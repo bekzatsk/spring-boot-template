@@ -45,7 +45,10 @@ Plans:
   3. A request with a valid RS256 Bearer token (signed with the loaded keystore) passes authentication and reaches the controller without hitting the database
   4. CORS allowed origins are read from configuration — changing the env var changes allowed origins without code changes
   5. Jakarta Validation rejects malformed auth request DTOs with a `400` error response in `{ error, message, status }` format
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 02-01-PLAN.md — SecurityFilterChain, CORS, error handlers, GlobalExceptionHandler
+- [ ] 02-02-PLAN.md — JwtTokenService, auth request DTO, stub UserController, end-to-end verification
 
 ### Phase 3: Google Auth and Token Management
 **Goal**: A mobile client can exchange a valid Google ID token for JWT access and refresh tokens, rotate the refresh token, revoke it on logout, and retrieve the authenticated user's profile
@@ -89,7 +92,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete | 2026-03-01 |
-| 2. Security Wiring | 0/TBD | Not started | - |
+| 2. Security Wiring | 0/2 | Planned | - |
 | 3. Google Auth and Token Management | 0/TBD | Not started | - |
 | 4. Apple Auth | 0/TBD | Not started | - |
 | 5. Hardening | 0/TBD | Not started | - |
