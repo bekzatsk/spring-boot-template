@@ -84,13 +84,47 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (To be filled by roadmapper) | | |
+| AUTH-01 | Phase 4 | Pending |
+| AUTH-02 | Phase 4 | Pending |
+| AUTH-03 | Phase 4 | Pending |
+| AUTH-04 | Phase 4 | Pending |
+| AUTH-05 | Phase 4 | Pending |
+| AUTH-06 | Phase 4 | Pending |
+| AUTH-07 | Phase 4 | Pending |
+| AUTH-08 | Phase 4 | Pending |
+| AUTH-09 | Phase 4 | Pending |
+| AUTH-10 | Phase 4 | Pending |
+| USER-01 | Phase 2 | Pending |
+| USER-02 | Phase 5 | Pending |
+| USER-03 | Phase 2 | Pending |
+| SEC-01 | Phase 3 | Pending |
+| SEC-02 | Phase 3 | Pending |
+| SEC-03 | Phase 3 | Pending |
+| SEC-04 | Phase 3 | Pending |
+| SEC-05 | Phase 3 | Pending |
+| SEC-06 | Phase 3 | Pending |
+| SEC-07 | Phase 5 | Pending |
+| SEC-08 | Phase 3 | Pending |
+| INFRA-01 | Phase 2 | Pending |
+| INFRA-02 | Phase 2 | Pending |
+| INFRA-03 | Phase 1 | Pending |
+| INFRA-04 | Phase 1 | Pending |
+| INFRA-05 | Phase 1 | Pending |
+| INFRA-06 | Phase 1 | Pending |
+| INFRA-07 | Phase 1 | Pending |
+| INFRA-08 | Phase 1 | Pending |
+| QUAL-01 | Phase 5 | Pending |
+| QUAL-02 | Phase 5 | Pending |
+| QUAL-03 | Phase 5 | Pending |
+| QUAL-04 | Phase 5 | Pending |
+| QUAL-05 | Phase 5 | Pending |
+| QUAL-06 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 31 total
-- Mapped to phases: 0
-- Unmapped: 31
+- Mapped to phases: 31
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-01*
-*Last updated: 2026-03-01 after initial definition*
+*Last updated: 2026-03-01 after roadmap creation — traceability complete*
