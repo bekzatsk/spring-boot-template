@@ -97,45 +97,47 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | — | Pending |
-| AUTH-02 | — | Pending |
-| AUTH-03 | — | Pending |
-| AUTH-04 | — | Pending |
-| AUTH-05 | — | Pending |
-| AUTH-06 | — | Pending |
-| TOKN-01 | — | Pending |
-| TOKN-02 | — | Pending |
-| TOKN-03 | — | Pending |
-| TOKN-04 | — | Pending |
-| TOKN-05 | — | Pending |
-| TOKN-06 | — | Pending |
-| SECU-01 | — | Pending |
-| SECU-02 | — | Pending |
-| SECU-03 | — | Pending |
-| SECU-04 | — | Pending |
-| SECU-05 | — | Pending |
-| SECU-06 | — | Pending |
-| SECU-07 | — | Pending |
-| SECU-08 | — | Pending |
-| SECU-09 | — | Pending |
-| USER-01 | — | Pending |
-| USER-02 | — | Pending |
-| USER-03 | — | Pending |
-| USER-04 | — | Pending |
-| INFR-01 | — | Pending |
-| INFR-02 | — | Pending |
-| INFR-03 | — | Pending |
-| INFR-04 | — | Pending |
-| INFR-05 | — | Pending |
-| INFR-06 | — | Pending |
-| INFR-07 | — | Pending |
-| INFR-08 | — | Pending |
+| AUTH-01 | Phase 3 | Pending |
+| AUTH-02 | Phase 4 | Pending |
+| AUTH-03 | Phase 3 | Pending |
+| AUTH-04 | Phase 4 | Pending |
+| AUTH-05 | Phase 4 | Pending |
+| AUTH-06 | Phase 4 | Pending |
+| TOKN-01 | Phase 2 | Pending |
+| TOKN-02 | Phase 3 | Pending |
+| TOKN-03 | Phase 3 | Pending |
+| TOKN-04 | Phase 3 | Pending |
+| TOKN-05 | Phase 3 | Pending |
+| TOKN-06 | Phase 3 | Pending |
+| SECU-01 | Phase 2 | Pending |
+| SECU-02 | Phase 2 | Pending |
+| SECU-03 | Phase 2 | Pending |
+| SECU-04 | Phase 2 | Pending |
+| SECU-05 | Phase 2 | Pending |
+| SECU-06 | Phase 1 | Pending |
+| SECU-07 | Phase 2 | Pending |
+| SECU-08 | Phase 2 | Pending |
+| SECU-09 | Phase 1 | Pending |
+| USER-01 | Phase 1 | Pending |
+| USER-02 | Phase 1 | Pending |
+| USER-03 | Phase 3 | Pending |
+| USER-04 | Phase 3 | Pending |
+| INFR-01 | Phase 1 | Pending |
+| INFR-02 | Phase 1 | Pending |
+| INFR-03 | Phase 1 | Pending |
+| INFR-04 | Phase 1 | Pending |
+| INFR-05 | Phase 1 | Pending |
+| INFR-06 | Phase 1 | Pending |
+| INFR-07 | Phase 5 | Pending |
+| INFR-08 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 32 total
-- Mapped to phases: 0
-- Unmapped: 32
+- v1 requirements: 33 total
+- Mapped to phases: 33
+- Unmapped: 0
+
+Note: The coverage counter previously read 32 — a recount of the requirement IDs shows 33 (AUTH 6 + TOKN 6 + SECU 9 + USER 4 + INFR 8). All 33 are mapped.
 
 ---
 *Requirements defined: 2026-03-01*
-*Last updated: 2026-03-01 after initial definition*
+*Last updated: 2026-03-01 after roadmap creation — traceability complete*
