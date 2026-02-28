@@ -30,7 +30,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The RSA keystore is loaded at startup (or auto-generated in dev profile) and exposes `JWKSource`, `JwtEncoder`, and `JwtDecoder` beans
   4. `application.yml` has dev and prod profiles with all sensitive values as `${ENV_VAR}` placeholders — no hardcoded secrets
   5. `.env.example` documents every required environment variable with descriptions
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 01-01-PLAN.md — Build infrastructure (pom.xml deps, Docker, profiles, env vars)
+- [ ] 01-02-PLAN.md — Domain entities and RSA key config (User, RefreshToken, JWKSource/JwtEncoder/JwtDecoder)
 
 ### Phase 2: Security Wiring
 **Goal**: The Spring Security filter chain is configured stateless with CORS, JWT Bearer validation, and consistent JSON error responses — all endpoints return correct HTTP status codes before any provider auth exists
@@ -85,7 +88,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/TBD | Not started | - |
+| 1. Foundation | 0/2 | Planned | - |
 | 2. Security Wiring | 0/TBD | Not started | - |
 | 3. Google Auth and Token Management | 0/TBD | Not started | - |
 | 4. Apple Auth | 0/TBD | Not started | - |
