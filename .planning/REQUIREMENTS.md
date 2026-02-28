@@ -27,13 +27,13 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Security
 
-- [ ] **SECU-01**: Spring Security configured as stateless (STATELESS session policy, CSRF disabled)
-- [ ] **SECU-02**: JwtAuthenticationFilter validates Bearer token and sets SecurityContext from JWT claims only (no DB hit)
-- [ ] **SECU-03**: All /api/** endpoints require authentication except /api/v1/auth/**
-- [ ] **SECU-04**: CORS configured inside SecurityFilterChain so OPTIONS pre-flight requests pass correctly
-- [ ] **SECU-05**: CORS allowed origins are configurable (not hardcoded)
+- [x] **SECU-01**: Spring Security configured as stateless (STATELESS session policy, CSRF disabled)
+- [x] **SECU-02**: JwtAuthenticationFilter validates Bearer token and sets SecurityContext from JWT claims only (no DB hit)
+- [x] **SECU-03**: All /api/** endpoints require authentication except /api/v1/auth/**
+- [x] **SECU-04**: CORS configured inside SecurityFilterChain so OPTIONS pre-flight requests pass correctly
+- [x] **SECU-05**: CORS allowed origins are configurable (not hardcoded)
 - [x] **SECU-06**: RSA keystore (.jks) for JWT signing with helper generation script + runtime fallback for dev
-- [ ] **SECU-07**: Consistent JSON error responses: `{ error, message, status }` via @RestControllerAdvice
+- [x] **SECU-07**: Consistent JSON error responses: `{ error, message, status }` via @RestControllerAdvice
 - [ ] **SECU-08**: Input validation with Jakarta Validation on auth request DTOs
 - [x] **SECU-09**: No hardcoded secrets — all sensitive values via environment variables / ${ENV_VAR} in application.yml
 
@@ -109,13 +109,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOKN-04 | Phase 3 | Pending |
 | TOKN-05 | Phase 3 | Pending |
 | TOKN-06 | Phase 3 | Pending |
-| SECU-01 | Phase 2 | Pending |
-| SECU-02 | Phase 2 | Pending |
-| SECU-03 | Phase 2 | Pending |
-| SECU-04 | Phase 2 | Pending |
-| SECU-05 | Phase 2 | Pending |
+| SECU-01 | Phase 2 | Complete |
+| SECU-02 | Phase 2 | Complete |
+| SECU-03 | Phase 2 | Complete |
+| SECU-04 | Phase 2 | Complete |
+| SECU-05 | Phase 2 | Complete |
 | SECU-06 | Phase 1 | Complete |
-| SECU-07 | Phase 2 | Pending |
+| SECU-07 | Phase 2 | Complete |
 | SECU-08 | Phase 2 | Pending |
 | SECU-09 | Phase 1 | Complete (01-01) |
 | USER-01 | Phase 1 | Complete |

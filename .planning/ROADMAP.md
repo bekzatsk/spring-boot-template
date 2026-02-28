@@ -47,7 +47,7 @@ Plans:
   5. Jakarta Validation rejects malformed auth request DTOs with a `400` error response in `{ error, message, status }` format
 **Plans:** 2 plans
 Plans:
-- [ ] 02-01-PLAN.md — SecurityFilterChain, CORS, error handlers, GlobalExceptionHandler
+- [x] 02-01-PLAN.md — SecurityFilterChain, CORS, error handlers, GlobalExceptionHandler
 - [ ] 02-02-PLAN.md — JwtTokenService, auth request DTO, stub UserController, end-to-end verification
 
 ### Phase 3: Google Auth and Token Management
@@ -92,7 +92,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete | 2026-03-01 |
-| 2. Security Wiring | 0/2 | Planned | - |
+| 2. Security Wiring | 1/2 | In progress | - |
 | 3. Google Auth and Token Management | 0/TBD | Not started | - |
 | 4. Apple Auth | 0/TBD | Not started | - |
 | 5. Hardening | 0/TBD | Not started | - |

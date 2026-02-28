@@ -5,32 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Mobile/web clients authenticate with Google or Apple ID tokens and receive JWT access/refresh tokens that secure all API endpoints — the entire auth flow works out of the box
-**Current focus:** Phase 1 — Foundation (complete)
+**Current focus:** Phase 2 — Security Wiring (in progress)
 
 ## Current Position
 
-Phase: 1 of 5 (Foundation)
-Plan: 2 of 2 in current phase (COMPLETE — ready for Phase 2)
-Status: Phase 1 complete
-Last activity: 2026-03-01 — Completed plan 01-02 (domain model and JWT infrastructure)
+Phase: 2 of 5 (Security Wiring)
+Plan: 1 of 3 in current phase (plan 02-01 complete — ready for 02-02)
+Status: Phase 2 in progress
+Last activity: 2026-03-01 — Completed plan 02-01 (SecurityFilterChain, CORS, error handling)
 
-Progress: [██░░░░░░░░] 20%
+Progress: [███░░░░░░░] 30%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 6 min
-- Total execution time: 0.2 hours
+- Total plans completed: 3
+- Average duration: 7 min
+- Total execution time: 0.3 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 2/2 | 12 min | 6 min |
+| 02-security-wiring | 1/3 | 8 min | 8 min |
 
 **Recent Trend:**
-- Last 5 plans: 5 min, 7 min
+- Last 5 plans: 5 min, 7 min, 8 min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -53,6 +54,8 @@ Recent decisions affecting current work:
 - Manual equals/hashCode on id field only for JPA entities — safe for transient (null id) and persistent entities
 - NimbusJwtDecoder.withJwkSource() used over OAuth2AuthorizationServerConfiguration.jwtDecoder() — avoids Authorization Server coupling
 - Dev profile auto-generates in-memory RSA keypair — tokens do not persist across restarts (acceptable for dev)
+- Jackson 3.x (tools.jackson.* namespace) used for ObjectMapper in error handlers — not com.fasterxml.jackson
+- AuthenticationEntryPoint registered in both exceptionHandling and oauth2ResourceServer DSL (Pitfall 4 per research)
 
 ### Pending Todos
 
@@ -68,5 +71,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 01-02-PLAN.md — domain model + JWT infrastructure complete; Phase 1 finished, ready for Phase 2
+Stopped at: Completed 02-01-PLAN.md — SecurityFilterChain, CORS, error handlers complete; ready for 02-02
 Resume file: None
