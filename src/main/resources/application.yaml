@@ -6,13 +6,15 @@ spring:
       enabled: true
   jpa:
     open-in-view: false
-  security:
-    user:
-      name: ${SPRING_SECURITY_USER:admin}
-      password: ${SPRING_SECURITY_PASSWORD:admin}
 
 server:
   port: 7070
+
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+      - http://localhost:5173
 
 ---
 spring:
@@ -50,3 +52,5 @@ app:
       keystore-location: ${JWT_KEYSTORE_LOCATION}
       keystore-password: ${JWT_KEYSTORE_PASSWORD}
       key-alias: ${JWT_KEY_ALIAS:jwt}
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS}
