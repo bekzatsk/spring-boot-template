@@ -4,63 +4,88 @@
 
 ## APIs & External Services
 
-**REST APIs:**
-- Not configured yet - No external service integrations detected in current dependencies
+**Not Detected:**
+- No external API integrations currently configured
+- No third-party SDK dependencies present
 
 ## Data Storage
 
 **Databases:**
-- PostgreSQL
-  - Connection: Not yet configured (driver present but no connection string in `application.yaml`)
-  - Client: PostgreSQL JDBC Driver (org.postgresql:postgresql)
-  - Configuration: Expected environment variables or `application.yaml` properties not yet defined
+- PostgreSQL (declared in pom.xml)
+  - Connection: Configurable via Spring Boot properties (currently in `src/main/resources/application.yaml`)
+  - Client: PostgreSQL JDBC Driver
+  - ORM: Not yet integrated (JPA/Hibernate not included)
+  - Status: Driver available but no active database configuration
 
 **File Storage:**
-- Local filesystem only - No S3, GCS, or cloud storage integrations
+- Local filesystem only
+- Static resources directory: `src/main/resources/static`
+- Templates directory: `src/main/resources/templates`
 
 **Caching:**
-- Not configured - No caching framework (Redis, Memcached) in dependencies
+- None currently integrated
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- Custom or not yet configured - No Spring Security or authentication framework in dependencies
-- Note: To add authentication, Spring Security would need to be added to `pom.xml`
+- Custom implementation or none currently configured
+- No OAuth2, SAML, or third-party auth providers configured
+- Spring Security not included in dependencies
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-- Not configured - No error tracking service (Sentry, Datadog) in dependencies
+- None configured
 
 **Logs:**
-- Console logging via Spring Boot defaults (Logback)
-- Configuration: Standard Spring Boot logging (no custom logback.xml)
+- Spring Boot default logging (SLF4J + Logback implied via Spring Boot starter)
+- Default configuration: console output
+- Configuration: Can be customized via `application.yaml` or `application.properties`
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- Not specified - Deployment platform not configured
+- Not yet configured
+- Target: Any platform supporting Java 24 runtime (Docker, Kubernetes, cloud platforms)
 
 **CI Pipeline:**
-- Not configured - No CI/CD tooling detected (GitHub Actions, GitLab CI, Jenkins, etc.)
+- Not detected
+- No GitHub Actions, GitLab CI, or Jenkins configuration present
+- Maven build: Available via `./mvnw clean package`
 
 ## Environment Configuration
 
 **Required env vars:**
-- No external integrations currently require environment variables
-- Note: `.env.template` exists but is empty (`.env.template` file present - contains configuration template)
+- No required environment variables currently enforced
+- Spring Boot standard properties can be externalized via:
+  - Environment variables (e.g., `SERVER_PORT=8080`)
+  - `application.yaml` or `application.properties`
+  - System properties
+  - `.env` file (via external library if added)
 
 **Secrets location:**
-- `.env.template` file present for future configuration
-- Current approach: No secrets configuration in use
+- `.env.template` file present but empty - placeholder for future secrets
+- `.env` listed in `.gitignore` - secrets should not be committed
+- Configuration pattern ready for environment-based secrets (Spring Boot externalized config)
 
 ## Webhooks & Callbacks
 
 **Incoming:**
-- Not implemented - Spring MVC supports HTTP endpoints but none are currently defined
+- None currently implemented
 
 **Outgoing:**
-- Not implemented - No outbound webhook or callback integrations configured
+- None currently implemented
+
+## Database Schema
+
+**Current State:**
+- No JPA entities or database schema defined
+- PostgreSQL driver present but no ORM framework to leverage it
+- Connection configuration not yet specified in `application.yaml`
+
+**Future Setup:**
+- Requires: Adding spring-boot-starter-data-jpa or spring-boot-starter-jpa
+- Requires: Entity definitions and Flyway/Liquibase for migrations (if desired)
 
 ---
 

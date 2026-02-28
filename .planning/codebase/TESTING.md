@@ -4,47 +4,53 @@
 
 ## Test Framework
 
-**Runner:**
-- JUnit 5 (Jupiter) - defined via Spring Boot starter parent
-- Spring Boot Test framework - for integration testing with Spring context
-- Kotlin Test JUnit5 - Kotlin-specific test utilities
+**Test Runner:**
+- JUnit 5 (Jupiter) - via `kotlin-test-junit5` dependency
+- Version: Latest compatible with Spring Boot 4.0.3
 
-**Config:**
-- `pom.xml` defines test dependencies:
-  - `spring-boot-starter-webmvc-test` (Spring Boot testing)
-  - `kotlin-test-junit5` (Kotlin testing)
-- Maven `testSourceDirectory` configured: `src/test/kotlin`
+**Test Dependencies:**
+- `spring-boot-starter-webmvc-test`: Spring Boot test context support
+- `kotlin-test-junit5`: Kotlin testing utilities for JUnit 5
+
+**Build Configuration:**
+- Test source directory: `src/test/kotlin`
+- Test runner: Maven Surefire (default, not explicitly configured)
+- Maven phase: `test`
 
 **Run Commands:**
 ```bash
-mvn test                    # Run all tests
-mvn test -Dtest=ClassName  # Run specific test class
-mvn test -DfailIfNoTests=false  # Run with tolerance for empty suites
+./mvnw test                    # Run all tests
+./mvnw test -Dtest=<class>    # Run specific test class
+./mvnw verify                  # Run tests and build verification
+./mvnw clean test              # Clean then run all tests
 ```
 
 ## Test File Organization
 
 **Location:**
-- Co-located convention: Tests are in separate `src/test/kotlin` directory matching main source structure
-- Package-parallel structure: `src/test/kotlin/kz/innlab/template/` mirrors `src/main/kotlin/kz/innlab/template/`
+- Separate directory structure: `src/test/kotlin/` mirrors `src/main/kotlin/`
 
-**Naming:**
-- Test classes follow pattern: `[ClassName]Tests.kt`
-- Example: `TemplateApplicationTests.kt` tests `TemplateApplication.kt`
+**Naming Convention:**
+- Mirror source class name with `Tests` suffix
+- Example: `TemplateApplication.kt` → `TemplateApplicationTests.kt`
+- Fully qualified package name matches source: `kz.innlab.template`
 
-**Structure:**
+**File Structure:**
 ```
 src/test/kotlin/
-├── kz/
-│   └── innlab/
-│       └── template/
-│           └── TemplateApplicationTests.kt
+└── kz/innlab/template/
+    └── TemplateApplicationTests.kt
 ```
 
 ## Test Structure
 
-**Suite Organization:**
+**Test Class Pattern:**
 ```kotlin
+package kz.innlab.template
+
+import org.junit.jupiter.api.Test
+import org.springframework.boot.test.context.SpringBootTest
+
 @SpringBootTest
 class TemplateApplicationTests {
 
@@ -55,102 +61,171 @@ class TemplateApplicationTests {
 }
 ```
 
-**Patterns:**
-- Class-level annotation: `@SpringBootTest` - loads full Spring application context for integration testing
-- Method-level annotation: `@Test` - JUnit 5 marker for test methods
-- Method naming uses camelCase with descriptive action: `contextLoads()`
-- Setup/Teardown: Not observed in current tests
+**Observations:**
+- `@SpringBootTest` annotation: Full Spring Boot application context loads
+- Single `@Test` method per test class currently
+- Test method uses camelCase naming with descriptive names
+- Empty test body for context loading verification
 
-## Mocking
+**Annotations Used:**
+- `@SpringBootTest`: Load complete application context for integration testing
+- `@Test`: JUnit 5 annotation marking test method
 
-**Framework:** Not detected in current codebase
+## Spring Boot Test Context
 
-**Patterns:**
-- Current test uses Spring Boot context loading without explicit mocking
-- Spring Test framework provides automatic mocking capabilities if needed
+**Testing Approach:**
+- Integration tests using `@SpringBootTest`
+- Full application context initialization in test setup
+- Server not started (default `webEnvironment` setting)
 
-**What to Mock:**
-- External service calls (if present)
-- Database dependencies
-- HTTP clients
+**Configuration:**
+- `@SpringBootTest` uses `webEnvironment = WebEnvironment.MOCK` by default
+- No explicit test profile configuration visible
+- Application properties loaded from `src/main/resources/application.yaml`
 
-**What NOT to Mock:**
-- Spring configuration and auto-wiring
-- Spring beans (use `@MockBean` if isolation needed)
+## Test Execution Model
 
-## Fixtures and Factories
+**Context Loading:**
+- Application context cached across tests in same class
+- `@SpringBootTest` performs full component scanning
+- All Spring beans initialized
 
-**Test Data:**
-- Not implemented in current codebase
+**Test Isolation:**
+- No explicit test isolation mechanisms configured
+- Minimal test code makes isolation impact low
+- Consider isolation when adding database tests
 
-**Location:**
-- Would be placed in `src/test/kotlin/kz/innlab/template/` alongside test classes
-- Could use separate `fixtures` or `builders` subdirectory for shared test data
+## Mocking Framework
+
+**Not yet configured.**
+
+**Future Integration:**
+- Mockito is typically included with `spring-boot-starter-test` (not included in current pom)
+- For mocking external dependencies, add: `spring-boot-starter-test` dependency
+- Kotlin-friendly mocking via Mockk is alternative option
+
+## Fixtures and Test Data
+
+**Not yet implemented.**
+
+**Recommended Location:**
+- `src/test/kotlin/kz/innlab/template/fixtures/` for test fixtures
+- Factory methods or builder patterns for test object creation
+- Consider separate `testdata/` directory for fixture files
 
 ## Coverage
 
-**Requirements:** No coverage requirements detected
+**Coverage Tools:**
+- Not explicitly configured in pom.xml
+- Recommended: Add `jacoco-maven-plugin` for coverage reporting
 
-**View Coverage:**
-```bash
-mvn test jacoco:report  # Requires JaCoCo plugin in pom.xml
+**To Add Coverage:**
+```xml
+<!-- Add to pom.xml <plugins> section -->
+<plugin>
+  <groupId>org.jacoco</groupId>
+  <artifactId>jacoco-maven-plugin</artifactId>
+  <version>0.8.10</version>
+  <executions>
+    <execution>
+      <goals>
+        <goal>prepare-agent</goal>
+      </goals>
+    </execution>
+    <execution>
+      <id>report</id>
+      <phase>test</phase>
+      <goals>
+        <goal>report</goal>
+      </goals>
+    </execution>
+  </executions>
+</plugin>
 ```
+
+**View Coverage (once configured):**
+```bash
+./mvnw jacoco:report
+# Open target/site/jacoco/index.html
+```
+
+**Coverage Requirements:**
+- Not enforced currently
+- Recommended minimum: 80% for critical paths
 
 ## Test Types
 
-**Unit Tests:**
-- Not present in current codebase
-- Should be added for individual components (services, utilities)
-- Location: `src/test/kotlin/kz/innlab/template/[module]/[ClassName]Tests.kt`
-
 **Integration Tests:**
-- `@SpringBootTest` annotation indicates integration test approach
-- `TemplateApplicationTests.kt` is an integration test verifying Spring context loads correctly
-- These tests load the full application context
+- Current approach: `@SpringBootTest` loads full context
+- Location: `src/test/kotlin/`
+- Example: `TemplateApplicationTests.kt` validates application startup
 
-**E2E Tests:**
-- Not detected
-- Not implemented in current codebase
-- Could use `@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)` for E2E scenarios
+**Unit Tests:**
+- Not yet present (application is minimal)
+- Recommended for service/repository layers when implemented
+- Use lightweight context or constructor injection for unit test speed
+- Consider `@SpringBootTest(classes = {SpecificClass.class})` for partial context
 
-## Common Patterns
+**End-to-End Tests:**
+- Not configured
+- Future consideration when REST endpoints added
+- Use `webEnvironment = WebEnvironment.RANDOM_PORT` for server startup
 
-**Async Testing:**
-- Not demonstrated in current tests
-- Would use `@Async` and `CompletableFuture` or Kotlin coroutines
-- JUnit 5 handles async via lambdas and CompletableFuture
+## Common Kotlin Testing Patterns
 
-**Error Testing:**
-- Not demonstrated in current tests
-- Should use `assertThrows()` for expected exceptions:
+**JUnit 5 with Kotlin:**
 ```kotlin
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Assertions.*
+
 @Test
-fun testException() {
-    assertThrows<IllegalArgumentException> {
-        // code that throws
-    }
+fun testSomething() {
+  // Arrange
+  val expected = "value"
+
+  // Act
+  val result = functionUnderTest()
+
+  // Assert
+  assertEquals(expected, result)
 }
 ```
 
-**Assertions:**
-- Should use JUnit 5 assertions: `assertEquals()`, `assertTrue()`, `assertNotNull()`
-- Can extend with AssertJ for fluent assertions (not currently in pom.xml)
-
-## Testing Best Practices
-
-**Spring Boot Test Configuration:**
-- Current approach uses `@SpringBootTest` for context loading
-- For faster unit tests, use `@DataJpaTest`, `@WebMvcTest`, or `@JsonTest` for specific slices
-- Mock external services with `@MockBean`
-
-**Kotlin-Specific:**
-- Leverage Kotlin's null safety in test assertions
-- Use Kotlin's readability features for test names with backticks if needed:
+**Parameterized Tests (Recommended for future use):**
 ```kotlin
-@Test
-fun `context should load successfully`() {
+@ParameterizedTest
+@ValueSource(strings = ["value1", "value2"])
+fun testWithParameters(value: String) {
+  // test implementation
 }
 ```
+
+**Display Names (Recommended for future use):**
+```kotlin
+@Test
+@DisplayName("Should load application context successfully")
+fun contextLoads() {
+  // assertion
+}
+```
+
+## Testing Conventions
+
+**When Writing Tests:**
+1. Place test in corresponding package under `src/test/kotlin/`
+2. Name test class with `Tests` suffix
+3. Use `@Test` annotation for each test method
+4. Use `@SpringBootTest` for integration tests requiring full context
+5. Use descriptive method names in camelCase starting with action verb
+6. Keep tests small and focused on single behavior
+7. Follow Arrange-Act-Assert pattern
+
+**Best Practices to Apply:**
+- Avoid test class dependencies on execution order
+- Mock external services and databases
+- Use test fixtures for complex test data setup
+- Document non-obvious test behavior with comments or display names
+- Separate unit and integration tests for clear purpose
 
 ---
 

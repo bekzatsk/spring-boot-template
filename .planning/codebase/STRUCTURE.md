@@ -6,167 +6,179 @@
 
 ```
 spring-boot-template/
-├── src/
-│   ├── main/
-│   │   ├── kotlin/kz/innlab/template/         # Application source code
-│   │   └── resources/
-│   │       ├── application.yaml               # Configuration file
-│   │       ├── static/                        # Static assets (CSS, JS, images)
-│   │       └── templates/                     # HTML templates (Thymeleaf)
-│   └── test/
-│       └── kotlin/kz/innlab/template/         # Unit and integration tests
-├── pom.xml                                    # Maven project configuration
-├── mvnw / mvnw.cmd                            # Maven wrapper scripts
-├── .env.template                              # Environment configuration template
-├── .gitignore                                 # Git ignore rules
-└── HELP.md                                    # Project documentation
+├── pom.xml                           # Maven project configuration
+├── .gitignore                        # Git ignore rules
+├── .env.template                     # Template for environment variables
+├── HELP.md                           # Spring Boot generated help
+├── mvnw                              # Maven wrapper script (Unix)
+├── mvnw.cmd                          # Maven wrapper script (Windows)
+├── .idea/                            # IntelliJ IDEA project files
+├── .git/                             # Git repository
+├── .planning/                        # GSD planning documents
+├── .claude/                          # Claude Code workspace
+└── src/
+    ├── main/
+    │   ├── kotlin/                   # Kotlin source code
+    │   │   └── kz/innlab/template/   # Application package root
+    │   │       └── TemplateApplication.kt
+    │   └── resources/
+    │       ├── application.yaml      # Spring Boot configuration
+    │       ├── static/               # Static assets (CSS, JS, images)
+    │       └── templates/            # Thymeleaf templates (if used)
+    └── test/
+        └── kotlin/                   # Kotlin test source code
+            └── kz/innlab/template/
+                └── TemplateApplicationTests.kt
 ```
 
 ## Directory Purposes
 
+**Root Directory:**
+- Purpose: Project metadata and build configuration
+- Contains: Maven POM, wrapper scripts, documentation
+- Key files: `pom.xml`
+
+**src/main/kotlin/:**
+- Purpose: Compiled Kotlin source code
+- Contains: All application source files, organized by package
+- Key files: All classes, controllers, services, repositories (when added)
+
 **src/main/kotlin/kz/innlab/template/:**
-- Purpose: All application source code organized by package structure
-- Contains: Application bootstrap class, future controllers, services, entities, repositories
+- Purpose: Application package root; all business logic starts here
+- Contains: TemplateApplication.kt plus future controllers, services, repositories
 - Key files: `TemplateApplication.kt`
-- Package convention: `kz.innlab.template` as root, extend with subdomain packages
 
 **src/main/resources/:**
-- Purpose: Non-code resources needed at runtime
-- Contains: Configuration files, static web content, templates
+- Purpose: Runtime configuration and assets served to clients
+- Contains: Application configuration, static files, templates
 - Key files: `application.yaml`
 
 **src/main/resources/static/:**
-- Purpose: Static web assets served directly by Spring
-- Contains: CSS files, JavaScript files, images, fonts
-- Served from: Root path or `/static/` context depending on configuration
+- Purpose: Serves static web assets (CSS, JavaScript, images)
+- Contains: Frontend files directly accessible via HTTP
+- Key files: None currently; ready for CSS/JS/images
 
 **src/main/resources/templates/:**
-- Purpose: Server-side rendered templates (if using traditional MVC)
-- Contains: Thymeleaf templates (.html files)
-- Pattern: One template per endpoint or logical view
-- Note: Only used for traditional MVC; REST APIs return JSON directly
+- Purpose: Server-side template files (Thymeleaf, Freemarker, etc.)
+- Contains: HTML templates for view rendering
+- Key files: None currently; ready for template files
+
+**src/test/kotlin/:**
+- Purpose: Test source code
+- Contains: Unit tests, integration tests using JUnit 5
+- Key files: Test classes mirroring production package structure
 
 **src/test/kotlin/kz/innlab/template/:**
-- Purpose: Test code mirroring source code structure
-- Contains: Unit tests, integration tests, test fixtures
-- Pattern: One test class per source class, named `{SourceClass}Tests.kt` or `{SourceClass}Test.kt`
+- Purpose: Tests for the application package
+- Contains: Test classes for TemplateApplication and future classes
 - Key files: `TemplateApplicationTests.kt`
-
-**pom.xml:**
-- Purpose: Maven project configuration and dependency management
-- Contains: Project metadata, dependency declarations, plugin configurations
-- Package manager: Maven (via `mvnw` wrapper)
-
-**.env.template:**
-- Purpose: Template showing required environment variables
-- Contains: Example environment variable names and values
-- Usage: Copy to `.env` and fill in actual values (never committed)
 
 ## Key File Locations
 
 **Entry Points:**
-- `src/main/kotlin/kz/innlab/template/TemplateApplication.kt`: Application bootstrap, main function
+- `src/main/kotlin/kz/innlab/template/TemplateApplication.kt`: Main application entry point with `main()` function
 
 **Configuration:**
-- `src/main/resources/application.yaml`: Spring Boot configuration (server port, application name, database)
-- `pom.xml`: Maven dependencies and build configuration
+- `src/main/resources/application.yaml`: Spring Boot server and application configuration
+- `pom.xml`: Maven build and dependency configuration
 
 **Core Logic:**
-- `src/main/kotlin/kz/innlab/template/`: All application code (empty initially, ready for expansion)
+- `src/main/kotlin/kz/innlab/template/`: Application package root (future location for controllers, services, repositories)
 
 **Testing:**
-- `src/test/kotlin/kz/innlab/template/`: Test classes and test utilities
-- `TemplateApplicationTests.kt`: Context load test
+- `src/test/kotlin/kz/innlab/template/TemplateApplicationTests.kt`: Basic Spring Boot test template
 
 ## Naming Conventions
 
 **Files:**
-- Kotlin files: PascalCase (ClassName.kt) - e.g., `UserController.kt`, `UserService.kt`
-- Configuration: lowercase with hyphens (application-profile.yaml) - e.g., `application-dev.yaml`, `application-prod.yaml`
-- Test files: {SourceClass}Tests.kt or {SourceClass}Test.kt - e.g., `UserServiceTests.kt`, `UserControllerTest.kt`
+- `*.kt`: Kotlin source files (follows Java convention)
+- `*Application.kt`: Main application class (Spring Boot convention)
+- `*Controller.kt`: REST controller classes
+- `*Service.kt`: Business logic service classes
+- `*Repository.kt`: Data access repository interfaces
+- `*Tests.kt` or `*Test.kt`: Test classes
 
 **Directories:**
-- Package directories: lowercase, reverse domain notation - e.g., `kz/innlab/template/`
-- Subdomain packages: lowercase, descriptive - e.g., `controller/`, `service/`, `repository/`, `entity/`, `dto/`
-- Test directories: Mirror source structure exactly
+- `controller/`: Contains HTTP request handlers
+- `service/`: Contains business logic
+- `repository/`: Contains data access objects
+- `model/`: Contains domain entities and DTOs
+- `dto/`: Contains data transfer objects
+- `util/`: Contains utility/helper classes
+- `config/`: Contains Spring configuration classes
 
-**Kotlin Classes:**
-- Class names: PascalCase - e.g., `UserController`, `UserService`, `User`
-- Interface names: PascalCase, often with I prefix or -able suffix optional - e.g., `UserRepository` (preferred)
-- Companion objects: Contain constants and factory methods
-- Data classes: For immutable value objects - e.g., `UserDto`, `CreateUserRequest`
-
-**Functions/Methods:**
-- Method names: camelCase - e.g., `getUserById()`, `createUser()`, `deleteUserByEmail()`
-- Suspend functions: Async operations, name doesn't differ from sync counterpart
-- Lambda parameters: Single letter conventional for simple operations - e.g., `users.map { it.name }`
+**Packages:**
+- `kz.innlab.template`: Root package
+- `kz.innlab.template.controller`: HTTP controllers
+- `kz.innlab.template.service`: Business services
+- `kz.innlab.template.repository`: Data repositories
+- `kz.innlab.template.model`: Domain models
+- `kz.innlab.template.config`: Configuration classes
 
 ## Where to Add New Code
 
-**New Controller Endpoint:**
-- Primary code: `src/main/kotlin/kz/innlab/template/controller/YourController.kt`
-- Class pattern: `@RestController` or `@Controller` with `@RequestMapping` on class
-- Tests: `src/test/kotlin/kz/innlab/template/controller/YourControllerTests.kt`
+**New REST Endpoint:**
+1. Create `@RestController` class in `src/main/kotlin/kz/innlab/template/controller/`
+2. Define `@GetMapping`, `@PostMapping`, etc. methods
+3. Inject `@Service` dependencies
+4. Create corresponding test in `src/test/kotlin/kz/innlab/template/` with matching class name
 
-**New Service/Business Logic:**
-- Implementation: `src/main/kotlin/kz/innlab/template/service/YourService.kt`
-- Interface: `src/main/kotlin/kz/innlab/template/service/YourService.kt` (interface inside, implementation can follow)
-- Tests: `src/test/kotlin/kz/innlab/template/service/YourServiceTests.kt`
+**New Business Service:**
+1. Create class with `@Service` annotation in `src/main/kotlin/kz/innlab/template/service/`
+2. Implement business logic
+3. Inject `@Repository` dependencies as needed
+4. Write unit tests in `src/test/kotlin/kz/innlab/template/` directory
 
-**New Data Entity:**
-- JPA Entity: `src/main/kotlin/kz/innlab/template/entity/YourEntity.kt`
-- Data Transfer Object: `src/main/kotlin/kz/innlab/template/dto/YourDto.kt`
-- Repository: `src/main/kotlin/kz/innlab/template/repository/YourRepository.kt`
+**New Data Repository:**
+1. Create interface extending Spring Data `Repository` in `src/main/kotlin/kz/innlab/template/repository/`
+2. Define query methods
+3. Spring Data generates implementation automatically
+4. Write tests if custom query logic needed
 
-**New Configuration Class:**
-- Location: `src/main/kotlin/kz/innlab/template/config/YourConfiguration.kt`
-- Pattern: `@Configuration` class with `@Bean` methods
+**New Domain Model/Entity:**
+1. Create Kotlin data class in `src/main/kotlin/kz/innlab/template/model/`
+2. Add JPA/Hibernate annotations for persistence
+3. Define properties and relationships
 
-**Utilities/Helpers:**
-- Location: `src/main/kotlin/kz/innlab/template/util/YourUtil.kt`
-- Pattern: Object (Kotlin singleton) with extension functions and helper methods
+**Utility/Helper Classes:**
+- Location: `src/main/kotlin/kz/innlab/template/util/`
+- Scope: Shared utilities across services and controllers
 
-**Exception Classes:**
-- Location: `src/main/kotlin/kz/innlab/template/exception/YourException.kt`
-- Pattern: Extend `RuntimeException` for unchecked exceptions
+**Configuration Classes:**
+- Location: `src/main/kotlin/kz/innlab/template/config/`
+- Purpose: Spring `@Configuration` classes for custom beans
 
 ## Special Directories
 
-**src/main/resources/application.yaml:**
-- Purpose: Spring Boot configuration
-- Generated: No
-- Committed: Yes
-- Usage: Define server port, application name, database connection, logging levels
-
-**src/main/resources/static/:**
-- Purpose: Static web resources
-- Generated: No
-- Committed: Yes (typically)
-- Usage: CSS, JavaScript, images served directly
-
-**src/main/resources/templates/:**
-- Purpose: Server-side templates
-- Generated: No
-- Committed: Yes
-- Usage: Thymeleaf templates for traditional MVC views
-
 **target/:**
-- Purpose: Maven build output (compiled classes, JARs, etc.)
-- Generated: Yes
+- Purpose: Maven build output directory
+- Generated: Yes (automatic during build)
 - Committed: No (in .gitignore)
-- Usage: Never edit; automatically created by Maven
+- Contents: Compiled classes, JARs, artifacts
 
 **.idea/:**
-- Purpose: IntelliJ IDEA IDE configuration
-- Generated: Yes
+- Purpose: IntelliJ IDEA project metadata
+- Generated: Yes (IntelliJ automatic)
 - Committed: No (in .gitignore)
-- Usage: IDE-specific settings, never manually edit
+- Contents: IDE settings, workspace state
 
 **.mvn/wrapper/:**
-- Purpose: Maven wrapper scripts and dependencies
-- Generated: Yes (once)
-- Committed: Yes (recommended)
-- Usage: Allows building without installing Maven globally
+- Purpose: Maven wrapper configuration
+- Generated: No (checked in for reproducible builds)
+- Committed: Conditionally (wrapper JARs excluded in .gitignore)
+- Contents: Maven distribution bootstrap
+
+**src/main/resources/static/:**
+- Purpose: Static web assets
+- Generated: No
+- Committed: Yes
+- Contents: CSS, JavaScript, images, fonts
+
+**src/main/resources/templates/:**
+- Purpose: Server-rendered HTML templates
+- Generated: No
+- Committed: Yes
+- Contents: Thymeleaf/Freemarker template files
 
 ---
 

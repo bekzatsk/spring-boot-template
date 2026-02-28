@@ -4,152 +4,130 @@
 
 ## Pattern Overview
 
-**Overall:** Layered Spring Boot application using Kotlin, following Spring MVC architecture with a standard web application structure.
+**Overall:** Spring Boot MVC Monolithic Application
 
 **Key Characteristics:**
-- Spring Boot auto-configuration driven setup with no explicit bean definitions
-- Minimal initial scaffolding designed for expansion
-- Single entry point to application lifecycle
-- Web tier ready for REST or traditional MVC endpoints
-- PostgreSQL database connectivity configured but not yet integrated
+- Spring Boot 4.0.3 framework handling HTTP routing and dependency injection
+- Kotlin-first implementation with Java interoperability
+- Maven-based build system with standard Spring conventions
+- Layered architecture pattern ready for expansion (controllers, services, repositories)
 
 ## Layers
 
-**Application Bootstrap:**
-- Purpose: Initializes and configures the Spring Boot application context
-- Location: `src/main/kotlin/kz/innlab/template/TemplateApplication.kt`
-- Contains: Main entry point, `@SpringBootApplication` annotation
-- Depends on: Spring Boot framework components
-- Used by: JVM runtime during application startup
+**Application (Entry Point):**
+- Purpose: Spring Boot application bootstrap and configuration
+- Location: `src/main/kotlin/kz/innlab/template/`
+- Contains: Main entry point class with Spring Boot annotations
+- Depends on: Spring Boot framework, Kotlin standard library
+- Used by: Spring container during startup
 
-**Web Layer (MVC):**
-- Purpose: Handles HTTP requests and responses through Spring MVC
-- Location: `src/main/kotlin/kz/innlab/template/` (future controllers will live here)
-- Contains: Controllers, request handlers, HTTP endpoint definitions
-- Depends on: Spring Web, Spring MVC auto-configuration
-- Used by: HTTP clients making requests to the application
+**Spring Framework Container:**
+- Purpose: Dependency injection, component lifecycle management, HTTP request routing
+- Location: Managed by Spring Boot autoconfiguration
+- Contains: Annotation-based configuration, component scanning
+- Depends on: `src/main/resources/application.yaml` for configuration
+- Used by: All application components
 
-**Service Layer:**
-- Purpose: Business logic and domain operations (to be implemented)
-- Location: `src/main/kotlin/kz/innlab/template/` (expected)
-- Contains: Service classes handling business rules
-- Depends on: Data layer, repositories
+**Web/HTTP Layer (Controllers - Ready to Implement):**
+- Purpose: Handle HTTP requests and responses
+- Location: Expected at `src/main/kotlin/kz/innlab/template/controller/`
+- Contains: Spring `@RestController` or `@Controller` annotated classes
+- Depends on: Service layer for business logic
+- Used by: External HTTP clients
+
+**Business Logic Layer (Services - Ready to Implement):**
+- Purpose: Core business operations and processing
+- Location: Expected at `src/main/kotlin/kz/innlab/template/service/`
+- Contains: `@Service` annotated classes with domain logic
+- Depends on: Repository layer and utilities
 - Used by: Controllers and other services
 
-**Data Layer:**
-- Purpose: Database access and persistence (to be implemented)
-- Location: `src/main/kotlin/kz/innlab/template/` (expected)
-- Contains: JPA entities, repositories, database queries
-- Depends on: Spring Data JPA, PostgreSQL driver
-- Used by: Service layer for data operations
+**Data Access Layer (Repositories - Ready to Implement):**
+- Purpose: Database operations and persistence
+- Location: Expected at `src/main/kotlin/kz/innlab/template/repository/`
+- Contains: Data access objects, repository interfaces
+- Depends on: PostgreSQL database driver, Spring Data abstractions
+- Used by: Service layer
 
-**Configuration Layer:**
-- Purpose: Application settings and environment configuration
-- Location: `src/main/resources/application.yaml`
-- Contains: Server port, application name, database credentials, logging levels
-- Depends on: Spring Boot auto-configuration framework
-- Used by: All runtime components
+**Configuration & Resources:**
+- Purpose: Application configuration and static assets
+- Location: `src/main/resources/`
+- Contains: `application.yaml`, static files, templates
+- Depends on: None
+- Used by: Spring Boot framework, HTTP responses
 
 ## Data Flow
 
-**HTTP Request Handling:**
+**HTTP Request Processing:**
 
-1. HTTP request arrives at application (port 7070)
-2. Spring DispatcherServlet routes request to appropriate controller
-3. Controller processes request and delegates to service layer
-4. Service layer performs business logic, may access data layer
-5. Data layer queries/updates PostgreSQL database
-6. Response flows back through service → controller → HTTP response
+1. HTTP request arrives at server (port 7070)
+2. Spring DispatcherServlet routes to appropriate `@RestController`
+3. Controller calls Service layer for business logic
+4. Service may access Database via Repository layer
+5. Repository executes queries against PostgreSQL
+6. Response data flows back through Service → Controller → HTTP Response
 
-**Application Startup:**
+**Initialization Flow:**
 
-1. JVM executes `main()` function in `TemplateApplication.kt`
-2. `runApplication<TemplateApplication>()` initializes Spring Boot
-3. Auto-configuration scans classpath for dependencies
-4. Spring creates bean instances and injects dependencies
-5. Application context fully initialized and ready for requests
+1. `TemplateApplication.main()` invoked
+2. `runApplication<TemplateApplication>()` starts Spring container
+3. `@SpringBootApplication` triggers component scanning in package `kz.innlab.template`
+4. Spring loads `application.yaml` configuration
+5. All `@Component`, `@Service`, `@Repository` beans registered
+6. Server listens on configured port (7070)
 
 **State Management:**
-- Spring manages application state through singleton beans
-- Request-scoped beans created per HTTP request
-- Stateless service design recommended for scalability
-- Database serves as persistent state store
+- No explicit state management detected currently
+- Spring manages singleton beans for Services and Repositories
+- HTTP session state would be managed by Spring Framework if configured
 
 ## Key Abstractions
 
-**TemplateApplication:**
-- Purpose: Application bootstrap and container
+**Spring Boot Application Class:**
+- Purpose: Single entry point for the entire application lifecycle
 - Examples: `src/main/kotlin/kz/innlab/template/TemplateApplication.kt`
-- Pattern: Singleton Spring Boot application context holder
+- Pattern: Standard Spring Boot pattern with `@SpringBootApplication` annotation
 
-**Spring Beans (Future):**
-- Purpose: Managed components following dependency injection pattern
-- Pattern: Constructor injection for required dependencies; field injection avoided
-- Strategy: Auto-wired components discovered through class path scanning
+**Spring Beans:**
+- Purpose: Managed objects created and configured by Spring DI container
+- Examples: Controllers, Services, Repositories (to be implemented)
+- Pattern: Declared with annotations (`@RestController`, `@Service`, `@Repository`)
 
-**Repositories (Future):**
-- Purpose: Abstract data access for domain entities
-- Pattern: Spring Data JPA repositories extending `JpaRepository` or custom interfaces
-- Responsibility: CRUD operations and custom queries
-
-**Services (Future):**
-- Purpose: Encapsulate business logic and domain rules
-- Pattern: Class-level `@Service` annotation, public methods for use cases
-- Responsibility: Orchestrate repositories, validate input, handle transactions
-
-**Controllers (Future):**
-- Purpose: HTTP endpoint handlers
-- Pattern: Class-level `@RestController` or `@Controller` annotation with `@RequestMapping`
-- Responsibility: Parse HTTP input, delegate to services, format response
+**Kotlin with Spring:**
+- Purpose: Leverage Kotlin language features (null safety, extension functions) in Spring applications
+- Examples: Function declarations in `TemplateApplication.kt`
+- Pattern: Kotlin compiler plugin (`kotlin-maven-allopen`) enables `open` classes for Spring proxying
 
 ## Entry Points
 
-**Application Entry:**
-- Location: `src/main/kotlin/kz/innlab/template/TemplateApplication.kt` line 9 (main function)
-- Triggers: JVM execution `java -jar`
-- Responsibilities: Initialize Spring Boot context, start web server on port 7070, enable dependency injection
+**Main Application:**
+- Location: `src/main/kotlin/kz/innlab/template/TemplateApplication.kt`
+- Triggers: JVM invocation of `main()` function
+- Responsibilities: Initialize Spring container, load configuration, start embedded Tomcat server
 
-**HTTP Entry Points:**
-- Location: Controllers in `src/main/kotlin/kz/innlab/template/` (to be created)
-- Triggers: HTTP requests to defined endpoints
-- Responsibilities: Route requests to appropriate handlers, validate input, return HTTP responses
-
-**Test Entry Point:**
-- Location: `src/test/kotlin/kz/innlab/template/TemplateApplicationTests.kt`
-- Triggers: Maven test execution or IDE test runner
-- Responsibilities: Validate application context loads without errors
+**HTTP Endpoints (To Be Implemented):**
+- Location: Will be defined in `src/main/kotlin/kz/innlab/template/controller/`
+- Triggers: HTTP requests to server port 7070
+- Responsibilities: Parse requests, delegate to services, return responses
 
 ## Error Handling
 
-**Strategy:** Spring Boot convention with exception translation to HTTP responses
+**Strategy:** Spring Boot default error handling with Jackson serialization
 
 **Patterns:**
-- Uncaught exceptions translated to HTTP 500 by default DispatcherServlet error handling
-- Spring Data exceptions converted to Spring DataAccessException hierarchy
-- Custom exception handlers can be added via `@ControllerAdvice` for specific error responses
-- Validation errors (future) handled via `BindingResult` or `@ControllerAdvice`
+- Uncaught exceptions converted to HTTP error responses via `@ControllerAdvice` (not yet implemented)
+- Spring provides default error pages and JSON error responses
+- `400 Bad Request` for validation failures
+- `500 Internal Server Error` for unhandled exceptions
 
 ## Cross-Cutting Concerns
 
-**Logging:**
-- Framework: SLF4J with Logback (included via Spring Boot starter)
-- Configuration: Via `application.yaml` under `logging.*` properties
-- Pattern: Use injected logger instances in components
+**Logging:** Not explicitly configured; uses Spring's default logging (SLF4J + Logback)
+- Location: Will be enabled via `application.yaml` with `logging.level` properties
 
-**Validation:**
-- Framework: Jakarta Validation (future addition needed if not already included)
-- Pattern: Bean validation annotations on entity fields and method parameters
-- Handler: `@ControllerAdvice` methods catch `MethodArgumentNotValidException`
+**Validation:** Spring Validation framework available; requires `@Valid` annotations on controller parameters
 
-**Authentication:**
-- Current: Not implemented
-- Future: Spring Security for role-based access control
-- Pattern: Interceptor/filter-based approach via Spring Security auto-configuration
-
-**Database Transactions:**
-- Framework: Spring Transaction Management
-- Pattern: `@Transactional` annotation on service methods
-- Behavior: Automatic transaction demarcation, rollback on unchecked exceptions
+**Authentication:** Not currently configured; ready for Spring Security integration if needed
 
 ---
 

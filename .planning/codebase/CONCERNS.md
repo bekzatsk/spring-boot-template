@@ -4,175 +4,163 @@
 
 ## Tech Debt
 
-**Minimal Implementation:**
-- Issue: Project contains only starter classes with no business logic, controllers, services, or repositories
-- Files: `src/main/kotlin/kz/innlab/template/TemplateApplication.kt`
-- Impact: No actual application functionality exists; application requires significant development before production readiness
-- Fix approach: Implement domain models, service layer, REST controllers, and database layer as features are added
+**Incomplete POM metadata:**
+- Issue: Maven pom.xml contains empty placeholder elements for license, developers, SCM, and project URL
+- Files: `pom.xml` (lines 17-28)
+- Impact: Missing project metadata makes builds less professional, complicates deployment pipelines, and obscures project ownership/documentation
+- Fix approach: Populate all metadata sections in pom.xml with actual project details
 
-**Incomplete Test Coverage:**
-- Issue: Single test file with empty test case that only checks if application context loads
-- Files: `src/test/kotlin/kz/innlab/template/TemplateApplicationTests.kt`
-- Impact: No unit tests for business logic; no integration test patterns established; future developers lack testing guidance
-- Fix approach: Establish unit test patterns in `src/test/kotlin/` and create test fixtures for new features
+**Missing Jackson groupId correction:**
+- Issue: pom.xml uses `tools.jackson.module` groupId instead of standard `com.fasterxml.jackson.module`
+- Files: `pom.xml` (line 47)
+- Impact: Dependency resolution may fail or use incorrect versions; Jackson module may not load properly
+- Fix approach: Update to `com.fasterxml.jackson.module` with standard artifact `jackson-module-kotlin`
 
-**Missing Configuration Documentation:**
-- Issue: POM metadata contains empty or placeholder values; `.env.template` file is empty
-- Files: `pom.xml` (lines 16-28 contain empty elements), `.env.template`
-- Impact: Unclear what environment variables are required or expected; incomplete project metadata makes multi-team development harder
-- Fix approach: Populate `<license>`, `<developers>`, `<scm>` in pom.xml; document all required environment variables in `.env.template`
+**Java version incompatibility noted:**
+- Issue: HELP.md documents that JVM level was downgraded from 25 to 24 due to Kotlin version incompatibility
+- Files: `HELP.md`, `pom.xml` (line 30)
+- Impact: Project cannot use Java 25 features; Kotlin compiler (v2.2.21) has language support ceiling
+- Fix approach: Monitor Kotlin release cycles; consider upgrading Kotlin when Java 25 support is released
 
-## Known Bugs
+## Configuration Gaps
 
-**Java Version Compatibility Issue:**
-- Symptoms: HELP.md reports JVM was downgraded from Java 25 to 24 because Kotlin doesn't support Java 25 yet
-- Files: `HELP.md` (line 4), `pom.xml` (line 30)
-- Trigger: Building with latest Java 25 JDK installed
-- Workaround: Continue using Java 24 until Kotlin releases compatible version
+**Minimal test coverage:**
+- Issue: Only a single placeholder test exists with empty test body
+- Files: `src/test/kotlin/kz/innlab/template/TemplateApplicationTests.kt` (lines 9-11)
+- Impact: No automated validation of application behavior; regressions will not be caught; Spring context loading is verified but nothing else
+- Fix approach: Add meaningful integration tests and unit tests for features as they are implemented
+
+**No logging configuration:**
+- Issue: application.yaml contains only Spring app name and server port; no logging levels, formats, or output configuration
+- Files: `src/main/resources/application.yaml`
+- Impact: Default logging will use Spring Boot's minimal configuration; debugging production issues becomes difficult; no structured logging
+- Fix approach: Add logging configuration sections (logback-spring.xml or application.yaml logging properties)
+
+**Missing database configuration:**
+- Issue: PostgreSQL driver is declared as runtime dependency but no connection properties, initialization, or data source configuration exists
+- Files: `pom.xml` (lines 52-55)
+- Impact: PostgreSQL dependency is unused; application cannot connect to database without manual configuration; suggests incomplete migration
+- Fix approach: Either remove PostgreSQL dependency or configure spring.datasource properties in application.yaml
+
+**Empty environment template:**
+- Issue: `.env.template` file exists but contains no content
+- Files: `.env.template`
+- Impact: Developers have no guidance on required environment variables; deployment process unclear
+- Fix approach: Document all environment variables needed for development, testing, and production
+
+## Application Scope Issues
+
+**Minimal application bootstrap:**
+- Issue: TemplateApplication.kt is a bare Spring Boot application with no business logic, controllers, services, or configuration
+- Files: `src/main/kotlin/kz/innlab/template/TemplateApplication.kt` (lines 1-11)
+- Impact: Application starts but provides no functionality; unclear what this template is meant to do
+- Fix approach: Define and implement actual application capabilities or clarify template purpose
+
+**No health or readiness endpoints:**
+- Issue: No Spring Actuator configuration or custom health endpoints exist
+- Files: Application configuration
+- Impact: Kubernetes/container orchestration cannot determine if application is ready or healthy; no way to verify database connectivity
+- Fix approach: Add spring-boot-starter-actuator dependency and configure health endpoints
+
+## Dependency Management Concerns
+
+**Test dependency name mismatch:**
+- Issue: pom.xml declares `spring-boot-starter-webmvc-test` which doesn't appear to be a standard Spring Boot artifact
+- Files: `pom.xml` (line 58)
+- Impact: Dependency resolution may fail or use wrong artifact; testing infrastructure may be incomplete
+- Fix approach: Replace with standard `spring-boot-starter-test` which includes all standard test dependencies
+
+**Incomplete test framework:**
+- Issue: kotlin-test-junit5 is declared but no test runners or assertions library explicitly configured
+- Files: `pom.xml` (lines 62-65)
+- Impact: Tests exist but lack standard assertion helpers; custom test infrastructure required
+- Fix approach: Add junit-jupiter-api and assertion library (e.g., AssertJ) dependencies
+
+**Missing common Spring starters:**
+- Issue: No starters for Spring Data, Spring JPA, or other standard Spring modules despite PostgreSQL dependency
+- Files: `pom.xml`
+- Impact: Database access layer must be built manually; ORM overhead deferred
+- Fix approach: Add spring-boot-starter-data-jpa or spring-boot-starter-data-r2dbc based on requirements
 
 ## Security Considerations
 
-**No Authentication/Authorization Framework:**
-- Risk: Application has no security configuration (no Spring Security, no JWT implementation, no role-based access control)
-- Files: `src/main/kotlin/kz/innlab/template/TemplateApplication.kt` - no security dependencies
-- Current mitigation: None
-- Recommendations: Before adding any API endpoints, implement Spring Security with appropriate authentication mechanism (e.g., JWT, OAuth2, or API keys)
+**No Spring Security configuration:**
+- Issue: No authentication or authorization framework configured
+- Files: Application codebase
+- Impact: If endpoints are added, they will be publicly accessible with no access control
+- Fix approach: Add spring-boot-starter-security dependency and implement authentication strategy
 
-**PostgreSQL Dependency Not Integrated:**
-- Risk: PostgreSQL driver is declared in pom.xml but not configured; database connection details not specified; credentials would be hardcoded or missing
-- Files: `pom.xml` (lines 52-55), no configuration in `application.yaml`
-- Current mitigation: Dependency is runtime scoped
-- Recommendations: Add Spring Data JPA starter; configure database properties in `application.yaml` using environment variables; never hardcode credentials
+**Default server port exposure:**
+- Issue: Server configured to listen on port 7070 with no HTTPS or security headers configured
+- Files: `src/main/resources/application.yaml` (line 6)
+- Impact: Default configuration is not production-ready; no TLS encryption; vulnerable to MITM attacks
+- Fix approach: Configure server.ssl properties and security headers; document port selection rationale
 
-**Environment Variables Not Enforced:**
-- Risk: `.env.template` is empty; no validation that required environment variables are present at startup
-- Files: `.env.template`, `.gitignore` (line 34 ignores .env)
-- Current mitigation: Good: .env files are in .gitignore
-- Recommendations: Create startup health checks that validate all required env vars are set; document in `.env.template` with examples like `DATABASE_URL=postgresql://user:pass@localhost/dbname`
+**No input validation framework:**
+- Issue: No Spring Validation or Bean Validation (JSR-380) dependencies present
+- Files: `pom.xml`
+- Impact: When endpoints are added, data validation must be implemented manually or omitted
+- Fix approach: Add spring-boot-starter-validation dependency
 
-**No Input Validation:**
-- Risk: When REST controllers are added, no framework established for request validation
-- Files: Not yet applicable, but will affect future `src/main/kotlin/kz/innlab/template/controller/` files
-- Current mitigation: None
-- Recommendations: Use `@Valid` with Jakarta Bean Validation; create centralized exception handler for validation errors
+**Missing CORS configuration:**
+- Issue: No CORS policy configuration or security headers configured
+- Files: Application configuration
+- Impact: If frontend application needs to consume APIs, cross-origin requests will be blocked or unrestricted
+- Fix approach: Configure spring.web.cors properties or implement WebMvcConfigurer
 
-## Performance Bottlenecks
+## Observability Gaps
 
-**No Caching Layer Configured:**
-- Problem: No caching mechanism established (Redis, Caffeine, or Spring Cache)
-- Files: `pom.xml` - no caching dependency; `application.yaml` - no cache configuration
-- Cause: Template intentionally minimal, but N+1 query problems will emerge when data layer is added
-- Improvement path: Add Spring Cache starter and configure appropriate caching strategy before deploying with data access
+**No structured logging:**
+- Issue: No SLF4J configuration or structured logging framework configured
+- Files: Application
+- Impact: Log parsing and analysis difficult; no JSON structured logs for centralized logging systems
+- Fix approach: Add logback-spring.xml with JSON layout or configure Logstash encoder
 
-**No Database Connection Pooling Configuration:**
-- Problem: PostgreSQL driver present but HikariCP (or other pooling) not explicitly configured
-- Files: `pom.xml` (lines 52-55), `application.yaml` - missing `spring.datasource.*` properties
-- Cause: Spring Boot defaults work but not optimized for production loads
-- Improvement path: Configure `spring.datasource.hikari.*` properties (maxPoolSize, minimumIdle, idleTimeout) in `application.yaml` once database integration is complete
+**No metrics collection:**
+- Issue: No Micrometer or Prometheus metrics configured
+- Files: Application
+- Impact: Cannot monitor application performance, request rates, or system health
+- Fix approach: Add spring-boot-starter-actuator and configure appropriate meters
 
-## Fragile Areas
+**No distributed tracing:**
+- Issue: No Spring Cloud Sleuth or distributed tracing framework configured
+- Files: Application
+- Impact: Cannot trace requests across microservices or log correlation IDs
+- Fix approach: Consider adding Spring Cloud Sleuth if microservices architecture is planned
 
-**Empty POM Metadata Blocks:**
-- Files: `pom.xml` (lines 16-28)
-- Why fragile: Build tools, documentation generators, and package repositories may fail or behave unexpectedly with empty license/developer/scm elements
-- Safe modification: Fill in `<license>`, `<developer>` (at minimum with empty sub-elements or valid values), and `<scm>` sections; never leave empty tags
-- Test coverage: Automated: run `mvn project-help:describe` to validate POM structure
+## Build and Deployment Concerns
 
-**Missing Spring Profiles Configuration:**
-- Files: `application.yaml` - no profile-specific files exist
-- Why fragile: Same configuration will be applied to dev, test, and production; port hardcoded to 7070; no environment-specific overrides
-- Safe modification: Create `application-dev.yaml`, `application-test.yaml`, `application-prod.yaml` with environment-specific settings; use `spring.profiles.active` environment variable
-- Test coverage: Manual: verify application starts correctly with each profile: `./mvnw spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=dev"`
+**No build profiles:**
+- Issue: Maven pom.xml has no profiles for dev, test, prod environments
+- Files: `pom.xml`
+- Impact: Same build artifact used everywhere; no environment-specific configuration possible at build time
+- Fix approach: Add Maven profiles for different deployment environments
 
-**No Graceful Shutdown Configuration:**
-- Files: `application.yaml` - missing shutdown configuration
-- Why fragile: Abrupt termination during deployment can leave requests in-flight or database connections hanging
-- Safe modification: Add to `application.yaml`:
-  ```yaml
-  server:
-    shutdown: graceful
-  spring:
-    lifecycle:
-      timeout-per-shutdown-phase: 30s
-  ```
-- Test coverage: Manual: send SIGTERM during active request and verify proper cleanup
+**No Docker support:**
+- Issue: No Dockerfile or container configuration present
+- Files: Project root
+- Impact: Application cannot be containerized without manual Dockerfile creation; Spring Boot's OCI image build support unused
+- Fix approach: Create Dockerfile or use Maven spring-boot:build-image plugin configuration
 
-**Kotlin Compiler Arguments Hard to Discover:**
-- Files: `pom.xml` (lines 80-82) - kotlin-maven-plugin args are non-standard
-- Why fragile: `-Xjsr305=strict` enables strict null checks; if removed accidentally, null-safety assumptions break
-- Safe modification: Document in README why these compiler args exist; add to comments in pom.xml; communicate to team that removing these requires thorough testing
-- Test coverage: Manual: run compilation with `./mvnw clean compile` and verify no warnings about null-safety
+**No runtime dependencies documentation:**
+- Issue: PostgreSQL dependency exists but no documentation on required database version, initialization scripts, or connection pooling
+- Files: `pom.xml`
+- Impact: Deployment process unclear; database setup prerequisites unknown
+- Fix approach: Add DEPLOYMENT.md or README with infrastructure requirements
 
-## Scaling Limits
+## Kotlin-Specific Issues
 
-**Single Module Architecture:**
-- Current capacity: Suitable for teams of 1-2 developers, simple single-bounded-context applications
-- Limit: Once business logic exceeds ~1000 lines of code or team exceeds 3 developers, monolith becomes difficult to modify safely
-- Scaling path: Break into modules (e.g., `app-api`, `app-domain`, `app-infrastructure`) using Maven multi-module structure; or extract to separate services if domain complexity warrants it
+**Minimal use of Kotlin features:**
+- Issue: TemplateApplication.kt uses only basic Kotlin syntax; no idiomatic patterns
+- Files: `src/main/kotlin/kz/innlab/template/TemplateApplication.kt`
+- Impact: Limited as a teaching example for Kotlin best practices
+- Fix approach: Add comments explaining Kotlin-specific idioms once application logic is implemented
 
-**Embedded Tomcat Server:**
-- Current capacity: ~100-200 concurrent requests with default configuration
-- Limit: Single application instance has no horizontal scaling; default thread pool (200 threads) reached before load balancer can help
-- Scaling path: Configure `server.tomcat.threads.max` based on load testing; add load balancer and deploy multiple instances; consider async/reactive stack (Spring WebFlux) if I/O bound
-
-## Dependencies at Risk
-
-**Kotlin 2.2.21 Against Java 24:**
-- Risk: Beta/release cycle mismatch - Kotlin released 2.2.21 but full Java 24 support may be incomplete
-- Impact: Potential compiler issues, runtime edge cases, or deprecation warnings in future releases
-- Migration plan: Monitor Kotlin releases monthly; upgrade to next Kotlin 2.3.x when Java 25 is fully supported; test thoroughly in dev environment before rolling to production
-
-**Spring Boot 4.0.3:**
-- Risk: Not latest; future security patches will require active version bumps
-- Impact: Security vulnerabilities discovered after release date will not be backported
-- Migration plan: Establish quarterly dependency update cycle; test Spring Boot 4.1.x when released; keep Spring Security and other security libraries up-to-date independent of Boot version
-
-**Jackson Module for Kotlin (tools.jackson.module:jackson-module-kotlin):**
-- Risk: Third-party Maven group ID (`tools.jackson.module` instead of standard `com.fasterxml.jackson`); potential supply chain risk
-- Impact: If package is compromised or removed, build fails
-- Migration plan: Verify this is correct upstream; consider switching to standard `com.fasterxml.jackson.module:jackson-module-kotlin` if this is unintended; audit dependency origin quarterly
-
-## Missing Critical Features
-
-**No HTTP Error Handling Framework:**
-- Problem: No `@ControllerAdvice` or error handler configured; when controllers are added, errors will return raw exception stack traces
-- Blocks: Production-ready API error responses; standardized error format for client applications
-- Priority: High - implement before first controller is added
-
-**No Logging Configuration:**
-- Problem: No SLF4J or Logback configuration; Spring Boot defaults to INFO level with basic formatting
-- Blocks: Production debugging, audit trails, monitoring
-- Priority: High - create `src/main/resources/logback-spring.xml` with appropriate levels per package and structured logging format
-
-**No API Documentation:**
-- Problem: No SpringDoc OpenAPI (Swagger) integration
-- Blocks: Client developers cannot discover API contracts; no generated API documentation
-- Priority: Medium - add springdoc-openapi-starter-webmvc-ui dependency and configure before deploying with multiple endpoints
-
-**No Actuator/Health Checks:**
-- Problem: No Spring Boot Actuator; health endpoint unavailable; deployment orchestrators cannot determine application health
-- Blocks: Kubernetes readiness/liveness probes; monitoring dashboards
-- Priority: High - add `spring-boot-starter-actuator` before containerization
-
-## Test Coverage Gaps
-
-**No Unit Test Infrastructure:**
-- What's not tested: No test utilities, no test data builders, no assertions framework preference documented
-- Files: `src/test/kotlin/` - only has placeholder test
-- Risk: Future developers will create ad-hoc tests with inconsistent patterns; test maintenance becomes expensive
-- Priority: High - create test utilities in `src/test/kotlin/kz/innlab/template/util/` with builders and assertion helpers; document test patterns in TESTING.md
-
-**No Integration Test Configuration:**
-- What's not tested: Database interactions, REST endpoint behavior, Spring context integration
-- Files: No `@SpringBootTest` tests beyond context load check; no TestContainers setup
-- Risk: Business logic shipped without verifying Spring component wiring or database queries
-- Priority: High - establish TestContainers pattern for database tests; create integration test template
-
-**No Contract/API Tests:**
-- What's not tested: If this becomes a multi-service system, no consumer-driven contract tests exist
-- Files: Not applicable yet
-- Risk: Service integrations will break in production due to incompatible changes
-- Priority: Medium (initially) - establish pattern when first external integration is added
+**JSR-305 annotations enabled:**
+- Issue: kotlin-maven-plugin explicitly enables `-Xjsr305=strict` and `-Xannotation-default-target=param-property`
+- Files: `pom.xml` (lines 81-82)
+- Impact: Compiler treats JSR-305 null safety annotations as platform types; may cause unexpected nullable behavior
+- Fix approach: Document nullability assumptions or consider using Kotlin's native @Nullable/@NotNull
 
 ---
 

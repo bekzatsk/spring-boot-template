@@ -2,109 +2,140 @@
 
 **Analysis Date:** 2026-03-01
 
+## Language & Build
+
+**Primary Language:** Kotlin 2.2.21
+**Target JVM:** Java 24
+**Build Tool:** Maven 3.x (via mvnw)
+**Build Source Directories:**
+- Main: `src/main/kotlin`
+- Test: `src/test/kotlin`
+
 ## Naming Patterns
 
-**Files:**
-- Kotlin source files use PascalCase: `TemplateApplication.kt`
-- Main application class follows pattern: `[ProjectName]Application.kt`
-- Test files follow pattern: `[ClassName]Tests.kt`
-- Package naming uses reversed domain convention: `kz.innlab.template`
+**Package Names:**
+- Reverse domain convention: `kz.innlab.template`
+- All lowercase with no underscores
+- Example: `kz.innlab.template`
 
-**Functions:**
-- Top-level functions use camelCase: `main()`, `runApplication()`
-- Kotlin idiomatic style observed in function calls: `runApplication<TemplateApplication>(*args)`
+**Files:**
+- Match Kotlin class names (PascalCase)
+- One public class per file when possible
+- Application entry point: `TemplateApplication.kt`
+- Test files mirror source structure with `Tests` suffix: `TemplateApplicationTests.kt`
 
 **Classes:**
-- PascalCase naming: `TemplateApplication`
-- Spring Boot application classes use suffix `Application`: `TemplateApplication`
+- PascalCase (UpperCamelCase)
+- Example: `TemplateApplication`, `TemplateApplicationTests`
+
+**Functions:**
+- camelCase (lowerCamelCase) in Kotlin style
+- Main entry function: `main(args: Array<String>)`
 
 **Variables:**
-- Implicit from limited codebase; Spring convention observed in type inference with Kotlin
+- camelCase (lowerCamelCase)
+- Example: `args`
 
-**Types:**
-- Generic type parameters use PascalCase in angle brackets: `Array<String>`, `SpringBootTest`
-- Spring annotations follow standard convention: `@SpringBootApplication`, `@SpringBootTest`
+## Kotlin Conventions
 
-## Code Style
+**Spring Integration:**
+- Use Spring Boot starter conventions with Kotlin
+- Kotlin `all-open` compiler plugin enabled for Spring proxying (configured in `pom.xml`)
+- JSR-305 strict null-checking enabled via Kotlin compiler args: `-Xjsr305=strict`
+- Annotation default target set to param-property: `-Xannotation-default-target=param-property`
+
+**Class & Function Style:**
+- Use Kotlin's concise syntax where appropriate
+- Spring Boot Kotlin conventions: make Spring-annotated classes open (handled by all-open plugin)
+- Single-expression functions preferred when reasonable
+
+**null Safety:**
+- Strict JSR-305 enforcement applied
+- Use Kotlin's nullable types (`Type?`) explicitly
+- Non-null types are default
+
+## Code Organization
+
+**Imports:**
+1. Package declaration at top
+2. Spring Boot imports
+3. Kotlin standard library imports
+4. Other imports
+
+**Example from `TemplateApplication.kt`:**
+```kotlin
+package kz.innlab.template
+
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
+
+@SpringBootApplication
+class TemplateApplication
+
+fun main(args: Array<String>) {
+	runApplication<TemplateApplication>(*args)
+}
+```
+
+## Spring Boot Patterns
+
+**Application Class:**
+- Single `@SpringBootApplication` annotated class: `src/main/kotlin/kz/innlab/template/TemplateApplication.kt`
+- Standard `main()` function using `runApplication<T>()` DSL
+
+**Configuration Files:**
+- YAML format for application properties: `src/main/resources/application.yaml`
+- Server configuration: port specified (7070)
+- Application name specified in config
+
+**Resource Directories:**
+- Static files: `src/main/resources/static/`
+- Templates: `src/main/resources/templates/`
+- Properties/YAML: `src/main/resources/`
+
+## Code Style Practices
+
+**Indentation:**
+- Tab characters (configured in `.gitattributes`)
+- Maven wrapper scripts: LF line endings (`mvnw`)
+- Windows batch: CRLF line endings (`mvnw.cmd`)
 
 **Formatting:**
-- YAML indentation (2 spaces) observed in `application.yaml`
-- No explicit formatter configuration detected (likely using IntelliJ IDEA defaults)
+- No explicit code formatter configured (relies on IDE defaults or manual formatting)
+- IDE: IntelliJ IDEA configuration present (`.idea/` directory)
+- Kotlin Maven plugin handles compilation
 
-**Linting:**
-- No linting tool configuration detected
-- No `.editorconfig`, `ktlint`, or `detekt` configuration present
-- Code follows Kotlin idioms by convention
-
-## Import Organization
-
-**Order:**
-1. Package declaration
-2. Standard library and framework imports: `import org.springframework.boot...`
-3. Kotlin standard library: `import org.jetbrains.kotlin...`
-4. JUnit/Testing framework: `import org.junit.jupiter.api...`
-
-**Path Aliases:**
-- Not detected; using full qualified imports
+**Comments:**
+- Minimal comments observed in current code
+- Self-documenting code preferred
+- Consider KDoc for public APIs when expanded
 
 ## Error Handling
 
-**Patterns:**
-- Not extensively demonstrated in minimal codebase
-- Test context loads without explicit error handling: `contextLoads()` method is empty
-- Spring Boot auto-configuration handles initialization errors
+**Spring Boot Default:**
+- No explicit error handling visible in current minimal code
+- Spring Boot provides default exception handling
+- Consider adding custom `@ControllerAdvice` for consistent error responses as application grows
 
-## Logging
+**Null Safety:**
+- Leverage Kotlin's type system and JSR-305 strict checking
+- Avoid null in function signatures where possible
+- Use optional types explicitly
 
-**Framework:** Not detected in current codebase
+## Dependency Management
 
-**Patterns:**
-- No logging configuration observed
-- Relying on Spring Boot's default logging
+**Maven Configuration:**
+- Parent: `spring-boot-starter-parent:4.0.3`
+- Transitive dependency management handled by parent
+- Jackson Kotlin module configured for serialization
+- PostgreSQL driver included (runtime scope)
 
-## Comments
+## IDE Configuration
 
-**When to Comment:**
-- Minimal commenting observed in current codebase
-- Self-documenting code with clear naming preferred
-
-**JavaDoc/KDoc:**
-- No KDoc documentation detected
-- Not required for simple entry points and test classes
-
-## Function Design
-
-**Size:**
-- Functions kept minimal: `main()` is 2 lines, `contextLoads()` is empty
-- Top-level functions used when appropriate: `fun main(args: Array<String>)`
-
-**Parameters:**
-- Function parameters explicitly typed: `args: Array<String>`
-- Varargs unpacking used: `*args`
-
-**Return Values:**
-- Type inference leveraged where clear: `fun main()` returns Unit (implicit)
-- Explicit generic type parameters when calling generic functions: `runApplication<TemplateApplication>(*args)`
-
-## Module Design
-
-**Exports:**
-- Minimal public API; main entry point exposed
-- Class marked as open for Spring proxying via `all-open` compiler plugin
-
-**Barrel Files:**
-- Not applicable to current project structure
-
-## Configuration
-
-**Build Configuration:**
-- Maven used as build tool (`pom.xml`)
-- Kotlin Maven plugin configured with Spring compiler plugin
-- JAR-based source/test directories configured: `src/main/kotlin` and `src/test/kotlin`
-
-**Spring Configuration:**
-- Minimal `application.yaml` with server port (7070) and application name
-- Relying on Spring Boot auto-configuration for sensible defaults
+**IntelliJ IDEA:**
+- Project uses IntelliJ IDEA configuration (`.idea/` directory)
+- Kotlin compiler settings: `kotlinc.xml` configured for Maven
+- Compiler options: `-parameters` for Spring parameter introspection
 
 ---
 
