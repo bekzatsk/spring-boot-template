@@ -32,26 +32,26 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **SECU-03**: All /api/** endpoints require authentication except /api/v1/auth/**
 - [ ] **SECU-04**: CORS configured inside SecurityFilterChain so OPTIONS pre-flight requests pass correctly
 - [ ] **SECU-05**: CORS allowed origins are configurable (not hardcoded)
-- [ ] **SECU-06**: RSA keystore (.jks) for JWT signing with helper generation script + runtime fallback for dev
+- [x] **SECU-06**: RSA keystore (.jks) for JWT signing with helper generation script + runtime fallback for dev
 - [ ] **SECU-07**: Consistent JSON error responses: `{ error, message, status }` via @RestControllerAdvice
 - [ ] **SECU-08**: Input validation with Jakarta Validation on auth request DTOs
 - [x] **SECU-09**: No hardcoded secrets — all sensitive values via environment variables / ${ENV_VAR} in application.yml
 
 ### User
 
-- [ ] **USER-01**: User entity with UUID id, email, name, picture, provider (enum), providerId, roles, createdAt, updatedAt
-- [ ] **USER-02**: Users are identified by (provider, providerId) composite key — never by email
+- [x] **USER-01**: User entity with UUID id, email, name, picture, provider (enum), providerId, roles, createdAt, updatedAt
+- [x] **USER-02**: Users are identified by (provider, providerId) composite key — never by email
 - [ ] **USER-03**: GET /api/v1/users/me returns the current authenticated user's profile
 - [ ] **USER-04**: New users are created automatically on first successful authentication (find-or-create)
 
 ### Infrastructure
 
 - [x] **INFR-01**: Virtual Threads enabled via spring.threads.virtual.enabled=true
-- [ ] **INFR-02**: Spring Data JPA + Hibernate for User and RefreshToken persistence
+- [x] **INFR-02**: Spring Data JPA + Hibernate for User and RefreshToken persistence
 - [x] **INFR-03**: docker-compose.yml with PostgreSQL 18
 - [x] **INFR-04**: application.yml with dev and prod profiles
 - [x] **INFR-05**: .env.example documenting all required environment variables
-- [ ] **INFR-06**: Domain-based package layout: config/, user/, authentication/
+- [x] **INFR-06**: Domain-based package layout: config/, user/, authentication/
 - [ ] **INFR-07**: Rate limiting TODO markers at auth endpoints and filter entry points
 - [ ] **INFR-08**: Project compiles and runs with ./mvnw spring-boot:run after database setup
 
@@ -114,20 +114,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SECU-03 | Phase 2 | Pending |
 | SECU-04 | Phase 2 | Pending |
 | SECU-05 | Phase 2 | Pending |
-| SECU-06 | Phase 1 | Pending |
+| SECU-06 | Phase 1 | Complete |
 | SECU-07 | Phase 2 | Pending |
 | SECU-08 | Phase 2 | Pending |
 | SECU-09 | Phase 1 | Complete (01-01) |
-| USER-01 | Phase 1 | Pending |
-| USER-02 | Phase 1 | Pending |
+| USER-01 | Phase 1 | Complete |
+| USER-02 | Phase 1 | Complete |
 | USER-03 | Phase 3 | Pending |
 | USER-04 | Phase 3 | Pending |
 | INFR-01 | Phase 1 | Complete (01-01) |
-| INFR-02 | Phase 1 | Pending |
+| INFR-02 | Phase 1 | Complete |
 | INFR-03 | Phase 1 | Complete (01-01) |
 | INFR-04 | Phase 1 | Complete (01-01) |
 | INFR-05 | Phase 1 | Complete (01-01) |
-| INFR-06 | Phase 1 | Pending |
+| INFR-06 | Phase 1 | Complete |
 | INFR-07 | Phase 5 | Pending |
 | INFR-08 | Phase 5 | Pending |
 

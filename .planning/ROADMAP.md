@@ -12,7 +12,7 @@ Starting from a minimal Spring Boot 4 + Kotlin scaffold with no auth logic, this
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Project infrastructure, JPA entities, RSA keystore, Docker, profiles
+- [x] **Phase 1: Foundation** - Project infrastructure, JPA entities, RSA keystore, Docker, profiles
 - [ ] **Phase 2: Security Wiring** - Stateless Spring Security 7, JWT filter, CORS, error handling
 - [ ] **Phase 3: Google Auth and Token Management** - Google ID token verification, full token lifecycle, /users/me
 - [ ] **Phase 4: Apple Auth** - Apple ID token verification, first-login data, private relay emails
@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 2 plans
 Plans:
 - [x] 01-01-PLAN.md — Build infrastructure (pom.xml deps, Docker, profiles, env vars)
-- [ ] 01-02-PLAN.md — Domain entities and RSA key config (User, RefreshToken, JWKSource/JwtEncoder/JwtDecoder)
+- [x] 01-02-PLAN.md — Domain entities and RSA key config (User, RefreshToken, JWKSource/JwtEncoder/JwtDecoder)
 
 ### Phase 2: Security Wiring
 **Goal**: The Spring Security filter chain is configured stateless with CORS, JWT Bearer validation, and consistent JSON error responses — all endpoints return correct HTTP status codes before any provider auth exists
@@ -88,7 +88,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 1/2 | In Progress | - |
+| 1. Foundation | 2/2 | Complete | 2026-03-01 |
 | 2. Security Wiring | 0/TBD | Not started | - |
 | 3. Google Auth and Token Management | 0/TBD | Not started | - |
 | 4. Apple Auth | 0/TBD | Not started | - |

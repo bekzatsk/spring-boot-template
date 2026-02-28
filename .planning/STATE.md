@@ -5,33 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Mobile/web clients authenticate with Google or Apple ID tokens and receive JWT access/refresh tokens that secure all API endpoints — the entire auth flow works out of the box
-**Current focus:** Phase 1 — Foundation
+**Current focus:** Phase 1 — Foundation (complete)
 
 ## Current Position
 
 Phase: 1 of 5 (Foundation)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-03-01 — Completed plan 01-01 (build infrastructure)
+Plan: 2 of 2 in current phase (COMPLETE — ready for Phase 2)
+Status: Phase 1 complete
+Last activity: 2026-03-01 — Completed plan 01-02 (domain model and JWT infrastructure)
 
-Progress: [█░░░░░░░░░] 10%
+Progress: [██░░░░░░░░] 20%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 5 min
-- Total execution time: 0.1 hours
+- Total plans completed: 2
+- Average duration: 6 min
+- Total execution time: 0.2 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 1/2 | 5 min | 5 min |
+| 01-foundation | 2/2 | 12 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 5 min
-- Trend: -
+- Last 5 plans: 5 min, 7 min
+- Trend: stable
 
 *Updated after each plan completion*
 
@@ -49,6 +49,10 @@ Recent decisions affecting current work:
 - OAuth2AuthorizationServerAutoConfiguration excluded from TemplateApplication — prevents competing SecurityFilterChain; Spring Boot 4.0.3 package is org.springframework.boot.security.oauth2.server.authorization.autoconfigure.servlet
 - Dev profile uses :default values for DB credentials (convenience), prod uses bare ${ENV_VAR} (SECU-09)
 - Kotlin all-open plugin configured for jakarta.persistence annotations (Entity, MappedSuperclass, Embeddable)
+- User entity is a regular Kotlin class (not data class) — data class equals/hashCode breaks Hibernate proxy equality
+- Manual equals/hashCode on id field only for JPA entities — safe for transient (null id) and persistent entities
+- NimbusJwtDecoder.withJwkSource() used over OAuth2AuthorizationServerConfiguration.jwtDecoder() — avoids Authorization Server coupling
+- Dev profile auto-generates in-memory RSA keypair — tokens do not persist across restarts (acceptable for dev)
 
 ### Pending Todos
 
@@ -59,9 +63,10 @@ None.
 - Phase 3: GoogleIdTokenVerifier builder pattern and multi-audience config need verification during planning (MEDIUM confidence in research)
 - Phase 4: Apple JWKS caching strategy (Caffeine TTL) and first-login detection mechanics need validation during planning (MEDIUM confidence)
 - Phase 4: Resolve whether to store refresh tokens as SHA-256 hashes or plaintext (TOKN-02 references hashing — adopt it)
+- Developer note: If running Postgres.app locally on port 5432, create the `template` role or stop Postgres.app and use Docker only
 
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 01-01-PLAN.md — build infrastructure complete, ready for plan 01-02
+Stopped at: Completed 01-02-PLAN.md — domain model + JWT infrastructure complete; Phase 1 finished, ready for Phase 2
 Resume file: None
