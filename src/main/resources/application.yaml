@@ -1,3 +1,6 @@
 spring:
   application:
     name: template
+
+server:
+  port: 7070
