@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 
 Phase: 1 of 5 (Foundation)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-01 — Roadmap created, all 5 phases defined, 33 requirements mapped
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-03-01 — Completed plan 01-01 (build infrastructure)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 10%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 5 min
+- Total execution time: 0.1 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01-foundation | 1/2 | 5 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: -
+- Last 5 plans: 5 min
 - Trend: -
 
 *Updated after each plan completion*
@@ -46,10 +46,13 @@ Recent decisions affecting current work:
 - Spring Authorization Server used narrowly for JWKSource/NimbusJwtEncoder only — NOT full OAuth2 server
 - Refresh token rotation with 10-second grace window for mobile concurrent retry handling
 - Users keyed on (provider, providerId) composite — never by email
+- OAuth2AuthorizationServerAutoConfiguration excluded from TemplateApplication — prevents competing SecurityFilterChain; Spring Boot 4.0.3 package is org.springframework.boot.security.oauth2.server.authorization.autoconfigure.servlet
+- Dev profile uses :default values for DB credentials (convenience), prod uses bare ${ENV_VAR} (SECU-09)
+- Kotlin all-open plugin configured for jakarta.persistence annotations (Entity, MappedSuperclass, Embeddable)
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
@@ -60,5 +63,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Roadmap written — ready to plan Phase 1
+Stopped at: Completed 01-01-PLAN.md — build infrastructure complete, ready for plan 01-02
 Resume file: None

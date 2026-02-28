@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. `.env.example` documents every required environment variable with descriptions
 **Plans:** 2 plans
 Plans:
-- [ ] 01-01-PLAN.md — Build infrastructure (pom.xml deps, Docker, profiles, env vars)
+- [x] 01-01-PLAN.md — Build infrastructure (pom.xml deps, Docker, profiles, env vars)
 - [ ] 01-02-PLAN.md — Domain entities and RSA key config (User, RefreshToken, JWKSource/JwtEncoder/JwtDecoder)
 
 ### Phase 2: Security Wiring
@@ -88,7 +88,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/2 | Planned | - |
+| 1. Foundation | 1/2 | In Progress | - |
 | 2. Security Wiring | 0/TBD | Not started | - |
 | 3. Google Auth and Token Management | 0/TBD | Not started | - |
 | 4. Apple Auth | 0/TBD | Not started | - |

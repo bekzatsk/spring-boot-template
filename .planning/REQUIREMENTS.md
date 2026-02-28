@@ -35,7 +35,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **SECU-06**: RSA keystore (.jks) for JWT signing with helper generation script + runtime fallback for dev
 - [ ] **SECU-07**: Consistent JSON error responses: `{ error, message, status }` via @RestControllerAdvice
 - [ ] **SECU-08**: Input validation with Jakarta Validation on auth request DTOs
-- [ ] **SECU-09**: No hardcoded secrets — all sensitive values via environment variables / ${ENV_VAR} in application.yml
+- [x] **SECU-09**: No hardcoded secrets — all sensitive values via environment variables / ${ENV_VAR} in application.yml
 
 ### User
 
@@ -46,11 +46,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Infrastructure
 
-- [ ] **INFR-01**: Virtual Threads enabled via spring.threads.virtual.enabled=true
+- [x] **INFR-01**: Virtual Threads enabled via spring.threads.virtual.enabled=true
 - [ ] **INFR-02**: Spring Data JPA + Hibernate for User and RefreshToken persistence
-- [ ] **INFR-03**: docker-compose.yml with PostgreSQL 18
-- [ ] **INFR-04**: application.yml with dev and prod profiles
-- [ ] **INFR-05**: .env.example documenting all required environment variables
+- [x] **INFR-03**: docker-compose.yml with PostgreSQL 18
+- [x] **INFR-04**: application.yml with dev and prod profiles
+- [x] **INFR-05**: .env.example documenting all required environment variables
 - [ ] **INFR-06**: Domain-based package layout: config/, user/, authentication/
 - [ ] **INFR-07**: Rate limiting TODO markers at auth endpoints and filter entry points
 - [ ] **INFR-08**: Project compiles and runs with ./mvnw spring-boot:run after database setup
@@ -117,16 +117,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SECU-06 | Phase 1 | Pending |
 | SECU-07 | Phase 2 | Pending |
 | SECU-08 | Phase 2 | Pending |
-| SECU-09 | Phase 1 | Pending |
+| SECU-09 | Phase 1 | Complete (01-01) |
 | USER-01 | Phase 1 | Pending |
 | USER-02 | Phase 1 | Pending |
 | USER-03 | Phase 3 | Pending |
 | USER-04 | Phase 3 | Pending |
-| INFR-01 | Phase 1 | Pending |
+| INFR-01 | Phase 1 | Complete (01-01) |
 | INFR-02 | Phase 1 | Pending |
-| INFR-03 | Phase 1 | Pending |
-| INFR-04 | Phase 1 | Pending |
-| INFR-05 | Phase 1 | Pending |
+| INFR-03 | Phase 1 | Complete (01-01) |
+| INFR-04 | Phase 1 | Complete (01-01) |
+| INFR-05 | Phase 1 | Complete (01-01) |
 | INFR-06 | Phase 1 | Pending |
 | INFR-07 | Phase 5 | Pending |
 | INFR-08 | Phase 5 | Pending |
@@ -140,4 +140,4 @@ Note: The coverage counter previously read 32 — a recount of the requirement I
 
 ---
 *Requirements defined: 2026-03-01*
-*Last updated: 2026-03-01 after roadmap creation — traceability complete*
+*Last updated: 2026-03-01 after 01-01 execution — INFR-01, INFR-03, INFR-04, INFR-05, SECU-09 marked complete*
