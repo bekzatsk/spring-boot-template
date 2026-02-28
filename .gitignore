@@ -31,4 +31,12 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Keystore files (JWT signing keys)
+*.p12
+*.jks
+jwt-keystore.*
+
+# Environment files
 .env
+!.env.example

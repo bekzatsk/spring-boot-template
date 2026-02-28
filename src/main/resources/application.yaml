@@ -1,6 +1,52 @@
 spring:
   application:
     name: template
+  threads:
+    virtual:
+      enabled: true
+  jpa:
+    open-in-view: false
+  security:
+    user:
+      name: ${SPRING_SECURITY_USER:admin}
+      password: ${SPRING_SECURITY_PASSWORD:admin}
 
 server:
   port: 7070
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:postgresql://localhost:5432/${DB_NAME:template}
+    username: ${DB_USERNAME:template}
+    password: ${DB_PASSWORD:template}
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+app:
+  security:
+    jwt:
+      keystore-location: ${JWT_KEYSTORE_LOCATION}
+      keystore-password: ${JWT_KEYSTORE_PASSWORD}
+      key-alias: ${JWT_KEY_ALIAS:jwt}
