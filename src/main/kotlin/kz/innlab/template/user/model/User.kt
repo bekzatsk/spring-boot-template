@@ -42,6 +42,12 @@ class User(
 
     var picture: String? = null
 
+    @Column(name = "password_hash")
+    var passwordHash: String? = null  // Only set for LOCAL email provider
+
+    @Column(name = "phone", unique = true)
+    var phone: String? = null  // E.164 format; set for LOCAL phone users
+
     @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
     @CollectionTable(name = "user_roles", joinColumns = [JoinColumn(name = "user_id")])

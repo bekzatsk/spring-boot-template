@@ -64,6 +64,26 @@
 			<artifactId>jackson-module-kotlin</artifactId>
 		</dependency>
 
+		<!-- Flyway — required in Boot 4.0 (not bare flyway-core) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
+		</dependency>
+
+		<!-- Twilio SDK for SMS OTP via Verify API -->
+		<dependency>
+			<groupId>com.twilio.sdk</groupId>
+			<artifactId>twilio</artifactId>
+			<version>11.3.3</version>
+		</dependency>
+
+		<!-- Phone number parsing and E.164 normalization -->
+		<dependency>
+			<groupId>com.googlecode.libphonenumber</groupId>
+			<artifactId>libphonenumber</artifactId>
+			<version>8.13.52</version>
+		</dependency>
+
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
