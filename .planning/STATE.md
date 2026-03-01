@@ -5,14 +5,13 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Mobile/web clients authenticate with Google or Apple ID tokens and receive JWT access/refresh tokens that secure all API endpoints — the entire auth flow works out of the box
-**Current focus:** Phase 6 — Restructure (plan 06-02 complete, phase fully done)
+**Current focus:** v1.0 MVP shipped — planning next milestone
 
 ## Current Position
 
-Phase: 6 of 6 (Restructure)
-Plan: 2 of 2 complete in current phase (plan 06-02 complete)
-Status: Phase 6 complete — entire project restructured into layered sub-packages; all 9 tests pass
-Last activity: 2026-03-01 - Completed plan 06-02: authentication/service/TokenService, GoogleOAuth2Service, AppleOAuth2Service, RefreshTokenService; authentication/controller/AuthController; all old root-level auth files deleted; 9/9 tests pass
+Milestone: v1.0 MVP — SHIPPED 2026-03-01
+Status: All 6 phases, 10 plans, 33 requirements complete
+Last activity: 2026-03-01 - Milestone v1.0 MVP archived
 
 Progress: [██████████] 100%
 
