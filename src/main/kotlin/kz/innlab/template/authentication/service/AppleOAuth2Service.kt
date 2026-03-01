@@ -1,4 +1,4 @@
-package kz.innlab.template.authentication
+package kz.innlab.template.authentication.service
 
 import kz.innlab.template.authentication.dto.AppleAuthRequest
 import kz.innlab.template.authentication.dto.AuthResponse
@@ -10,17 +10,17 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-class AppleAuthService(
+class AppleOAuth2Service(
     @Qualifier("appleJwtDecoder")
     private val appleJwtDecoder: JwtDecoder,
     private val userService: UserService,
-    private val jwtTokenService: JwtTokenService,
+    private val tokenService: TokenService,
     private val refreshTokenService: RefreshTokenService
 ) {
 
     @Transactional
     fun authenticate(request: AppleAuthRequest): AuthResponse {
-        // Wrap JwtException (not a BadCredentialsException subtype) so GlobalExceptionHandler returns 401
+        // Wrap JwtException (not a BadCredentialsException subtype) so AuthExceptionHandler returns 401
         val jwt = try {
             appleJwtDecoder.decode(request.idToken)
         } catch (ex: Exception) {
@@ -47,7 +47,7 @@ class AppleAuthService(
             name = fullName
         )
 
-        val accessToken = jwtTokenService.generateAccessToken(user.id!!, user.roles)
+        val accessToken = tokenService.generateAccessToken(user.id!!, user.roles)
         val refreshToken = refreshTokenService.createToken(user)
 
         return AuthResponse(accessToken = accessToken, refreshToken = refreshToken)

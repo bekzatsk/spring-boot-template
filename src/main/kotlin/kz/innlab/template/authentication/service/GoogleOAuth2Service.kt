@@ -1,4 +1,4 @@
-package kz.innlab.template.authentication
+package kz.innlab.template.authentication.service
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier
 import kz.innlab.template.authentication.dto.AuthResponse
@@ -8,10 +8,10 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-class GoogleAuthService(
+class GoogleOAuth2Service(
     private val googleIdTokenVerifier: GoogleIdTokenVerifier,
     private val userService: UserService,
-    private val jwtTokenService: JwtTokenService,
+    private val tokenService: TokenService,
     private val refreshTokenService: RefreshTokenService
 ) {
 
@@ -30,7 +30,7 @@ class GoogleAuthService(
 
         val user = userService.findOrCreateGoogleUser(providerId, email, name, picture)
 
-        val accessToken = jwtTokenService.generateAccessToken(user.id!!, user.roles)
+        val accessToken = tokenService.generateAccessToken(user.id!!, user.roles)
         val refreshToken = refreshTokenService.createToken(user)
 
         return AuthResponse(accessToken = accessToken, refreshToken = refreshToken)

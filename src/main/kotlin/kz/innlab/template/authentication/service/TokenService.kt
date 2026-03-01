@@ -1,4 +1,4 @@
-package kz.innlab.template.authentication
+package kz.innlab.template.authentication.service
 
 import kz.innlab.template.user.model.Role
 import org.springframework.security.oauth2.jwt.JwtClaimsSet
@@ -10,7 +10,7 @@ import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 @Service
-class JwtTokenService(
+class TokenService(
     private val jwtEncoder: JwtEncoder
 ) {
 

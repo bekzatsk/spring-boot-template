@@ -1,4 +1,4 @@
-package kz.innlab.template.authentication
+package kz.innlab.template.authentication.service
 
 import kz.innlab.template.authentication.exception.TokenGracePeriodException
 import kz.innlab.template.authentication.model.RefreshToken
