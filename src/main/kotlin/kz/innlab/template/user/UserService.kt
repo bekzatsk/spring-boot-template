@@ -1,6 +1,7 @@
 package kz.innlab.template.user
 
 import org.springframework.security.access.AccessDeniedException
+import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -24,6 +25,37 @@ class UserService(
                     it.picture = picture
                 }
             )
+
+    @Transactional
+    fun findOrCreateAppleUser(
+        providerId: String,
+        email: String?,   // Nullable: absent on subsequent Apple logins — this is expected
+        name: String?
+    ): User {
+        // Always look up by (APPLE, sub) — sub is stable; email may be absent on subsequent logins
+        val existing = userRepository.findByProviderAndProviderId(AuthProvider.APPLE, providerId)
+        if (existing != null) {
+            return existing  // Returning user — email/name absent is expected; do NOT overwrite
+        }
+
+        // New user (first login) — email must be present; absent means iOS client scope misconfiguration
+        val resolvedEmail = email
+            ?: throw BadCredentialsException(
+                "Email not present in Apple identity token on first sign-in — check iOS email scope configuration"
+            )
+
+        // Name persisted atomically in same @Transactional call (AUTH-05)
+        // Apple does not provide profile pictures
+        return userRepository.save(
+            User(
+                email = resolvedEmail,
+                provider = AuthProvider.APPLE,
+                providerId = providerId
+            ).also { user ->
+                user.name = name  // Null if iOS client didn't send givenName/familyName
+            }
+        )
+    }
 
     @Transactional(readOnly = true)
     fun findById(id: UUID): User =
