@@ -1,5 +1,8 @@
-package kz.innlab.template.user
+package kz.innlab.template.user.service
 
+import kz.innlab.template.user.model.AuthProvider
+import kz.innlab.template.user.model.User
+import kz.innlab.template.user.repository.UserRepository
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.stereotype.Service

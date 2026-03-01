@@ -1,5 +1,6 @@
-package kz.innlab.template.user
+package kz.innlab.template.user.dto
 
+import kz.innlab.template.user.model.User
 import java.time.Instant
 
 data class UserProfileResponse(

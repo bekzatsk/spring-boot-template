@@ -1,5 +1,7 @@
-package kz.innlab.template.user
+package kz.innlab.template.user.controller
 
+import kz.innlab.template.user.dto.UserProfileResponse
+import kz.innlab.template.user.service.UserService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
