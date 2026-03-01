@@ -17,9 +17,10 @@ app:
     allowed-origins:
       - http://localhost:3000
       - http://localhost:5173
+      - http://localhost:8082
   auth:
     google:
-      client-id: ${GOOGLE_CLIENT_ID:test-client-id}
+      client-id: ${GOOGLE_CLIENT_ID:396697761661-kl4j8dr0ed48nqcauhdbrsub6e7k2mq2.apps.googleusercontent.com}
     apple:
       bundle-id: ${APPLE_BUNDLE_ID:com.example.app}
     refresh-token:
