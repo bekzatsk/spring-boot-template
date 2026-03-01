@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Mobile/web clients authenticate with Google or Apple ID tokens and receive JWT access/refresh tokens that secure all API endpoints — the entire auth flow works out of the box
-**Current focus:** Phase 3 — Google Auth and Token Management (in progress)
+**Current focus:** Phase 3 — Google Auth and Token Management (complete — advancing to Phase 4)
 
 ## Current Position
 
 Phase: 3 of 5 (Google Auth and Token Management)
-Plan: 1 of 2 complete in current phase (plan 03-01 complete)
-Status: Phase 3 in progress — RefreshTokenService done, Google auth endpoints next
-Last activity: 2026-03-01 - Completed 03-01-PLAN.md: RefreshTokenService with grace window and reuse detection
+Plan: 2 of 2 complete in current phase (plan 03-02 complete)
+Status: Phase 3 complete — all endpoints wired; Phase 4 (Apple Auth) is next
+Last activity: 2026-03-01 - Completed 03-02-PLAN.md: Google OAuth2 auth endpoints, AuthController, real UserController
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
@@ -34,7 +34,7 @@ Progress: [█████░░░░░] 50%
 - Last 5 plans: 5 min, 7 min, 8 min, 7 min
 - Trend: stable
 
-| 03-google-auth-and-token-management | 1/2 | 3 min | 3 min |
+| 03-google-auth-and-token-management | 2/2 | 8 min | 4 min |
 
 *Updated after each plan completion*
 
@@ -63,6 +63,9 @@ Recent decisions affecting current work:
 - JwtTokenService omits JwsHeader in JwtEncoderParameters — NimbusJwtEncoder infers RS256 from RSA JWKSource automatically
 - [Phase 03-01]: Grace window replay returns 409 Conflict (not replacement raw token) — raw tokens not stored per TOKN-02; mobile client retries with token received from first successful rotation
 - [Phase 03-01]: deleteAllByUser uses JPQL DELETE (not derived deleteBy) to avoid N+1 entity loading on family revocation
+- [Phase 03-02]: GoogleIdTokenVerifier.verify() returns null on invalid token — checked explicitly, throws BadCredentialsException caught by GlobalExceptionHandler
+- [Phase 03-02]: Test application.yaml must include app.auth config — test YAML overrides main YAML; auth section missing caused context init failure
+- [Phase 03-02]: SecurityIntegrationTest /users/me creates real User in H2 — required because UserController now does real DB lookup instead of returning JWT claims
 
 ### Pending Todos
 
@@ -82,5 +85,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 03-01-PLAN.md — RefreshTokenService with SHA-256 hash storage, grace window (409), reuse detection (deleteAllByUser), BadCredentialsException handler complete
+Stopped at: Completed 03-02-PLAN.md — Google OAuth2 login wired end-to-end: AuthController with /google, /refresh, /revoke; real UserController with UserService; 5 tests passing
 Resume file: None

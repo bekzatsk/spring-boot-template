@@ -9,9 +9,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Authentication
 
-- [ ] **AUTH-01**: Client can send Google ID token to POST /api/v1/auth/google and receive JWT access + refresh tokens
+- [x] **AUTH-01**: Client can send Google ID token to POST /api/v1/auth/google and receive JWT access + refresh tokens
 - [ ] **AUTH-02**: Client can send Apple ID token to POST /api/v1/auth/apple and receive JWT access + refresh tokens
-- [ ] **AUTH-03**: Backend verifies Google ID token directly with Google (via google-api-client) including `aud` claim validation
+- [x] **AUTH-03**: Backend verifies Google ID token directly with Google (via google-api-client) including `aud` claim validation
 - [ ] **AUTH-04**: Backend verifies Apple ID token via Apple's JWKS endpoint with `iss`, `aud`, `exp` claim validation
 - [ ] **AUTH-05**: Apple first-sign-in user data (name, email) is persisted atomically — never lost
 - [ ] **AUTH-06**: Apple private relay emails (`*@privaterelay.appleid.com`) are accepted without failure
@@ -22,8 +22,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TOKN-02**: Refresh tokens are opaque, stored in DB as SHA-256 hashes, with single-use rotation
 - [x] **TOKN-03**: Reuse detection revokes all refresh tokens for the user when a used token is replayed
 - [x] **TOKN-04**: 10-second grace window on refresh token rotation to handle concurrent mobile retries
-- [ ] **TOKN-05**: POST /api/v1/auth/refresh rotates refresh token and returns new access + refresh tokens
-- [ ] **TOKN-06**: POST /api/v1/auth/revoke invalidates the refresh token (logout)
+- [x] **TOKN-05**: POST /api/v1/auth/refresh rotates refresh token and returns new access + refresh tokens
+- [x] **TOKN-06**: POST /api/v1/auth/revoke invalidates the refresh token (logout)
 
 ### Security
 
@@ -41,8 +41,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **USER-01**: User entity with UUID id, email, name, picture, provider (enum), providerId, roles, createdAt, updatedAt
 - [x] **USER-02**: Users are identified by (provider, providerId) composite key — never by email
-- [ ] **USER-03**: GET /api/v1/users/me returns the current authenticated user's profile
-- [ ] **USER-04**: New users are created automatically on first successful authentication (find-or-create)
+- [x] **USER-03**: GET /api/v1/users/me returns the current authenticated user's profile
+- [x] **USER-04**: New users are created automatically on first successful authentication (find-or-create)
 
 ### Infrastructure
 
@@ -97,9 +97,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 3 | Pending |
+| AUTH-01 | Phase 3 | Complete |
 | AUTH-02 | Phase 4 | Pending |
-| AUTH-03 | Phase 3 | Pending |
+| AUTH-03 | Phase 3 | Complete |
 | AUTH-04 | Phase 4 | Pending |
 | AUTH-05 | Phase 4 | Pending |
 | AUTH-06 | Phase 4 | Pending |
@@ -107,8 +107,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOKN-02 | Phase 3 | Complete |
 | TOKN-03 | Phase 3 | Complete |
 | TOKN-04 | Phase 3 | Complete |
-| TOKN-05 | Phase 3 | Pending |
-| TOKN-06 | Phase 3 | Pending |
+| TOKN-05 | Phase 3 | Complete |
+| TOKN-06 | Phase 3 | Complete |
 | SECU-01 | Phase 2 | Complete |
 | SECU-02 | Phase 2 | Complete |
 | SECU-03 | Phase 2 | Complete |
@@ -120,8 +120,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SECU-09 | Phase 1 | Complete (01-01) |
 | USER-01 | Phase 1 | Complete |
 | USER-02 | Phase 1 | Complete |
-| USER-03 | Phase 3 | Pending |
-| USER-04 | Phase 3 | Pending |
+| USER-03 | Phase 3 | Complete |
+| USER-04 | Phase 3 | Complete |
 | INFR-01 | Phase 1 | Complete (01-01) |
 | INFR-02 | Phase 1 | Complete |
 | INFR-03 | Phase 1 | Complete (01-01) |

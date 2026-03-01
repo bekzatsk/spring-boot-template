@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Project infrastructure, JPA entities, RSA keystore, Docker, profiles
 - [x] **Phase 2: Security Wiring** - Stateless Spring Security 7, JWT filter, CORS, error handling
-- [ ] **Phase 3: Google Auth and Token Management** - Google ID token verification, full token lifecycle, /users/me
+- [x] **Phase 3: Google Auth and Token Management** - Google ID token verification, full token lifecycle, /users/me (completed 2026-03-01)
 - [ ] **Phase 4: Apple Auth** - Apple ID token verification, first-login data, private relay emails
 - [ ] **Phase 5: Hardening** - Integration tests, rate limit markers, compile verification, template polish
 
@@ -61,7 +61,7 @@ Plans:
   4. Replaying a used refresh token revokes all refresh tokens for that user (reuse detection), and subsequent `/refresh` calls return `401`
   5. `POST /api/v1/auth/revoke` invalidates the refresh token, and `GET /api/v1/users/me` with the previous access token still works until expiry while no new tokens can be issued
   6. `GET /api/v1/users/me` with a valid Bearer token returns the authenticated user's profile JSON
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 03-01-PLAN.md — Refresh token lifecycle: entity updates, RefreshTokenService (create/rotate/revoke), grace window, reuse detection
 - [ ] 03-02-PLAN.md — Google auth flow: GoogleIdTokenVerifier, GoogleAuthService, AuthController, UserService, real /users/me
@@ -96,6 +96,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete | 2026-03-01 |
 | 2. Security Wiring | 2/2 | Complete | 2026-03-01 |
-| 3. Google Auth and Token Management | 1/2 | In Progress|  |
+| 3. Google Auth and Token Management | 2/2 | Complete   | 2026-03-01 |
 | 4. Apple Auth | 0/TBD | Not started | - |
 | 5. Hardening | 0/TBD | Not started | - |
