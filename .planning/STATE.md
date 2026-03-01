@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Mobile/web clients authenticate with Google or Apple ID tokens and receive JWT access/refresh tokens that secure all API endpoints — the entire auth flow works out of the box
-**Current focus:** Phase 4 — Apple Auth (plan 04-01 complete — advancing to next phase)
+**Current focus:** Phase 5 — Hardening (plan 05-01 complete — all phases complete)
 
 ## Current Position
 
-Phase: 4 of 5 (Apple Auth)
-Plan: 1 of 1 complete in current phase (plan 04-01 complete)
-Status: Phase 4 complete — Apple Sign In end-to-end wired and tested; Phase 5 (Final Polish) is next
-Last activity: 2026-03-01 - Completed 04-01-PLAN.md: AppleAuthConfig, AppleAuthService, /auth/apple endpoint, 4 integration tests passing
+Phase: 5 of 5 (Hardening)
+Plan: 1 of 1 complete in current phase (plan 05-01 complete)
+Status: ALL PHASES COMPLETE — Template fully hardened with Maven Wrapper, rate limiting markers, and clean test output
+Last activity: 2026-03-01 - Completed 05-01-PLAN.md: Maven Wrapper 3.9.9, rate limiting TODO markers at all 5 auth entry points, H2Dialect deprecation warning eliminated
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 7 min
-- Total execution time: 0.6 hours
+- Total plans completed: 7
+- Average duration: 6 min
+- Total execution time: 0.7 hours
 
 **By Phase:**
 
@@ -31,9 +31,10 @@ Progress: [████████░░] 80%
 | 02-security-wiring | 2/3 | 15 min | 7.5 min |
 | 03-google-auth-and-token-management | 2/2 | 8 min | 4 min |
 | 04-apple-auth | 1/1 | 13 min | 13 min |
+| 05-hardening | 1/1 | 2 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 5 min, 7 min, 8 min, 7 min, 13 min
+- Last 5 plans: 7 min, 8 min, 7 min, 13 min, 2 min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -70,6 +71,9 @@ Recent decisions affecting current work:
 - [Phase 04-01]: refreshTokenRepository.deleteAll() must precede userRepository.deleteAll() in test @BeforeEach — FK constraint from refresh_tokens.user_id prevents deleting users with active tokens
 - [Phase 04-01]: appleJwtDecoder bean named explicitly and injected with @Qualifier("appleJwtDecoder") — prevents NoUniqueBeanDefinitionException with resource server JwtDecoder from RsaKeyConfig
 - [Phase 04-01]: JwtException from NimbusJwtDecoder.decode() wrapped as BadCredentialsException — JwtException not handled by GlobalExceptionHandler (would produce 500 without wrap)
+- [Phase 05-01]: Maven Wrapper 3.3+ does not require maven-wrapper.jar — only maven-wrapper.properties needed; wrapperVersion=3.3.4
+- [Phase 05-01]: H2Dialect auto-detection preferred — removing explicit database-platform eliminates HHH90000025 deprecation warning in Hibernate 7.x
+- [Phase 05-01]: Rate limiting markers as // TODO comments (not stubs) — zero runtime behavior change, found via grep "TODO: rate limiting"
 
 ### Pending Todos
 
@@ -88,5 +92,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 04-01-PLAN.md — Apple Sign In wired end-to-end: AppleAuthConfig (NimbusJwtDecoder JWKS), AppleAuthService, POST /auth/apple, UserService.findOrCreateAppleUser with nullable email, 4 integration tests all passing (9 total)
+Stopped at: Completed 05-01-PLAN.md — All phases complete: Maven Wrapper 3.9.9, rate limiting TODO markers at 5 entry points (4 AuthController + 1 SecurityConfig), H2Dialect deprecation eliminated, all 9 tests pass
 Resume file: None

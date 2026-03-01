@@ -52,8 +52,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **INFR-04**: application.yml with dev and prod profiles
 - [x] **INFR-05**: .env.example documenting all required environment variables
 - [x] **INFR-06**: Domain-based package layout: config/, user/, authentication/
-- [ ] **INFR-07**: Rate limiting TODO markers at auth endpoints and filter entry points
-- [ ] **INFR-08**: Project compiles and runs with ./mvnw spring-boot:run after database setup
+- [x] **INFR-07**: Rate limiting TODO markers at auth endpoints and filter entry points
+- [x] **INFR-08**: Project compiles and runs with ./mvnw spring-boot:run after database setup
 
 ## v2 Requirements
 
@@ -128,8 +128,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFR-04 | Phase 1 | Complete (01-01) |
 | INFR-05 | Phase 1 | Complete (01-01) |
 | INFR-06 | Phase 1 | Complete |
-| INFR-07 | Phase 5 | Pending |
-| INFR-08 | Phase 5 | Pending |
+| INFR-07 | Phase 5 | Complete |
+| INFR-08 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 33 total

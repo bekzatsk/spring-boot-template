@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Security Wiring** - Stateless Spring Security 7, JWT filter, CORS, error handling
 - [x] **Phase 3: Google Auth and Token Management** - Google ID token verification, full token lifecycle, /users/me (completed 2026-03-01)
 - [ ] **Phase 4: Apple Auth** - Apple ID token verification, first-login data, private relay emails
-- [ ] **Phase 5: Hardening** - Integration tests, rate limit markers, compile verification, template polish
+- [x] **Phase 5: Hardening** - Integration tests, rate limit markers, compile verification, template polish (completed 2026-03-01)
 
 ## Phase Details
 
@@ -87,7 +87,7 @@ Plans:
   1. `./mvnw spring-boot:run` succeeds from a clean checkout after `docker-compose up -d` with only `.env` populated from `.env.example`
   2. `// TODO: rate limiting` markers exist at auth endpoint entry points and in `JwtAuthenticationFilter`
   3. The project compiles with `./mvnw clean package` with zero errors and zero warnings about deprecated APIs
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
 - [ ] 05-01-PLAN.md — Rate limiting TODO markers, Maven Wrapper config, test YAML cleanup, and full build verification
 
@@ -102,4 +102,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Security Wiring | 2/2 | Complete | 2026-03-01 |
 | 3. Google Auth and Token Management | 2/2 | Complete   | 2026-03-01 |
 | 4. Apple Auth | 1/1 | Complete | 2026-03-01 |
-| 5. Hardening | 0/1 | Not started | - |
+| 5. Hardening | 1/1 | Complete   | 2026-03-01 |
