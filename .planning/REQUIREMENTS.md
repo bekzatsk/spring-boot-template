@@ -19,9 +19,9 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Token Management
 
 - [x] **TOKN-01**: JWT access tokens are RS256-signed with 15-minute expiry via NimbusJwtEncoder + JWKSource
-- [ ] **TOKN-02**: Refresh tokens are opaque, stored in DB as SHA-256 hashes, with single-use rotation
-- [ ] **TOKN-03**: Reuse detection revokes all refresh tokens for the user when a used token is replayed
-- [ ] **TOKN-04**: 10-second grace window on refresh token rotation to handle concurrent mobile retries
+- [x] **TOKN-02**: Refresh tokens are opaque, stored in DB as SHA-256 hashes, with single-use rotation
+- [x] **TOKN-03**: Reuse detection revokes all refresh tokens for the user when a used token is replayed
+- [x] **TOKN-04**: 10-second grace window on refresh token rotation to handle concurrent mobile retries
 - [ ] **TOKN-05**: POST /api/v1/auth/refresh rotates refresh token and returns new access + refresh tokens
 - [ ] **TOKN-06**: POST /api/v1/auth/revoke invalidates the refresh token (logout)
 
@@ -104,9 +104,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-05 | Phase 4 | Pending |
 | AUTH-06 | Phase 4 | Pending |
 | TOKN-01 | Phase 2 | Complete |
-| TOKN-02 | Phase 3 | Pending |
-| TOKN-03 | Phase 3 | Pending |
-| TOKN-04 | Phase 3 | Pending |
+| TOKN-02 | Phase 3 | Complete |
+| TOKN-03 | Phase 3 | Complete |
+| TOKN-04 | Phase 3 | Complete |
 | TOKN-05 | Phase 3 | Pending |
 | TOKN-06 | Phase 3 | Pending |
 | SECU-01 | Phase 2 | Complete |

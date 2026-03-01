@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Mobile/web clients authenticate with Google or Apple ID tokens and receive JWT access/refresh tokens that secure all API endpoints — the entire auth flow works out of the box
-**Current focus:** Phase 2 — Security Wiring (complete — ready for Phase 3)
+**Current focus:** Phase 3 — Google Auth and Token Management (in progress)
 
 ## Current Position
 
-Phase: 2 of 5 (Security Wiring)
-Plan: 3 of 3 in current phase (plan 02-02 complete — Phase 2 complete)
-Status: Phase 2 complete — ready for Phase 3 (Google Auth)
-Last activity: 2026-03-01 - Completed quick task 1: Fix DataSource 'url' not specified error
+Phase: 3 of 5 (Google Auth and Token Management)
+Plan: 1 of 2 complete in current phase (plan 03-01 complete)
+Status: Phase 3 in progress — RefreshTokenService done, Google auth endpoints next
+Last activity: 2026-03-01 - Completed 03-01-PLAN.md: RefreshTokenService with grace window and reuse detection
 
-Progress: [████░░░░░░] 40%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 7 min
-- Total execution time: 0.4 hours
+- Total plans completed: 5
+- Average duration: 6 min
+- Total execution time: 0.5 hours
 
 **By Phase:**
 
@@ -33,6 +33,8 @@ Progress: [████░░░░░░] 40%
 **Recent Trend:**
 - Last 5 plans: 5 min, 7 min, 8 min, 7 min
 - Trend: stable
+
+| 03-google-auth-and-token-management | 1/2 | 3 min | 3 min |
 
 *Updated after each plan completion*
 
@@ -59,6 +61,8 @@ Recent decisions affecting current work:
 - Spring Boot 4.x @AutoConfigureMockMvc is in org.springframework.boot.webmvc.test.autoconfigure — not boot.test.autoconfigure.web.servlet
 - H2 test-scoped dependency added — enables full @SpringBootTest with JPA without a running PostgreSQL instance
 - JwtTokenService omits JwsHeader in JwtEncoderParameters — NimbusJwtEncoder infers RS256 from RSA JWKSource automatically
+- [Phase 03-01]: Grace window replay returns 409 Conflict (not replacement raw token) — raw tokens not stored per TOKN-02; mobile client retries with token received from first successful rotation
+- [Phase 03-01]: deleteAllByUser uses JPQL DELETE (not derived deleteBy) to avoid N+1 entity loading on family revocation
 
 ### Pending Todos
 
@@ -72,13 +76,11 @@ None.
 
 ### Blockers/Concerns
 
-- Phase 3: GoogleIdTokenVerifier builder pattern and multi-audience config need verification during planning (MEDIUM confidence in research)
 - Phase 4: Apple JWKS caching strategy (Caffeine TTL) and first-login detection mechanics need validation during planning (MEDIUM confidence)
-- Phase 4: Resolve whether to store refresh tokens as SHA-256 hashes or plaintext (TOKN-02 references hashing — adopt it)
 - Developer note: If running Postgres.app locally on port 5432, create the `template` role or stop Postgres.app and use Docker only
 
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 02-02-PLAN.md — JwtTokenService, AuthRequest DTO, stub UserController, and 4 security integration tests complete; Phase 2 fully done
+Stopped at: Completed 03-01-PLAN.md — RefreshTokenService with SHA-256 hash storage, grace window (409), reuse detection (deleteAllByUser), BadCredentialsException handler complete
 Resume file: None
