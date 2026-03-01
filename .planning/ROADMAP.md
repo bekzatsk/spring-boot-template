@@ -75,7 +75,9 @@ Plans:
   2. `POST /api/v1/auth/apple` on a subsequent sign-in (no name/email in token) finds and authenticates the existing user without error
   3. `POST /api/v1/auth/apple` with a `*@privaterelay.appleid.com` email returns a successful auth response — not a validation error
   4. Apple ID token `iss`, `aud`, and `exp` claims are validated — an expired or wrong-audience token returns `401`
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 04-01-PLAN.md — Apple Sign In: AppleAuthConfig (NimbusJwtDecoder + JWKS), AppleAuthService, AuthController /apple endpoint, integration tests
 
 ### Phase 5: Hardening
 **Goal**: The template is verified end-to-end, rate limiting extension points are marked, and a developer can clone and run it with confidence
