@@ -68,6 +68,28 @@ class UserService(
         )
     }
 
+    /**
+     * Find an existing phone user or create a new one (find-or-create pattern).
+     * Phone users are keyed on (LOCAL, phoneE164) — consistent with email users keyed on (LOCAL, email).
+     * Email is set to empty string since the column is NOT NULL.
+     * TODO: consider making email nullable for phone-only users
+     */
+    @Transactional
+    fun findOrCreatePhoneUser(phoneE164: String): User {
+        val existing = userRepository.findByProviderAndProviderId(AuthProvider.LOCAL, phoneE164)
+        if (existing != null) return existing
+
+        return userRepository.save(
+            User(
+                email = "",  // Phone users have no email; set empty string (column is NOT NULL)
+                provider = AuthProvider.LOCAL,
+                providerId = phoneE164
+            ).also {
+                it.phone = phoneE164
+            }
+        )
+    }
+
     @Transactional(readOnly = true)
     fun findById(id: UUID): User =
         userRepository.findById(id).orElseThrow { AccessDeniedException("User not found") }
