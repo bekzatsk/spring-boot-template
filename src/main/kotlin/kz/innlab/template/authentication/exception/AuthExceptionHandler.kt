@@ -45,6 +45,12 @@ class AuthExceptionHandler {
             ErrorResponse(error = "Conflict", message = ex.message ?: "Token already rotated", status = 409)
         )
 
+    @ExceptionHandler(IllegalStateException::class)
+    fun handleConflict(ex: IllegalStateException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.CONFLICT).body(
+            ErrorResponse(error = "Conflict", message = ex.message ?: "Resource conflict", status = 409)
+        )
+
     @ExceptionHandler(Exception::class)
     fun handleGeneral(ex: Exception): ResponseEntity<ErrorResponse> {
         logger.error("Unhandled exception: {}", ex.message, ex)
