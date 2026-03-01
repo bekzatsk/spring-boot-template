@@ -3,7 +3,10 @@ package kz.innlab.template
 import jakarta.validation.Valid
 import kz.innlab.template.authentication.JwtTokenService
 import kz.innlab.template.authentication.dto.AuthRequest
+import kz.innlab.template.user.AuthProvider
 import kz.innlab.template.user.Role
+import kz.innlab.template.user.User
+import kz.innlab.template.user.UserRepository
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -36,6 +39,9 @@ class SecurityIntegrationTest {
     @Autowired
     private lateinit var jwtTokenService: JwtTokenService
 
+    @Autowired
+    private lateinit var userRepository: UserRepository
+
     @TestConfiguration
     @RestController
     @RequestMapping("/api/v1/test-validation")
@@ -54,14 +60,21 @@ class SecurityIntegrationTest {
     }
 
     @Test
-    fun `validToken returns 200 with JWT claims`() {
-        val token = jwtTokenService.generateAccessToken(UUID.randomUUID(), setOf(Role.USER))
+    fun `validToken returns 200 with user profile`() {
+        val user = userRepository.save(
+            User(
+                email = "test@example.com",
+                provider = AuthProvider.GOOGLE,
+                providerId = "google-sub-${UUID.randomUUID()}"
+            )
+        )
+        val token = jwtTokenService.generateAccessToken(user.id!!, setOf(Role.USER))
         mockMvc.perform(
             get("/api/v1/users/me")
                 .header("Authorization", "Bearer $token")
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.sub").exists())
+            .andExpect(jsonPath("$.id").exists())
             .andExpect(jsonPath("$.roles[0]").value("USER"))
     }
 
@@ -79,7 +92,14 @@ class SecurityIntegrationTest {
 
     @Test
     fun `blankIdToken returns 400 with validation error`() {
-        val token = jwtTokenService.generateAccessToken(UUID.randomUUID(), setOf(Role.USER))
+        val user = userRepository.save(
+            User(
+                email = "test2@example.com",
+                provider = AuthProvider.GOOGLE,
+                providerId = "google-sub-${UUID.randomUUID()}"
+            )
+        )
+        val token = jwtTokenService.generateAccessToken(user.id!!, setOf(Role.USER))
 
         // Test with blank idToken
         mockMvc.perform(
