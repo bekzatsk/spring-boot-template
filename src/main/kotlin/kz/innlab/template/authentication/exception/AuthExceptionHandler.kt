@@ -1,6 +1,6 @@
-package kz.innlab.template.shared.error
+package kz.innlab.template.authentication.exception
 
-import kz.innlab.template.authentication.TokenGracePeriodException
+import kz.innlab.template.shared.error.ErrorResponse
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -11,10 +11,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.HandlerMethodValidationException
 
 @RestControllerAdvice
-class GlobalExceptionHandler {
+class AuthExceptionHandler {
 
     companion object {
-        private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
+        private val logger = LoggerFactory.getLogger(AuthExceptionHandler::class.java)
     }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)

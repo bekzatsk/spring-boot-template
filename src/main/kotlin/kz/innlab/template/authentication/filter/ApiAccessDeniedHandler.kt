@@ -1,29 +1,29 @@
-package kz.innlab.template.authentication.error
+package kz.innlab.template.authentication.filter
 
 import tools.jackson.databind.ObjectMapper
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import kz.innlab.template.shared.error.ErrorResponse
-import org.springframework.security.core.AuthenticationException
-import org.springframework.security.web.AuthenticationEntryPoint
+import org.springframework.security.access.AccessDeniedException
+import org.springframework.security.web.access.AccessDeniedHandler
 import org.springframework.stereotype.Component
 
 @Component
-class ApiAuthenticationEntryPoint(
+class ApiAccessDeniedHandler(
     private val objectMapper: ObjectMapper
-) : AuthenticationEntryPoint {
+) : AccessDeniedHandler {
 
-    override fun commence(
+    override fun handle(
         request: HttpServletRequest,
         response: HttpServletResponse,
-        authException: AuthenticationException
+        accessDeniedException: AccessDeniedException
     ) {
-        response.status = HttpServletResponse.SC_UNAUTHORIZED
+        response.status = HttpServletResponse.SC_FORBIDDEN
         response.contentType = "application/json"
         val errorResponse = ErrorResponse(
-            error = "Unauthorized",
-            message = "Authentication required",
-            status = 401
+            error = "Forbidden",
+            message = "Insufficient permissions",
+            status = 403
         )
         response.writer.write(objectMapper.writeValueAsString(errorResponse))
     }

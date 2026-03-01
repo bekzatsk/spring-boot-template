@@ -2,7 +2,7 @@ package kz.innlab.template.authentication
 
 import kz.innlab.template.authentication.dto.AppleAuthRequest
 import kz.innlab.template.authentication.dto.AuthResponse
-import kz.innlab.template.user.UserService
+import kz.innlab.template.user.service.UserService
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.oauth2.jwt.JwtDecoder

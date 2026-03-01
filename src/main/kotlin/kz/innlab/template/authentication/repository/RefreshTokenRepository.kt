@@ -1,6 +1,7 @@
-package kz.innlab.template.authentication
+package kz.innlab.template.authentication.repository
 
-import kz.innlab.template.user.User
+import kz.innlab.template.authentication.model.RefreshToken
+import kz.innlab.template.user.model.User
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query

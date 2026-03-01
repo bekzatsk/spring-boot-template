@@ -1,6 +1,9 @@
 package kz.innlab.template.authentication
 
-import kz.innlab.template.user.User
+import kz.innlab.template.authentication.exception.TokenGracePeriodException
+import kz.innlab.template.authentication.model.RefreshToken
+import kz.innlab.template.authentication.repository.RefreshTokenRepository
+import kz.innlab.template.user.model.User
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.stereotype.Service
@@ -10,8 +13,6 @@ import java.security.SecureRandom
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.Base64
-
-class TokenGracePeriodException(message: String) : RuntimeException(message)
 
 @Service
 class RefreshTokenService(

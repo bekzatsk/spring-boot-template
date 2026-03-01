@@ -2,7 +2,7 @@ package kz.innlab.template.authentication
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier
 import kz.innlab.template.authentication.dto.AuthResponse
-import kz.innlab.template.user.UserService
+import kz.innlab.template.user.service.UserService
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

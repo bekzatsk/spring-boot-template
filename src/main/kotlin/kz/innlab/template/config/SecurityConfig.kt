@@ -1,7 +1,7 @@
 package kz.innlab.template.config
 
-import kz.innlab.template.authentication.error.ApiAccessDeniedHandler
-import kz.innlab.template.authentication.error.ApiAuthenticationEntryPoint
+import kz.innlab.template.authentication.filter.ApiAccessDeniedHandler
+import kz.innlab.template.authentication.filter.ApiAuthenticationEntryPoint
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
