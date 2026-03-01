@@ -34,6 +34,12 @@ class RefreshToken(
     @Column(nullable = false)
     var revoked: Boolean = false
 
+    @Column(name = "used_at")
+    var usedAt: Instant? = null
+
+    @Column(name = "replaced_by_token_hash")
+    var replacedByTokenHash: String? = null
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant? = null
