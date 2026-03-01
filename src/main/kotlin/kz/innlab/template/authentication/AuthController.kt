@@ -22,18 +22,21 @@ class AuthController(
 
     @PostMapping("/google")
     fun googleLogin(@Valid @RequestBody request: AuthRequest): ResponseEntity<AuthResponse> {
+        // TODO: rate limiting — add per-IP or per-client rate limit here before delegating to service
         val response = googleAuthService.authenticate(request.idToken)
         return ResponseEntity.ok(response)
     }
 
     @PostMapping("/apple")
     fun appleLogin(@Valid @RequestBody request: AppleAuthRequest): ResponseEntity<AuthResponse> {
+        // TODO: rate limiting — add per-IP or per-client rate limit here before delegating to service
         val response = appleAuthService.authenticate(request)
         return ResponseEntity.ok(response)
     }
 
     @PostMapping("/refresh")
     fun refresh(@Valid @RequestBody request: RefreshRequest): ResponseEntity<AuthResponse> {
+        // TODO: rate limiting — refresh endpoint is a common abuse target; consider per-IP limit
         val (user, newRawToken) = refreshTokenService.rotate(request.refreshToken)
         val accessToken = jwtTokenService.generateAccessToken(user.id!!, user.roles)
         return ResponseEntity.ok(AuthResponse(accessToken = accessToken, refreshToken = newRawToken))
@@ -41,6 +44,7 @@ class AuthController(
 
     @PostMapping("/revoke")
     fun revoke(@Valid @RequestBody request: RefreshRequest): ResponseEntity<Void> {
+        // TODO: rate limiting — optional; include in global auth rate limit policy
         refreshTokenService.revoke(request.refreshToken)
         return ResponseEntity.noContent().build()
     }

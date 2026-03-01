@@ -48,6 +48,9 @@ class SecurityConfig(
                 authorize(anyRequest, permitAll)
             }
             oauth2ResourceServer {
+                // TODO: rate limiting — to rate-limit authenticated API requests, insert a custom
+                // OncePerRequestFilter before BearerTokenAuthenticationFilter:
+                //   http.addFilterBefore(myRateLimitFilter, BearerTokenAuthenticationFilter::class.java)
                 jwt {
                     jwtDecoder = this@SecurityConfig.jwtDecoder
                     jwtAuthenticationConverter = jwtAuthenticationConverter()
