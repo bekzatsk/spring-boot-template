@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 
 ## Current Position
 
-Milestone: v2.0 Local Auth — IN PROGRESS
+Milestone: v2.0 Local Auth — COMPLETE
 Phase: 01-add-local-authentication-email-password-and-phone-sms-code-login
-Current Plan: 3 of 3
-Last activity: 2026-03-02 - Completed 01-02-PLAN.md (email+password auth with DaoAuthenticationProvider and BCrypt)
+Current Plan: 3 of 3 (COMPLETE)
+Last activity: 2026-03-02 - Completed 01-03-PLAN.md (phone+SMS OTP auth with Twilio Verify API, TwilioVerifyClient abstraction, E.164 normalization, 22 tests pass)
 
-Progress: [██░░░░░░░░] 67% (2/3 plans complete in active phase)
+Progress: [███░░░░░░░] 100% (3/3 plans complete in active phase)
 
 ## Performance Metrics
 
@@ -33,7 +33,7 @@ Progress: [██░░░░░░░░] 67% (2/3 plans complete in active pha
 | 04-apple-auth | 1/1 | 13 min | 13 min |
 | 05-hardening | 1/1 | 2 min | 2 min |
 | 06-restructure | 2/2 | 7 min | 3.5 min |
-| 01-local-auth (v2) | 2/3 | 10 min | 5 min |
+| 01-local-auth (v2) | 3/3 | 12 min | 4 min |
 
 **Recent Trend:**
 - Last 5 plans: 13 min, 2 min, 3 min, 4 min, 8 min
@@ -92,6 +92,9 @@ Recent decisions affecting current work:
 - [Phase 01-02 v2]: localAuthenticationManager bean uses ProviderManager(DaoAuthenticationProvider) — separate from resource server JWT auth to avoid interference
 - [Phase 01-02 v2]: LocalUserDetailsService scopes loadUserByUsername to (LOCAL, email) lookup — prevents cross-provider credential leakage from Google/Apple users
 - [Phase 01-02 v2]: IllegalStateException -> 409 Conflict via AuthExceptionHandler — consistent with TokenGracePeriodException -> 409 pattern for resource conflicts
+- [Phase 01-03]: TwilioVerifyClient interface abstracts Twilio API — @MockitoBean replaces only Twilio boundary in tests; full service layer exercised without network calls
+- [Phase 01-03]: Phone users keyed on (LOCAL, phoneE164) — symmetric with email users (LOCAL, email); phone stored in both providerId and phone fields; email set to empty string (NOT NULL column)
+- [Phase 01-03]: normalizeToE164() requires '+' prefix — eliminates region ambiguity; no default region configured per research
 
 ### Roadmap Evolution
 
@@ -116,5 +119,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 01-02-PLAN.md — email+password auth with DaoAuthenticationProvider, BCrypt, LocalAuthService, 7 integration tests, all 16 tests pass
+Stopped at: Completed 01-03-PLAN.md — phone+SMS OTP auth with Twilio Verify API, TwilioVerifyClient abstraction, E.164 normalization, 6 integration tests, all 22 tests pass. Phase 01 (v2) COMPLETE.
 Resume file: None
