@@ -6,10 +6,13 @@ import kz.innlab.template.authentication.dto.AuthRequest
 import kz.innlab.template.authentication.dto.AuthResponse
 import kz.innlab.template.authentication.dto.LocalLoginRequest
 import kz.innlab.template.authentication.dto.LocalRegisterRequest
+import kz.innlab.template.authentication.dto.PhoneOtpRequest
+import kz.innlab.template.authentication.dto.PhoneVerifyRequest
 import kz.innlab.template.authentication.dto.RefreshRequest
 import kz.innlab.template.authentication.service.AppleOAuth2Service
 import kz.innlab.template.authentication.service.GoogleOAuth2Service
 import kz.innlab.template.authentication.service.LocalAuthService
+import kz.innlab.template.authentication.service.PhoneOtpService
 import kz.innlab.template.authentication.service.RefreshTokenService
 import kz.innlab.template.authentication.service.TokenService
 import org.springframework.http.HttpStatus
@@ -25,6 +28,7 @@ class AuthController(
     private val googleOAuth2Service: GoogleOAuth2Service,
     private val appleOAuth2Service: AppleOAuth2Service,
     private val localAuthService: LocalAuthService,
+    private val phoneOtpService: PhoneOtpService,
     private val refreshTokenService: RefreshTokenService,
     private val tokenService: TokenService
 ) {
@@ -54,6 +58,20 @@ class AuthController(
     fun localLogin(@Valid @RequestBody request: LocalLoginRequest): ResponseEntity<AuthResponse> {
         // TODO: rate limiting
         val response = localAuthService.login(request.email, request.password)
+        return ResponseEntity.ok(response)
+    }
+
+    @PostMapping("/phone/request-otp")
+    fun requestPhoneOtp(@Valid @RequestBody request: PhoneOtpRequest): ResponseEntity<Void> {
+        // TODO: rate limiting — OTP request is a prime abuse target; strict per-phone rate limit
+        phoneOtpService.sendOtp(request.phoneNumber)
+        return ResponseEntity.noContent().build()  // 204 — don't leak whether phone exists
+    }
+
+    @PostMapping("/phone/verify-otp")
+    fun verifyPhoneOtp(@Valid @RequestBody request: PhoneVerifyRequest): ResponseEntity<AuthResponse> {
+        // TODO: rate limiting — limit verification attempts per phone number
+        val response = phoneOtpService.verifyOtp(request.phoneNumber, request.code)
         return ResponseEntity.ok(response)
     }
 

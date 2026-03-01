@@ -1,0 +1,149 @@
+package kz.innlab.template
+
+import kz.innlab.template.authentication.repository.RefreshTokenRepository
+import kz.innlab.template.authentication.service.TwilioVerifyClient
+import kz.innlab.template.user.model.AuthProvider
+import kz.innlab.template.user.model.User
+import kz.innlab.template.user.repository.UserRepository
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.Mockito.anyString
+import org.mockito.Mockito.doNothing
+import org.mockito.Mockito.`when`
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.http.MediaType
+import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+
+@SpringBootTest
+@AutoConfigureMockMvc
+class PhoneAuthIntegrationTest {
+
+    @MockitoBean
+    private lateinit var twilioVerifyClient: TwilioVerifyClient
+
+    @Autowired
+    private lateinit var mockMvc: MockMvc
+
+    @Autowired
+    private lateinit var userRepository: UserRepository
+
+    @Autowired
+    private lateinit var refreshTokenRepository: RefreshTokenRepository
+
+    private val testPhone = "+77001234567"
+
+    @BeforeEach
+    fun cleanUp() {
+        // Delete refresh tokens first to avoid FK constraint violation (Phase 04-01 decision)
+        refreshTokenRepository.deleteAll()
+        userRepository.deleteAll()
+    }
+
+    @Test
+    fun `request OTP success returns 204`() {
+        doNothing().`when`(twilioVerifyClient).sendVerification(anyString(), anyString(), anyString())
+
+        mockMvc.perform(
+            post("/api/v1/auth/phone/request-otp")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"phoneNumber": "$testPhone"}""")
+        )
+            .andExpect(status().isNoContent)
+    }
+
+    @Test
+    fun `verify OTP success for new user creates user and returns tokens`() {
+        `when`(twilioVerifyClient.checkVerification(anyString(), anyString(), anyString()))
+            .thenReturn("approved")
+
+        mockMvc.perform(
+            post("/api/v1/auth/phone/verify-otp")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"phoneNumber": "$testPhone", "code": "123456"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.accessToken").exists())
+            .andExpect(jsonPath("$.refreshToken").exists())
+
+        // User created with correct fields
+        val user = userRepository.findByProviderAndProviderId(AuthProvider.LOCAL, testPhone)
+        assert(user != null) { "Phone user should be created in DB" }
+        assert(user!!.provider == AuthProvider.LOCAL) { "Provider should be LOCAL" }
+        assert(user.providerId == testPhone) { "ProviderId should be E.164 phone" }
+        assert(user.phone == testPhone) { "Phone field should be set to E.164 phone" }
+    }
+
+    @Test
+    fun `verify OTP success for returning user finds existing user and returns tokens`() {
+        // Pre-create a phone user
+        val existingUser = userRepository.save(
+            User(
+                email = "",
+                provider = AuthProvider.LOCAL,
+                providerId = testPhone
+            ).also { it.phone = testPhone }
+        )
+
+        `when`(twilioVerifyClient.checkVerification(anyString(), anyString(), anyString()))
+            .thenReturn("approved")
+
+        mockMvc.perform(
+            post("/api/v1/auth/phone/verify-otp")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"phoneNumber": "$testPhone", "code": "123456"}""")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.accessToken").exists())
+            .andExpect(jsonPath("$.refreshToken").exists())
+
+        // No duplicate user created — exactly one LOCAL user with this phone
+        val users = userRepository.findAll().filter { it.provider == AuthProvider.LOCAL && it.providerId == testPhone }
+        assert(users.size == 1) { "Should be exactly 1 phone user, found ${users.size}" }
+        assert(users[0].id == existingUser.id) { "Should be the same existing user" }
+    }
+
+    @Test
+    fun `verify OTP failure returns 401`() {
+        `when`(twilioVerifyClient.checkVerification(anyString(), anyString(), anyString()))
+            .thenReturn("pending")
+
+        mockMvc.perform(
+            post("/api/v1/auth/phone/verify-otp")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"phoneNumber": "$testPhone", "code": "000000"}""")
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error").value("Unauthorized"))
+            .andExpect(jsonPath("$.status").value(401))
+    }
+
+    @Test
+    fun `request OTP with empty phone returns 400`() {
+        mockMvc.perform(
+            post("/api/v1/auth/phone/request-otp")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"phoneNumber": ""}""")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("Bad Request"))
+            .andExpect(jsonPath("$.status").value(400))
+    }
+
+    @Test
+    fun `verify OTP with invalid phone format returns 400`() {
+        mockMvc.perform(
+            post("/api/v1/auth/phone/verify-otp")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"phoneNumber": "not-a-number", "code": "123456"}""")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("Bad Request"))
+            .andExpect(jsonPath("$.status").value(400))
+    }
+}

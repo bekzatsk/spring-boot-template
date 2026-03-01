@@ -51,6 +51,12 @@ class AuthExceptionHandler {
             ErrorResponse(error = "Conflict", message = ex.message ?: "Resource conflict", status = 409)
         )
 
+    @ExceptionHandler(IllegalArgumentException::class)
+    fun handleBadRequest(ex: IllegalArgumentException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.badRequest().body(
+            ErrorResponse(error = "Bad Request", message = ex.message ?: "Invalid request", status = 400)
+        )
+
     @ExceptionHandler(Exception::class)
     fun handleGeneral(ex: Exception): ResponseEntity<ErrorResponse> {
         logger.error("Unhandled exception: {}", ex.message, ex)
