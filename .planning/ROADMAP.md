@@ -103,14 +103,14 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Google Auth and Token Management | 2/2 | Complete   | 2026-03-01 |
 | 4. Apple Auth | 1/1 | Complete | 2026-03-01 |
 | 5. Hardening | 1/1 | Complete   | 2026-03-01 |
-| 6. Restructure | 0/2 | Planned | — |
+| 6. Restructure | 2/2 | Complete   | 2026-03-01 |
 
 ### Phase 6: Restructure project into layered packages — config, user, authentication with model/repository/service/controller/dto/exception subpackages
 
 **Goal:** Every domain package (user, authentication) uses explicit layered sub-packages (model/, repository/, service/, controller/, dto/, exception/, filter/) and classes are renamed to follow Spring conventions — all existing tests pass after the restructure
 **Depends on:** Phase 5
 **Requirements**: INFR-06
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 06-01-PLAN.md — Move user domain and authentication foundation (models, repos, exceptions, filters) into sub-packages

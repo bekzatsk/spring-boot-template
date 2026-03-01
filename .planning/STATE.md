@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Mobile/web clients authenticate with Google or Apple ID tokens and receive JWT access/refresh tokens that secure all API endpoints — the entire auth flow works out of the box
-**Current focus:** Phase 6 — Restructure (plan 06-01 complete)
+**Current focus:** Phase 6 — Restructure (plan 06-02 complete, phase fully done)
 
 ## Current Position
 
 Phase: 6 of 6 (Restructure)
-Plan: 1 of 1 complete in current phase (plan 06-01 complete)
-Status: Phase 6 complete — user and authentication domains restructured into layered sub-packages; compile passes
-Last activity: 2026-03-01 - Completed plan 06-01: user/model, user/repository, user/service, user/controller, user/dto, authentication/model, authentication/repository, authentication/exception, authentication/filter sub-packages established
+Plan: 2 of 2 complete in current phase (plan 06-02 complete)
+Status: Phase 6 complete — entire project restructured into layered sub-packages; all 9 tests pass
+Last activity: 2026-03-01 - Completed plan 06-02: authentication/service/TokenService, GoogleOAuth2Service, AppleOAuth2Service, RefreshTokenService; authentication/controller/AuthController; all old root-level auth files deleted; 9/9 tests pass
 
 Progress: [██████████] 100%
 
@@ -32,10 +32,10 @@ Progress: [██████████] 100%
 | 03-google-auth-and-token-management | 2/2 | 8 min | 4 min |
 | 04-apple-auth | 1/1 | 13 min | 13 min |
 | 05-hardening | 1/1 | 2 min | 2 min |
-| 06-restructure | 1/1 | 3 min | 3 min |
+| 06-restructure | 2/2 | 7 min | 3.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 8 min, 7 min, 13 min, 2 min, 3 min
+- Last 5 plans: 7 min, 13 min, 2 min, 3 min, 4 min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -81,6 +81,9 @@ Recent decisions affecting current work:
 - [Phase 06-01]: TokenGracePeriodException extracted from RefreshTokenService into its own file — single-responsibility for exception definitions
 - [Phase 06-01]: ErrorResponse kept in shared/error (not moved) — generic DTO used by both authentication and user domains
 - [Phase 06-01]: authentication/error/ package replaced by authentication/filter/ — filter handlers belong with filter layer, not generic error handling
+- [Phase 06]: JwtTokenService renamed to TokenService — clearer name without JWT implementation detail leaking into service name
+- [Phase 06]: GoogleAuthService renamed to GoogleOAuth2Service — explicit OAuth2 protocol reference; AppleAuthService renamed to AppleOAuth2Service — symmetric naming
+- [Phase 06]: Clean Maven build required after moving compiled classes — incremental compile left stale .class files causing ConflictingBeanDefinitionException
 
 ### Roadmap Evolution
 
@@ -104,5 +107,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 06-01-PLAN.md — User domain and authentication foundation restructured into layered sub-packages; 13 files in new locations, 12 old files deleted, ./mvnw compile passes with zero errors
+Stopped at: Completed 06-02-PLAN.md — Authentication services and controller moved to sub-packages, 3 renamed (TokenService, GoogleOAuth2Service, AppleOAuth2Service), all 9 tests pass with ./mvnw clean test
 Resume file: None
