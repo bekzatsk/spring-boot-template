@@ -5,15 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Mobile/web clients authenticate with Google or Apple ID tokens and receive JWT access/refresh tokens that secure all API endpoints — the entire auth flow works out of the box
-**Current focus:** v1.0 MVP shipped — planning next milestone
+**Current focus:** Phase 01 (v2) — Local authentication (email+password and phone+SMS OTP)
 
 ## Current Position
 
-Milestone: v1.0 MVP — SHIPPED 2026-03-01
-Status: All 6 phases, 10 plans, 33 requirements complete
-Last activity: 2026-03-01 - Milestone v1.0 MVP archived
+Milestone: v2.0 Local Auth — IN PROGRESS
+Phase: 01-add-local-authentication-email-password-and-phone-sms-code-login
+Current Plan: 2 of 3
+Last activity: 2026-03-02 - Completed 01-01-PLAN.md (data model foundation and dependencies)
 
-Progress: [██████████] 100%
+Progress: [█░░░░░░░░░] 33% (1/3 plans complete in active phase)
 
 ## Performance Metrics
 
@@ -32,9 +33,10 @@ Progress: [██████████] 100%
 | 04-apple-auth | 1/1 | 13 min | 13 min |
 | 05-hardening | 1/1 | 2 min | 2 min |
 | 06-restructure | 2/2 | 7 min | 3.5 min |
+| 01-local-auth (v2) | 1/3 | 8 min | 8 min |
 
 **Recent Trend:**
-- Last 5 plans: 7 min, 13 min, 2 min, 3 min, 4 min
+- Last 5 plans: 13 min, 2 min, 3 min, 4 min, 8 min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -83,10 +85,15 @@ Recent decisions affecting current work:
 - [Phase 06]: JwtTokenService renamed to TokenService — clearer name without JWT implementation detail leaking into service name
 - [Phase 06]: GoogleAuthService renamed to GoogleOAuth2Service — explicit OAuth2 protocol reference; AppleAuthService renamed to AppleOAuth2Service — symmetric naming
 - [Phase 06]: Clean Maven build required after moving compiled classes — incremental compile left stale .class files causing ConflictingBeanDefinitionException
+- [Phase 01-01 v2]: V1 migration includes all columns (including password_hash and phone) — no V2 needed for greenfield project; single migration for complete target schema
+- [Phase 01-01 v2]: spring-boot-starter-flyway used (not bare flyway-core) — Boot 4.x requires starter for auto-configuration
+- [Phase 01-01 v2]: Flyway disabled in test profile (spring.flyway.enabled=false) — H2 incompatible with PostgreSQL-specific DDL (gen_random_uuid, TIMESTAMPTZ); H2 create-drop preserved for tests
+- [Phase 01-01 v2]: Twilio config added as ${ENV_VAR:placeholder} in common section now — Plans 02/03 reference app.auth.twilio.* without modifying application.yaml again
 
 ### Roadmap Evolution
 
 - Phase 6 added: Restructure project into layered packages — config, user, authentication with model/repository/service/controller/dto/exception subpackages
+- Phase 1 (v2): Add LOCAL authentication — email+password and phone+SMS code login
 
 ### Pending Todos
 
@@ -105,6 +112,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-01
-Stopped at: Completed 06-02-PLAN.md — Authentication services and controller moved to sub-packages, 3 renamed (TokenService, GoogleOAuth2Service, AppleOAuth2Service), all 9 tests pass with ./mvnw clean test
+Last session: 2026-03-02
+Stopped at: Completed 01-01-PLAN.md — Flyway V1 migration, AuthProvider.LOCAL, User.passwordHash/phone, 3 new Maven deps (Flyway, Twilio, libphonenumber), all 9 tests pass
 Resume file: None

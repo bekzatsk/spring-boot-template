@@ -28,6 +28,7 @@
 | 4. Apple Auth | v1.0 | 1/1 | Complete | 2026-03-01 |
 | 5. Hardening | v1.0 | 1/1 | Complete | 2026-03-01 |
 | 6. Restructure | v1.0 | 2/2 | Complete | 2026-03-01 |
+| 1. Local Auth (v2) | v2.0 | 1/3 | In Progress | — |
 
 ### Phase 1: Add LOCAL authentication — email+password and phone+SMS code login
 
@@ -36,6 +37,6 @@
 **Plans:** 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Foundation: Maven dependencies (Flyway, Twilio, libphonenumber), AuthProvider.LOCAL, User entity columns, Flyway migrations
+- [x] 01-01-PLAN.md — Foundation: Maven dependencies (Flyway, Twilio, libphonenumber), AuthProvider.LOCAL, User entity columns, Flyway migrations — completed 2026-03-02
 - [ ] 01-02-PLAN.md — Email+password auth: LocalUserDetailsService, LocalAuthService, DaoAuthenticationProvider, register/login endpoints, integration tests
 - [ ] 01-03-PLAN.md — Phone+SMS OTP auth: TwilioConfig, PhoneOtpService, E.164 normalization, request-otp/verify-otp endpoints, integration tests
