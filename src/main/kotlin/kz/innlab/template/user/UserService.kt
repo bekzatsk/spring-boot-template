@@ -17,14 +17,22 @@ class UserService(
         email: String,
         name: String?,
         picture: String?
-    ): User =
-        userRepository.findByProviderAndProviderId(AuthProvider.GOOGLE, providerId)
-            ?: userRepository.save(
-                User(email = email, provider = AuthProvider.GOOGLE, providerId = providerId).also {
-                    it.name = name
-                    it.picture = picture
-                }
-            )
+    ): User {
+        val existing = userRepository.findByProviderAndProviderId(AuthProvider.GOOGLE, providerId)
+        if (existing != null) {
+            var updated = false
+            if (name != null && existing.name != name) { existing.name = name; updated = true }
+            if (picture != null && existing.picture != picture) { existing.picture = picture; updated = true }
+            if (existing.email != email) { existing.email = email; updated = true }
+            return if (updated) userRepository.save(existing) else existing
+        }
+        return userRepository.save(
+            User(email = email, provider = AuthProvider.GOOGLE, providerId = providerId).also {
+                it.name = name
+                it.picture = picture
+            }
+        )
+    }
 
     @Transactional
     fun findOrCreateAppleUser(

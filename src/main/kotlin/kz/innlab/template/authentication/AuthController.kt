@@ -23,7 +23,7 @@ class AuthController(
     @PostMapping("/google")
     fun googleLogin(@Valid @RequestBody request: AuthRequest): ResponseEntity<AuthResponse> {
         // TODO: rate limiting — add per-IP or per-client rate limit here before delegating to service
-        val response = googleAuthService.authenticate(request.idToken)
+        val response = googleAuthService.authenticate(request.idToken, request.name, request.picture)
         return ResponseEntity.ok(response)
     }
 

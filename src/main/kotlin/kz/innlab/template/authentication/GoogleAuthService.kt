@@ -16,16 +16,17 @@ class GoogleAuthService(
 ) {
 
     @Transactional
-    fun authenticate(idTokenString: String): AuthResponse {
+    fun authenticate(idTokenString: String, clientName: String? = null, clientPicture: String? = null): AuthResponse {
         val idToken = googleIdTokenVerifier.verify(idTokenString)
             ?: throw BadCredentialsException("Invalid Google ID token")
 
         val payload = idToken.payload
+
         val providerId = payload.subject
         val email = payload.email
             ?: throw BadCredentialsException("Google account does not have an email")
-        val name = payload["name"] as? String
-        val picture = payload["picture"] as? String
+        val name = payload["name"] as? String ?: clientName
+        val picture = payload["picture"] as? String ?: clientPicture
 
         val user = userService.findOrCreateGoogleUser(providerId, email, name, picture)
 
