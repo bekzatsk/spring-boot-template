@@ -1,6 +1,7 @@
 package kz.innlab.template.shared.error
 
 import kz.innlab.template.authentication.TokenGracePeriodException
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.authentication.BadCredentialsException
@@ -11,6 +12,10 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleValidation(ex: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
@@ -42,6 +47,7 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception::class)
     fun handleGeneral(ex: Exception): ResponseEntity<ErrorResponse> {
+        logger.error("Unhandled exception: {}", ex.message, ex)
         return ResponseEntity.internalServerError().body(
             ErrorResponse(error = "Internal Server Error", message = "An unexpected error occurred", status = 500)
         )

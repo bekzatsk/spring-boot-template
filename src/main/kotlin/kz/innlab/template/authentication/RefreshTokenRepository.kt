@@ -9,7 +9,8 @@ import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 interface RefreshTokenRepository : JpaRepository<RefreshToken, UUID> {
-    fun findByTokenHash(tokenHash: String): RefreshToken?
+    @Query("SELECT rt FROM RefreshToken rt JOIN FETCH rt.user WHERE rt.tokenHash = :tokenHash")
+    fun findByTokenHash(@Param("tokenHash") tokenHash: String): RefreshToken?
 
     @Modifying
     @Transactional
