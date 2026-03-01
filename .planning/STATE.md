@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 Phase: 2 of 5 (Security Wiring)
 Plan: 3 of 3 in current phase (plan 02-02 complete — Phase 2 complete)
 Status: Phase 2 complete — ready for Phase 3 (Google Auth)
-Last activity: 2026-03-01 — Completed plan 02-02 (JwtTokenService, AuthRequest DTO, stub UserController, integration tests)
+Last activity: 2026-03-01 - Completed quick task 1: Fix DataSource 'url' not specified error
 
 Progress: [████░░░░░░] 40%
 
@@ -63,6 +63,12 @@ Recent decisions affecting current work:
 ### Pending Todos
 
 None.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Fix DataSource 'url' not specified error — add default spring profile | 2026-03-01 | cd51f12 | [1-fix-datasource-url-not-specified-error-a](./quick/1-fix-datasource-url-not-specified-error-a/) |
 
 ### Blockers/Concerns
 
