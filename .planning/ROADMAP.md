@@ -13,7 +13,7 @@ Starting from a minimal Spring Boot 4 + Kotlin scaffold with no auth logic, this
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Project infrastructure, JPA entities, RSA keystore, Docker, profiles
-- [ ] **Phase 2: Security Wiring** - Stateless Spring Security 7, JWT filter, CORS, error handling
+- [x] **Phase 2: Security Wiring** - Stateless Spring Security 7, JWT filter, CORS, error handling
 - [ ] **Phase 3: Google Auth and Token Management** - Google ID token verification, full token lifecycle, /users/me
 - [ ] **Phase 4: Apple Auth** - Apple ID token verification, first-login data, private relay emails
 - [ ] **Phase 5: Hardening** - Integration tests, rate limit markers, compile verification, template polish
@@ -48,7 +48,7 @@ Plans:
 **Plans:** 2 plans
 Plans:
 - [x] 02-01-PLAN.md — SecurityFilterChain, CORS, error handlers, GlobalExceptionHandler
-- [ ] 02-02-PLAN.md — JwtTokenService, auth request DTO, stub UserController, end-to-end verification
+- [x] 02-02-PLAN.md — JwtTokenService, auth request DTO, stub UserController, end-to-end verification
 
 ### Phase 3: Google Auth and Token Management
 **Goal**: A mobile client can exchange a valid Google ID token for JWT access and refresh tokens, rotate the refresh token, revoke it on logout, and retrieve the authenticated user's profile
@@ -92,7 +92,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete | 2026-03-01 |
-| 2. Security Wiring | 1/2 | In progress | - |
+| 2. Security Wiring | 2/2 | Complete | 2026-03-01 |
 | 3. Google Auth and Token Management | 0/TBD | Not started | - |
 | 4. Apple Auth | 0/TBD | Not started | - |
 | 5. Hardening | 0/TBD | Not started | - |

@@ -18,7 +18,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Token Management
 
-- [ ] **TOKN-01**: JWT access tokens are RS256-signed with 15-minute expiry via NimbusJwtEncoder + JWKSource
+- [x] **TOKN-01**: JWT access tokens are RS256-signed with 15-minute expiry via NimbusJwtEncoder + JWKSource
 - [ ] **TOKN-02**: Refresh tokens are opaque, stored in DB as SHA-256 hashes, with single-use rotation
 - [ ] **TOKN-03**: Reuse detection revokes all refresh tokens for the user when a used token is replayed
 - [ ] **TOKN-04**: 10-second grace window on refresh token rotation to handle concurrent mobile retries
@@ -34,7 +34,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **SECU-05**: CORS allowed origins are configurable (not hardcoded)
 - [x] **SECU-06**: RSA keystore (.jks) for JWT signing with helper generation script + runtime fallback for dev
 - [x] **SECU-07**: Consistent JSON error responses: `{ error, message, status }` via @RestControllerAdvice
-- [ ] **SECU-08**: Input validation with Jakarta Validation on auth request DTOs
+- [x] **SECU-08**: Input validation with Jakarta Validation on auth request DTOs
 - [x] **SECU-09**: No hardcoded secrets — all sensitive values via environment variables / ${ENV_VAR} in application.yml
 
 ### User
@@ -103,7 +103,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-04 | Phase 4 | Pending |
 | AUTH-05 | Phase 4 | Pending |
 | AUTH-06 | Phase 4 | Pending |
-| TOKN-01 | Phase 2 | Pending |
+| TOKN-01 | Phase 2 | Complete |
 | TOKN-02 | Phase 3 | Pending |
 | TOKN-03 | Phase 3 | Pending |
 | TOKN-04 | Phase 3 | Pending |
@@ -116,7 +116,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SECU-05 | Phase 2 | Complete |
 | SECU-06 | Phase 1 | Complete |
 | SECU-07 | Phase 2 | Complete |
-| SECU-08 | Phase 2 | Pending |
+| SECU-08 | Phase 2 | Complete |
 | SECU-09 | Phase 1 | Complete (01-01) |
 | USER-01 | Phase 1 | Complete |
 | USER-02 | Phase 1 | Complete |
@@ -140,4 +140,4 @@ Note: The coverage counter previously read 32 — a recount of the requirement I
 
 ---
 *Requirements defined: 2026-03-01*
-*Last updated: 2026-03-01 after 01-01 execution — INFR-01, INFR-03, INFR-04, INFR-05, SECU-09 marked complete*
+*Last updated: 2026-03-01 after 02-02 execution — TOKN-01, SECU-08 marked complete; Phase 2 Security Wiring complete*

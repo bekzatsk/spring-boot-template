@@ -5,33 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Mobile/web clients authenticate with Google or Apple ID tokens and receive JWT access/refresh tokens that secure all API endpoints — the entire auth flow works out of the box
-**Current focus:** Phase 2 — Security Wiring (in progress)
+**Current focus:** Phase 2 — Security Wiring (complete — ready for Phase 3)
 
 ## Current Position
 
 Phase: 2 of 5 (Security Wiring)
-Plan: 1 of 3 in current phase (plan 02-01 complete — ready for 02-02)
-Status: Phase 2 in progress
-Last activity: 2026-03-01 — Completed plan 02-01 (SecurityFilterChain, CORS, error handling)
+Plan: 3 of 3 in current phase (plan 02-02 complete — Phase 2 complete)
+Status: Phase 2 complete — ready for Phase 3 (Google Auth)
+Last activity: 2026-03-01 — Completed plan 02-02 (JwtTokenService, AuthRequest DTO, stub UserController, integration tests)
 
-Progress: [███░░░░░░░] 30%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: 7 min
-- Total execution time: 0.3 hours
+- Total execution time: 0.4 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 2/2 | 12 min | 6 min |
-| 02-security-wiring | 1/3 | 8 min | 8 min |
+| 02-security-wiring | 2/3 | 15 min | 7.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 5 min, 7 min, 8 min
+- Last 5 plans: 5 min, 7 min, 8 min, 7 min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -56,6 +56,9 @@ Recent decisions affecting current work:
 - Dev profile auto-generates in-memory RSA keypair — tokens do not persist across restarts (acceptable for dev)
 - Jackson 3.x (tools.jackson.* namespace) used for ObjectMapper in error handlers — not com.fasterxml.jackson
 - AuthenticationEntryPoint registered in both exceptionHandling and oauth2ResourceServer DSL (Pitfall 4 per research)
+- Spring Boot 4.x @AutoConfigureMockMvc is in org.springframework.boot.webmvc.test.autoconfigure — not boot.test.autoconfigure.web.servlet
+- H2 test-scoped dependency added — enables full @SpringBootTest with JPA without a running PostgreSQL instance
+- JwtTokenService omits JwsHeader in JwtEncoderParameters — NimbusJwtEncoder infers RS256 from RSA JWKSource automatically
 
 ### Pending Todos
 
@@ -71,5 +74,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 02-01-PLAN.md — SecurityFilterChain, CORS, error handlers complete; ready for 02-02
+Stopped at: Completed 02-02-PLAN.md — JwtTokenService, AuthRequest DTO, stub UserController, and 4 security integration tests complete; Phase 2 fully done
 Resume file: None
