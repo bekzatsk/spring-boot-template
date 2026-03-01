@@ -28,3 +28,14 @@
 | 4. Apple Auth | v1.0 | 1/1 | Complete | 2026-03-01 |
 | 5. Hardening | v1.0 | 1/1 | Complete | 2026-03-01 |
 | 6. Restructure | v1.0 | 2/2 | Complete | 2026-03-01 |
+
+### Phase 1: Add LOCAL authentication — email+password and phone+SMS code login
+
+**Goal:** Users can register and login with email+password or phone+SMS OTP, with Flyway-managed schema migrations, extending the existing JWT token infrastructure
+**Depends on:** v1.0 MVP (Phases 1-6)
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Foundation: Maven dependencies (Flyway, Twilio, libphonenumber), AuthProvider.LOCAL, User entity columns, Flyway migrations
+- [ ] 01-02-PLAN.md — Email+password auth: LocalUserDetailsService, LocalAuthService, DaoAuthenticationProvider, register/login endpoints, integration tests
+- [ ] 01-03-PLAN.md — Phone+SMS OTP auth: TwilioConfig, PhoneOtpService, E.164 normalization, request-otp/verify-otp endpoints, integration tests
