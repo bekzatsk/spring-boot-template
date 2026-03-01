@@ -1,6 +1,8 @@
 spring:
   application:
     name: template
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   threads:
     virtual:
       enabled: true
@@ -23,8 +25,8 @@ spring:
       on-profile: dev
   datasource:
     url: jdbc:postgresql://localhost:5432/${DB_NAME:template}
-    username: ${DB_USERNAME:template}
-    password: ${DB_PASSWORD:template}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
   jpa:
     hibernate:
       ddl-auto: create-drop
