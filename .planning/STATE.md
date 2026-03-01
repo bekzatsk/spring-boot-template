@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Mobile/web clients authenticate with Google or Apple ID tokens and receive JWT access/refresh tokens that secure all API endpoints — the entire auth flow works out of the box
-**Current focus:** Phase 3 — Google Auth and Token Management (complete — advancing to Phase 4)
+**Current focus:** Phase 4 — Apple Auth (plan 04-01 complete — advancing to next phase)
 
 ## Current Position
 
-Phase: 3 of 5 (Google Auth and Token Management)
-Plan: 2 of 2 complete in current phase (plan 03-02 complete)
-Status: Phase 3 complete — all endpoints wired; Phase 4 (Apple Auth) is next
-Last activity: 2026-03-01 - Completed 03-02-PLAN.md: Google OAuth2 auth endpoints, AuthController, real UserController
+Phase: 4 of 5 (Apple Auth)
+Plan: 1 of 1 complete in current phase (plan 04-01 complete)
+Status: Phase 4 complete — Apple Sign In end-to-end wired and tested; Phase 5 (Final Polish) is next
+Last activity: 2026-03-01 - Completed 04-01-PLAN.md: AppleAuthConfig, AppleAuthService, /auth/apple endpoint, 4 integration tests passing
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 6 min
-- Total execution time: 0.5 hours
+- Total plans completed: 6
+- Average duration: 7 min
+- Total execution time: 0.6 hours
 
 **By Phase:**
 
@@ -29,12 +29,12 @@ Progress: [██████░░░░] 60%
 |-------|-------|-------|----------|
 | 01-foundation | 2/2 | 12 min | 6 min |
 | 02-security-wiring | 2/3 | 15 min | 7.5 min |
+| 03-google-auth-and-token-management | 2/2 | 8 min | 4 min |
+| 04-apple-auth | 1/1 | 13 min | 13 min |
 
 **Recent Trend:**
-- Last 5 plans: 5 min, 7 min, 8 min, 7 min
+- Last 5 plans: 5 min, 7 min, 8 min, 7 min, 13 min
 - Trend: stable
-
-| 03-google-auth-and-token-management | 2/2 | 8 min | 4 min |
 
 *Updated after each plan completion*
 
@@ -66,6 +66,10 @@ Recent decisions affecting current work:
 - [Phase 03-02]: GoogleIdTokenVerifier.verify() returns null on invalid token — checked explicitly, throws BadCredentialsException caught by GlobalExceptionHandler
 - [Phase 03-02]: Test application.yaml must include app.auth config — test YAML overrides main YAML; auth section missing caused context init failure
 - [Phase 03-02]: SecurityIntegrationTest /users/me creates real User in H2 — required because UserController now does real DB lookup instead of returning JWT claims
+- [Phase 04-01]: @MockitoBean is from org.springframework.test.context.bean.override.mockito (Spring 7.x) — not from spring-boot-test; mockito-kotlin not on classpath; use plain Mockito.when()/anyString()
+- [Phase 04-01]: refreshTokenRepository.deleteAll() must precede userRepository.deleteAll() in test @BeforeEach — FK constraint from refresh_tokens.user_id prevents deleting users with active tokens
+- [Phase 04-01]: appleJwtDecoder bean named explicitly and injected with @Qualifier("appleJwtDecoder") — prevents NoUniqueBeanDefinitionException with resource server JwtDecoder from RsaKeyConfig
+- [Phase 04-01]: JwtException from NimbusJwtDecoder.decode() wrapped as BadCredentialsException — JwtException not handled by GlobalExceptionHandler (would produce 500 without wrap)
 
 ### Pending Todos
 
@@ -79,11 +83,10 @@ None.
 
 ### Blockers/Concerns
 
-- Phase 4: Apple JWKS caching strategy (Caffeine TTL) and first-login detection mechanics need validation during planning (MEDIUM confidence)
 - Developer note: If running Postgres.app locally on port 5432, create the `template` role or stop Postgres.app and use Docker only
 
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 03-02-PLAN.md — Google OAuth2 login wired end-to-end: AuthController with /google, /refresh, /revoke; real UserController with UserService; 5 tests passing
+Stopped at: Completed 04-01-PLAN.md — Apple Sign In wired end-to-end: AppleAuthConfig (NimbusJwtDecoder JWKS), AppleAuthService, POST /auth/apple, UserService.findOrCreateAppleUser with nullable email, 4 integration tests all passing (9 total)
 Resume file: None

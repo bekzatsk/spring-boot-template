@@ -10,11 +10,11 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Authentication
 
 - [x] **AUTH-01**: Client can send Google ID token to POST /api/v1/auth/google and receive JWT access + refresh tokens
-- [ ] **AUTH-02**: Client can send Apple ID token to POST /api/v1/auth/apple and receive JWT access + refresh tokens
+- [x] **AUTH-02**: Client can send Apple ID token to POST /api/v1/auth/apple and receive JWT access + refresh tokens
 - [x] **AUTH-03**: Backend verifies Google ID token directly with Google (via google-api-client) including `aud` claim validation
-- [ ] **AUTH-04**: Backend verifies Apple ID token via Apple's JWKS endpoint with `iss`, `aud`, `exp` claim validation
-- [ ] **AUTH-05**: Apple first-sign-in user data (name, email) is persisted atomically — never lost
-- [ ] **AUTH-06**: Apple private relay emails (`*@privaterelay.appleid.com`) are accepted without failure
+- [x] **AUTH-04**: Backend verifies Apple ID token via Apple's JWKS endpoint with `iss`, `aud`, `exp` claim validation
+- [x] **AUTH-05**: Apple first-sign-in user data (name, email) is persisted atomically — never lost
+- [x] **AUTH-06**: Apple private relay emails (`*@privaterelay.appleid.com`) are accepted without failure
 
 ### Token Management
 
@@ -98,11 +98,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | AUTH-01 | Phase 3 | Complete |
-| AUTH-02 | Phase 4 | Pending |
+| AUTH-02 | Phase 4 | Complete |
 | AUTH-03 | Phase 3 | Complete |
-| AUTH-04 | Phase 4 | Pending |
-| AUTH-05 | Phase 4 | Pending |
-| AUTH-06 | Phase 4 | Pending |
+| AUTH-04 | Phase 4 | Complete |
+| AUTH-05 | Phase 4 | Complete |
+| AUTH-06 | Phase 4 | Complete |
 | TOKN-01 | Phase 2 | Complete |
 | TOKN-02 | Phase 3 | Complete |
 | TOKN-03 | Phase 3 | Complete |
