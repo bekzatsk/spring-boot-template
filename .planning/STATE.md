@@ -74,6 +74,8 @@ Recent decisions affecting current work:
 - [Phase 05-01]: Maven Wrapper 3.3+ does not require maven-wrapper.jar — only maven-wrapper.properties needed; wrapperVersion=3.3.4
 - [Phase 05-01]: H2Dialect auto-detection preferred — removing explicit database-platform eliminates HHH90000025 deprecation warning in Hibernate 7.x
 - [Phase 05-01]: Rate limiting markers as // TODO comments (not stubs) — zero runtime behavior change, found via grep "TODO: rate limiting"
+- [Quick-02]: JOIN FETCH rt.user on findByTokenHash fixes LazyInitializationException — open-in-view=false means persistence context closes before controller layer; fetching eagerly avoids re-opening transaction in AuthController
+- [Quick-02]: SLF4J logger in GlobalExceptionHandler companion object — all catch-all handlers must log with logger.error() before returning 500 so unhandled exceptions are diagnosable
 
 ### Pending Todos
 
@@ -84,6 +86,7 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 1 | Fix DataSource 'url' not specified error — add default spring profile | 2026-03-01 | cd51f12 | [1-fix-datasource-url-not-specified-error-a](./quick/1-fix-datasource-url-not-specified-error-a/) |
+| 2 | Fix 500 on POST /api/v1/auth/refresh — JOIN FETCH User in findByTokenHash, add exception logging | 2026-03-01 | ce3560f | [2-fix-500-internal-server-error-on-api-v1-](./quick/2-fix-500-internal-server-error-on-api-v1-/) |
 
 ### Blockers/Concerns
 
