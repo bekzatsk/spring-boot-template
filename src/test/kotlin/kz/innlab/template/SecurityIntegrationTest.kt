@@ -1,12 +1,12 @@
 package kz.innlab.template
 
 import jakarta.validation.Valid
-import kz.innlab.template.authentication.JwtTokenService
 import kz.innlab.template.authentication.dto.AuthRequest
-import kz.innlab.template.user.AuthProvider
-import kz.innlab.template.user.Role
-import kz.innlab.template.user.User
-import kz.innlab.template.user.UserRepository
+import kz.innlab.template.authentication.service.TokenService
+import kz.innlab.template.user.model.AuthProvider
+import kz.innlab.template.user.model.Role
+import kz.innlab.template.user.model.User
+import kz.innlab.template.user.repository.UserRepository
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -37,7 +37,7 @@ class SecurityIntegrationTest {
     private lateinit var mockMvc: MockMvc
 
     @Autowired
-    private lateinit var jwtTokenService: JwtTokenService
+    private lateinit var tokenService: TokenService
 
     @Autowired
     private lateinit var userRepository: UserRepository
@@ -68,7 +68,7 @@ class SecurityIntegrationTest {
                 providerId = "google-sub-${UUID.randomUUID()}"
             )
         )
-        val token = jwtTokenService.generateAccessToken(user.id!!, setOf(Role.USER))
+        val token = tokenService.generateAccessToken(user.id!!, setOf(Role.USER))
         mockMvc.perform(
             get("/api/v1/users/me")
                 .header("Authorization", "Bearer $token")
@@ -99,7 +99,7 @@ class SecurityIntegrationTest {
                 providerId = "google-sub-${UUID.randomUUID()}"
             )
         )
-        val token = jwtTokenService.generateAccessToken(user.id!!, setOf(Role.USER))
+        val token = tokenService.generateAccessToken(user.id!!, setOf(Role.USER))
 
         // Test with blank idToken
         mockMvc.perform(

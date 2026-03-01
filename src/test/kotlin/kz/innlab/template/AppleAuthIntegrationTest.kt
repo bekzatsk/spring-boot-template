@@ -1,10 +1,10 @@
 package kz.innlab.template
 
-import kz.innlab.template.authentication.JwtTokenService
-import kz.innlab.template.authentication.RefreshTokenRepository
-import kz.innlab.template.user.AuthProvider
-import kz.innlab.template.user.User
-import kz.innlab.template.user.UserRepository
+import kz.innlab.template.authentication.repository.RefreshTokenRepository
+import kz.innlab.template.authentication.service.TokenService
+import kz.innlab.template.user.model.AuthProvider
+import kz.innlab.template.user.model.User
+import kz.innlab.template.user.repository.UserRepository
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.anyString
@@ -41,7 +41,7 @@ class AppleAuthIntegrationTest {
     private lateinit var refreshTokenRepository: RefreshTokenRepository
 
     @Autowired
-    private lateinit var jwtTokenService: JwtTokenService
+    private lateinit var tokenService: TokenService
 
     @BeforeEach
     fun cleanUp() {
