@@ -4,6 +4,8 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password: ""
+  flyway:
+    enabled: false
   jpa:
     open-in-view: false
     hibernate:
@@ -22,3 +24,7 @@ app:
       bundle-id: test-bundle-id
     refresh-token:
       expiry-days: 30
+    twilio:
+      account-sid: test-account-sid
+      auth-token: test-auth-token
+      verify-service-sid: test-verify-service-sid
