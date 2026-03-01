@@ -61,7 +61,10 @@ Plans:
   4. Replaying a used refresh token revokes all refresh tokens for that user (reuse detection), and subsequent `/refresh` calls return `401`
   5. `POST /api/v1/auth/revoke` invalidates the refresh token, and `GET /api/v1/users/me` with the previous access token still works until expiry while no new tokens can be issued
   6. `GET /api/v1/users/me` with a valid Bearer token returns the authenticated user's profile JSON
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 03-01-PLAN.md — Refresh token lifecycle: entity updates, RefreshTokenService (create/rotate/revoke), grace window, reuse detection
+- [ ] 03-02-PLAN.md — Google auth flow: GoogleIdTokenVerifier, GoogleAuthService, AuthController, UserService, real /users/me
 
 ### Phase 4: Apple Auth
 **Goal**: A mobile client can exchange a valid Apple ID token for JWT access and refresh tokens, with first-login user data persisted atomically and private relay emails accepted
@@ -93,6 +96,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete | 2026-03-01 |
 | 2. Security Wiring | 2/2 | Complete | 2026-03-01 |
-| 3. Google Auth and Token Management | 0/TBD | Not started | - |
+| 3. Google Auth and Token Management | 0/2 | Not started | - |
 | 4. Apple Auth | 0/TBD | Not started | - |
 | 5. Hardening | 0/TBD | Not started | - |
