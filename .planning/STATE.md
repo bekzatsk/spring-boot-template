@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Mobile/web clients authenticate with Google or Apple ID tokens and receive JWT access/refresh tokens that secure all API endpoints — the entire auth flow works out of the box
-**Current focus:** Phase 5 — Hardening (plan 05-01 complete — all phases complete)
+**Current focus:** Phase 6 — Restructure (plan 06-01 complete)
 
 ## Current Position
 
-Phase: 5 of 5 (Hardening)
-Plan: 1 of 1 complete in current phase (plan 05-01 complete)
-Status: ALL PHASES COMPLETE — Template fully hardened with Maven Wrapper, rate limiting markers, and clean test output
-Last activity: 2026-03-01 - Completed quick task 2: Fix 500 Internal Server Error on /api/v1/auth/refresh endpoint
+Phase: 6 of 6 (Restructure)
+Plan: 1 of 1 complete in current phase (plan 06-01 complete)
+Status: Phase 6 complete — user and authentication domains restructured into layered sub-packages; compile passes
+Last activity: 2026-03-01 - Completed plan 06-01: user/model, user/repository, user/service, user/controller, user/dto, authentication/model, authentication/repository, authentication/exception, authentication/filter sub-packages established
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 6 min
-- Total execution time: 0.7 hours
+- Total plans completed: 8
+- Average duration: 5.9 min
+- Total execution time: 0.75 hours
 
 **By Phase:**
 
@@ -32,9 +32,10 @@ Progress: [██████████] 100%
 | 03-google-auth-and-token-management | 2/2 | 8 min | 4 min |
 | 04-apple-auth | 1/1 | 13 min | 13 min |
 | 05-hardening | 1/1 | 2 min | 2 min |
+| 06-restructure | 1/1 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 7 min, 8 min, 7 min, 13 min, 2 min
+- Last 5 plans: 8 min, 7 min, 13 min, 2 min, 3 min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -76,6 +77,14 @@ Recent decisions affecting current work:
 - [Phase 05-01]: Rate limiting markers as // TODO comments (not stubs) — zero runtime behavior change, found via grep "TODO: rate limiting"
 - [Quick-02]: JOIN FETCH rt.user on findByTokenHash fixes LazyInitializationException — open-in-view=false means persistence context closes before controller layer; fetching eagerly avoids re-opening transaction in AuthController
 - [Quick-02]: SLF4J logger in GlobalExceptionHandler companion object — all catch-all handlers must log with logger.error() before returning 500 so unhandled exceptions are diagnosable
+- [Phase 06-01]: GlobalExceptionHandler renamed to AuthExceptionHandler and placed in authentication/exception — semantically belongs with auth domain, not shared error utilities
+- [Phase 06-01]: TokenGracePeriodException extracted from RefreshTokenService into its own file — single-responsibility for exception definitions
+- [Phase 06-01]: ErrorResponse kept in shared/error (not moved) — generic DTO used by both authentication and user domains
+- [Phase 06-01]: authentication/error/ package replaced by authentication/filter/ — filter handlers belong with filter layer, not generic error handling
+
+### Roadmap Evolution
+
+- Phase 6 added: Restructure project into layered packages — config, user, authentication with model/repository/service/controller/dto/exception subpackages
 
 ### Pending Todos
 
@@ -95,5 +104,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 05-01-PLAN.md — All phases complete: Maven Wrapper 3.9.9, rate limiting TODO markers at 5 entry points (4 AuthController + 1 SecurityConfig), H2Dialect deprecation eliminated, all 9 tests pass
+Stopped at: Completed 06-01-PLAN.md — User domain and authentication foundation restructured into layered sub-packages; 13 files in new locations, 12 old files deleted, ./mvnw compile passes with zero errors
 Resume file: None
