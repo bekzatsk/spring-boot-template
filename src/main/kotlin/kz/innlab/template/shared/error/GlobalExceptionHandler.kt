@@ -1,6 +1,9 @@
 package kz.innlab.template.shared.error
 
+import kz.innlab.template.authentication.TokenGracePeriodException
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -24,6 +27,18 @@ class GlobalExceptionHandler {
             ErrorResponse(error = "Bad Request", message = message, status = 400)
         )
     }
+
+    @ExceptionHandler(BadCredentialsException::class)
+    fun handleBadCredentials(ex: BadCredentialsException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+            ErrorResponse(error = "Unauthorized", message = ex.message ?: "Invalid credentials", status = 401)
+        )
+
+    @ExceptionHandler(TokenGracePeriodException::class)
+    fun handleGracePeriod(ex: TokenGracePeriodException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.CONFLICT).body(
+            ErrorResponse(error = "Conflict", message = ex.message ?: "Token already rotated", status = 409)
+        )
 
     @ExceptionHandler(Exception::class)
     fun handleGeneral(ex: Exception): ResponseEntity<ErrorResponse> {
