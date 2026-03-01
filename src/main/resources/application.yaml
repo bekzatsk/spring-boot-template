@@ -20,6 +20,8 @@ app:
   auth:
     google:
       client-id: ${GOOGLE_CLIENT_ID:test-client-id}
+    apple:
+      bundle-id: ${APPLE_BUNDLE_ID:com.example.app}
     refresh-token:
       expiry-days: ${REFRESH_TOKEN_EXPIRY_DAYS:30}
 

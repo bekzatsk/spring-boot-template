@@ -18,5 +18,7 @@ app:
   auth:
     google:
       client-id: test-client-id
+    apple:
+      bundle-id: test-bundle-id
     refresh-token:
       expiry-days: 30

@@ -1,6 +1,7 @@
 package kz.innlab.template.authentication
 
 import jakarta.validation.Valid
+import kz.innlab.template.authentication.dto.AppleAuthRequest
 import kz.innlab.template.authentication.dto.AuthRequest
 import kz.innlab.template.authentication.dto.AuthResponse
 import kz.innlab.template.authentication.dto.RefreshRequest
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/v1/auth")
 class AuthController(
     private val googleAuthService: GoogleAuthService,
+    private val appleAuthService: AppleAuthService,
     private val refreshTokenService: RefreshTokenService,
     private val jwtTokenService: JwtTokenService
 ) {
@@ -21,6 +23,12 @@ class AuthController(
     @PostMapping("/google")
     fun googleLogin(@Valid @RequestBody request: AuthRequest): ResponseEntity<AuthResponse> {
         val response = googleAuthService.authenticate(request.idToken)
+        return ResponseEntity.ok(response)
+    }
+
+    @PostMapping("/apple")
+    fun appleLogin(@Valid @RequestBody request: AppleAuthRequest): ResponseEntity<AuthResponse> {
+        val response = appleAuthService.authenticate(request)
         return ResponseEntity.ok(response)
     }
 
