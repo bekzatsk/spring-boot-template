@@ -75,13 +75,6 @@
 			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
 
-		<!-- Twilio SDK for SMS OTP via Verify API -->
-		<dependency>
-			<groupId>com.twilio.sdk</groupId>
-			<artifactId>twilio</artifactId>
-			<version>11.3.3</version>
-		</dependency>
-
 		<!-- Phone number parsing and E.164 normalization -->
 		<dependency>
 			<groupId>com.googlecode.libphonenumber</groupId>

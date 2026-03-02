@@ -25,10 +25,6 @@ app:
       bundle-id: ${APPLE_BUNDLE_ID:com.example.app}
     refresh-token:
       expiry-days: ${REFRESH_TOKEN_EXPIRY_DAYS:30}
-    twilio:
-      account-sid: ${TWILIO_ACCOUNT_SID:placeholder}
-      auth-token: ${TWILIO_AUTH_TOKEN:placeholder}
-      verify-service-sid: ${TWILIO_VERIFY_SERVICE_SID:placeholder}
 
 ---
 spring:
