@@ -115,6 +115,7 @@ Recent decisions affecting current work:
 - [Phase 03-01]: Phone endpoint paths renamed /phone/request-otp -> /phone/request and /phone/verify-otp -> /phone/verify; DTO field phoneNumber -> phone
 - [Phase 03-02]: ArgumentCaptor.capture() returns null in Kotlin — plain Mockito's capture() is incompatible with Kotlin non-null String params; doAnswer { invocation -> capturedCode = invocation.arguments[1] as String; null } is the correct workaround when mockito-kotlin is not on classpath
 - [Phase 03-02]: captureCodeOnSend() helper pattern — returns () -> String lambda; stub with doAnswer during setup, retrieve captured code after HTTP perform; decouples stubbing from code retrieval
+- [Quick-05]: verificationId (UUID) returned from /phone/request and required in /phone/verify — binds OTP to specific SmsVerification record, prevents phone-only brute-force; findById(UUID) replaces findActiveByPhone()
 
 ### Roadmap Evolution
 
@@ -135,6 +136,7 @@ None.
 | 2 | Fix 500 on POST /api/v1/auth/refresh — JOIN FETCH User in findByTokenHash, add exception logging | 2026-03-01 | ce3560f | [2-fix-500-internal-server-error-on-api-v1-](./quick/2-fix-500-internal-server-error-on-api-v1-/) |
 | 3 | Fix Flyway "Unsupported Database: PostgreSQL 18.2" — add flyway-database-postgresql module | 2026-03-02 | 0cc5bd8 | [3-fix-flyway-unsupported-postgresql-18-2-e](./quick/3-fix-flyway-unsupported-postgresql-18-2-e/) |
 | 4 | Fix RsaKeyPair bean NPE on startup — invert isNullOrBlank() conditional in RsaKeyConfig | 2026-03-02 | aef19cc | [4-fix-rsakeypair-bean-creation-failure-in-](./quick/4-fix-rsakeypair-bean-creation-failure-in-/) |
+| 5 | Add verificationId to phone OTP flow — /phone/request returns UUID, /phone/verify requires UUID | 2026-03-02 | 673106f | [5-add-smsverification-id-to-phone-otp-flow](./quick/5-add-smsverification-id-to-phone-otp-flow/) |
 
 ### Blockers/Concerns
 
@@ -143,5 +145,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Quick task 4 complete. Fixed inverted conditional in RsaKeyConfig.rsaKeyPair() — NPE on startup eliminated. 23 tests pass.
+Stopped at: Quick task 5 complete. Added verificationId UUID to phone OTP flow — /phone/request returns 200+JSON, /phone/verify requires UUID, findById replaces findActiveByPhone. 23 tests pass.
 Resume file: None
