@@ -46,6 +46,11 @@ spring:
       hibernate:
         format_sql: true
 
+app:
+  auth:
+    sms:
+      dev-code: "123456"
+
 ---
 spring:
   config:

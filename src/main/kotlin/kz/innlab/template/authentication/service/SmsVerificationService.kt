@@ -2,6 +2,7 @@ package kz.innlab.template.authentication.service
 
 import kz.innlab.template.authentication.model.SmsVerification
 import kz.innlab.template.authentication.repository.SmsVerificationRepository
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -13,7 +14,8 @@ import java.util.UUID
 class SmsVerificationService(
     private val smsVerificationRepository: SmsVerificationRepository,
     private val smsService: SmsService,
-    private val passwordEncoder: PasswordEncoder
+    private val passwordEncoder: PasswordEncoder,
+    @Value("\${app.auth.sms.dev-code:}") private val devCode: String = ""
 ) {
 
     companion object {
@@ -30,8 +32,7 @@ class SmsVerificationService(
         if (smsVerificationRepository.existsByPhoneAndCreatedAtAfter(phoneE164, Instant.now().minusSeconds(RATE_LIMIT_SECONDS))) {
             throw IllegalStateException("Please wait before requesting a new code")
         }
-        val code = String.format("%06d", random.nextInt(CODE_BOUND))
-        println(code)
+        val code = if (devCode.isNotBlank()) devCode else String.format("%06d", random.nextInt(CODE_BOUND))
         val hash = passwordEncoder.encode(code)!!
         // Delete existing codes for this phone before issuing new one
         smsVerificationRepository.deleteAllByPhone(phoneE164)
