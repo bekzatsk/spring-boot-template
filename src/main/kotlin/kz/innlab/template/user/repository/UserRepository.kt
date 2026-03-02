@@ -1,10 +1,14 @@
 package kz.innlab.template.user.repository
 
-import kz.innlab.template.user.model.AuthProvider
 import kz.innlab.template.user.model.User
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
 import java.util.UUID
 
 interface UserRepository : JpaRepository<User, UUID> {
-    fun findByProviderAndProviderId(provider: AuthProvider, providerId: String): User?
+    fun findByEmail(email: String): User?
+
+    @Query("SELECT u FROM User u JOIN u.providerIds pid WHERE KEY(pid) = 'APPLE' AND VALUE(pid) = :sub")
+    fun findByAppleProviderId(@Param("sub") sub: String): User?
 }

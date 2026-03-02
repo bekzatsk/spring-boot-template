@@ -11,6 +11,8 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
+import jakarta.persistence.MapKeyColumn
+import jakarta.persistence.MapKeyEnumerated
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 import org.hibernate.annotations.CreationTimestamp
@@ -19,20 +21,10 @@ import java.time.Instant
 import java.util.UUID
 
 @Entity
-@Table(
-    name = "users",
-    uniqueConstraints = [UniqueConstraint(columnNames = ["provider", "provider_id"])]
-)
+@Table(name = "users")
 class User(
     @Column(nullable = false)
     var email: String,
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    var provider: AuthProvider,
-
-    @Column(name = "provider_id", nullable = false)
-    var providerId: String
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -47,6 +39,27 @@ class User(
 
     @Column(name = "phone", unique = true)
     var phone: String? = null  // E.164 format; set for LOCAL phone users
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @Enumerated(EnumType.STRING)
+    @CollectionTable(
+        name = "user_providers",
+        joinColumns = [JoinColumn(name = "user_id")],
+        uniqueConstraints = [UniqueConstraint(columnNames = ["user_id", "provider"])]
+    )
+    @Column(name = "provider")
+    var providers: MutableSet<AuthProvider> = mutableSetOf()
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+        name = "user_provider_ids",
+        joinColumns = [JoinColumn(name = "user_id")],
+        uniqueConstraints = [UniqueConstraint(columnNames = ["user_id", "provider"])]
+    )
+    @MapKeyEnumerated(EnumType.STRING)
+    @MapKeyColumn(name = "provider")
+    @Column(name = "provider_id")
+    var providerIds: MutableMap<AuthProvider, String> = mutableMapOf()
 
     @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
