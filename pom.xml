@@ -75,6 +75,13 @@
 			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
 
+		<!-- UUID v7 (time-ordered) generation — RFC 9562 compliant -->
+		<dependency>
+			<groupId>com.github.f4b6a3</groupId>
+			<artifactId>uuid-creator</artifactId>
+			<version>6.1.1</version>
+		</dependency>
+
 		<!-- Phone number parsing and E.164 normalization -->
 		<dependency>
 			<groupId>com.googlecode.libphonenumber</groupId>

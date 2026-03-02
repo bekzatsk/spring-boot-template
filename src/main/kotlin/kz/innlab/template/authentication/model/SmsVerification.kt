@@ -2,13 +2,10 @@ package kz.innlab.template.authentication.model
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
 import jakarta.persistence.Table
+import kz.innlab.template.shared.model.BaseEntity
 import org.hibernate.annotations.CreationTimestamp
 import java.time.Instant
-import java.util.UUID
 
 @Entity
 @Table(name = "sms_verifications")
@@ -21,10 +18,7 @@ class SmsVerification(
 
     @Column(name = "expires_at", nullable = false)
     val expiresAt: Instant
-) {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID? = null
+) : BaseEntity() {
 
     @Column(nullable = false)
     var used: Boolean = false
@@ -39,8 +33,8 @@ class SmsVerification(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is SmsVerification) return false
-        return id != null && id == other.id
+        return id == other.id
     }
 
-    override fun hashCode(): Int = id?.hashCode() ?: 0
+    override fun hashCode(): Int = id.hashCode()
 }

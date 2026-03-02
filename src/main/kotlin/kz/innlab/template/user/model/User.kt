@@ -7,28 +7,22 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.MapKeyColumn
 import jakarta.persistence.MapKeyEnumerated
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
+import kz.innlab.template.shared.model.BaseEntity
 import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
 import java.time.Instant
-import java.util.UUID
 
 @Entity
 @Table(name = "users")
 class User(
     @Column(nullable = false)
     var email: String,
-) {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    val id: UUID? = null
+) : BaseEntity() {
 
     var name: String? = null
 
@@ -78,8 +72,8 @@ class User(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is User) return false
-        return id != null && id == other.id
+        return id == other.id
     }
 
-    override fun hashCode(): Int = id?.hashCode() ?: 0
+    override fun hashCode(): Int = id.hashCode()
 }
