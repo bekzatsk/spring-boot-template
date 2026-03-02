@@ -21,16 +21,20 @@ class UserService(
         name: String?,
         picture: String?
     ): User {
-        val existing = userRepository.findByProviderAndProviderId(AuthProvider.GOOGLE, providerId)
+        val existing = userRepository.findByEmail(email)
         if (existing != null) {
-            var updated = false
-            if (name != null && existing.name != name) { existing.name = name; updated = true }
-            if (picture != null && existing.picture != picture) { existing.picture = picture; updated = true }
-            if (existing.email != email) { existing.email = email; updated = true }
-            return if (updated) userRepository.save(existing) else existing
+            // Link GOOGLE provider to existing account (idempotent)
+            existing.providers.add(AuthProvider.GOOGLE)
+            existing.providerIds[AuthProvider.GOOGLE] = providerId
+            // Only update name/picture if currently null on existing user
+            if (existing.name == null && name != null) existing.name = name
+            if (existing.picture == null && picture != null) existing.picture = picture
+            return userRepository.save(existing)
         }
         return userRepository.save(
-            User(email = email, provider = AuthProvider.GOOGLE, providerId = providerId).also {
+            User(email = email).also {
+                it.providers.add(AuthProvider.GOOGLE)
+                it.providerIds[AuthProvider.GOOGLE] = providerId
                 it.name = name
                 it.picture = picture
             }
@@ -43,48 +47,50 @@ class UserService(
         email: String?,   // Nullable: absent on subsequent Apple logins — this is expected
         name: String?
     ): User {
-        // Always look up by (APPLE, sub) — sub is stable; email may be absent on subsequent logins
-        val existing = userRepository.findByProviderAndProviderId(AuthProvider.APPLE, providerId)
-        if (existing != null) {
-            return existing  // Returning user — email/name absent is expected; do NOT overwrite
+        // Step 1: Try Apple sub lookup — covers returning users where email is absent
+        val byAppleSub = userRepository.findByAppleProviderId(providerId)
+        if (byAppleSub != null) {
+            return byAppleSub  // Returning user — no changes needed
         }
 
-        // New user (first login) — email must be present; absent means iOS client scope misconfiguration
+        // Step 2: First sign-in — email MUST be present
         val resolvedEmail = email
             ?: throw BadCredentialsException(
-                "Email not present in Apple identity token on first sign-in — check iOS email scope configuration"
+                "Email not present in Apple identity token on first sign-in"
             )
 
-        // Name persisted atomically in same @Transactional call (AUTH-05)
-        // Apple does not provide profile pictures
+        // Step 3: Check if email already exists — link APPLE to existing account
+        val byEmail = userRepository.findByEmail(resolvedEmail)
+        if (byEmail != null) {
+            byEmail.providers.add(AuthProvider.APPLE)
+            byEmail.providerIds[AuthProvider.APPLE] = providerId
+            if (byEmail.name == null && name != null) byEmail.name = name
+            return userRepository.save(byEmail)
+        }
+
+        // Step 4: Create new user
         return userRepository.save(
-            User(
-                email = resolvedEmail,
-                provider = AuthProvider.APPLE,
-                providerId = providerId
-            ).also { user ->
-                user.name = name  // Null if iOS client didn't send givenName/familyName
+            User(email = resolvedEmail).also {
+                it.providers.add(AuthProvider.APPLE)
+                it.providerIds[AuthProvider.APPLE] = providerId
+                it.name = name
             }
         )
     }
 
     /**
      * Find an existing phone user or create a new one (find-or-create pattern).
-     * Phone users are keyed on (LOCAL, phoneE164) — consistent with email users keyed on (LOCAL, email).
+     * Phone users are looked up by phone field (unique column).
      * Email is set to empty string since the column is NOT NULL.
-     * TODO: consider making email nullable for phone-only users
      */
     @Transactional
     fun findOrCreatePhoneUser(phoneE164: String): User {
-        val existing = userRepository.findByProviderAndProviderId(AuthProvider.LOCAL, phoneE164)
+        val existing = userRepository.findByPhone(phoneE164)
         if (existing != null) return existing
 
         return userRepository.save(
-            User(
-                email = "",  // Phone users have no email; set empty string (column is NOT NULL)
-                provider = AuthProvider.LOCAL,
-                providerId = phoneE164
-            ).also {
+            User(email = "").also {
+                it.providers.add(AuthProvider.LOCAL)
                 it.phone = phoneE164
             }
         )

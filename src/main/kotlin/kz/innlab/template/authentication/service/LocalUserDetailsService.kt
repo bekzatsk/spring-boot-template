@@ -15,12 +15,16 @@ class LocalUserDetailsService(
 
     /**
      * Load a LOCAL user by email.
-     * Scoped lookup to (LOCAL, email) — prevents Google/Apple users with the same email
-     * from being returned as local auth candidates.
+     * Looks up by email, then checks LOCAL is in the user's providers set.
+     * Prevents Google/Apple-only users from authenticating via local credentials.
      */
     override fun loadUserByUsername(email: String): UserDetails {
-        val user = userRepository.findByProviderAndProviderId(AuthProvider.LOCAL, email)
-            ?: throw UsernameNotFoundException("No local account for email: $email")
+        val user = userRepository.findByEmail(email)
+            ?: throw UsernameNotFoundException("No account for email: $email")
+
+        if (AuthProvider.LOCAL !in user.providers) {
+            throw UsernameNotFoundException("No local account for email: $email")
+        }
 
         if (user.passwordHash == null) {
             throw BadCredentialsException("No password set")

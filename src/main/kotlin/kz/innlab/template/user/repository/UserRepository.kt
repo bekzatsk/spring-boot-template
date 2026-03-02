@@ -9,6 +9,8 @@ import java.util.UUID
 interface UserRepository : JpaRepository<User, UUID> {
     fun findByEmail(email: String): User?
 
+    fun findByPhone(phone: String): User?
+
     @Query("SELECT u FROM User u JOIN u.providerIds pid WHERE KEY(pid) = 'APPLE' AND VALUE(pid) = :sub")
     fun findByAppleProviderId(@Param("sub") sub: String): User?
 }
