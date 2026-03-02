@@ -38,6 +38,7 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    clean-on-validation-error: true
   jpa:
     hibernate:
       ddl-auto: validate
