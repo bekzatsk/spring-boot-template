@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Milestone: v4.0 UUID v7 — COMPLETE
 Phase: 04-replace-all-uuid-generation-with-uuid-v7-time-ordered-ids-for-chronological-sorting-and-cursor-based-pagination (COMPLETE)
 Current Plan: 1 of 1 (COMPLETE)
-Last activity: 2026-03-02 - Completed plan 04-01: UUID v7 migration — BaseEntity, all entities migrated, all id!! removed
+Last activity: 2026-03-02 - Completed quick task 7: Consolidate Flyway migrations into single V1
 
 Progress: [██████████] 100% (phase 04 complete)
 
