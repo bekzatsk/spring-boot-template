@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 Milestone: v2.0 Local Auth — COMPLETE
 Phase: 01-add-local-authentication-email-password-and-phone-sms-code-login
 Current Plan: 3 of 3 (COMPLETE)
-Last activity: 2026-03-02 - Completed 01-03-PLAN.md (phone+SMS OTP auth with Twilio Verify API, TwilioVerifyClient abstraction, E.164 normalization, 22 tests pass)
+Last activity: 2026-03-02 - Completed quick task 3: Fix Flyway unsupported PostgreSQL 18.2 error by upgrading Flyway version
 
 Progress: [███░░░░░░░] 100% (3/3 plans complete in active phase)
 
