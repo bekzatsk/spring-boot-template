@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.security.SecureRandom
 import java.time.Instant
+import java.util.UUID
 
 @Service
 class SmsVerificationService(
@@ -24,16 +25,17 @@ class SmsVerificationService(
     }
 
     @Transactional
-    fun sendCode(phoneE164: String) {
+    fun sendCode(phoneE164: String): UUID {
         // Rate limit: max 1 OTP request per phone per 60 seconds
         if (smsVerificationRepository.existsByPhoneAndCreatedAtAfter(phoneE164, Instant.now().minusSeconds(RATE_LIMIT_SECONDS))) {
             throw IllegalStateException("Please wait before requesting a new code")
         }
         val code = String.format("%06d", random.nextInt(CODE_BOUND))
+        println(code)
         val hash = passwordEncoder.encode(code)!!
         // Delete existing codes for this phone before issuing new one
         smsVerificationRepository.deleteAllByPhone(phoneE164)
-        smsVerificationRepository.save(
+        val saved = smsVerificationRepository.save(
             SmsVerification(
                 phone = phoneE164,
                 codeHash = hash,
@@ -41,12 +43,17 @@ class SmsVerificationService(
             )
         )
         smsService.sendCode(phoneE164, code)
+        return saved.id!!
     }
 
     @Transactional
-    fun verifyCode(phoneE164: String, code: String): Boolean {
-        val record = smsVerificationRepository.findActiveByPhone(phoneE164, Instant.now())
-            ?: return false
+    fun verifyCode(verificationId: UUID, phoneE164: String, code: String): Boolean {
+        val record = smsVerificationRepository.findById(verificationId).orElse(null) ?: return false
+        // Phone mismatch: reject to prevent UUID guessing across phone numbers
+        if (record.phone != phoneE164) return false
+        if (record.used) return false
+        if (record.expiresAt <= Instant.now()) return false
+        if (record.attempts >= MAX_ATTEMPTS) return false
         // Increment attempts before checking — prevents brute force by counting failed attempts
         record.attempts++
         smsVerificationRepository.save(record)

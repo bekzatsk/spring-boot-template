@@ -62,16 +62,16 @@ class AuthController(
     }
 
     @PostMapping("/phone/request")
-    fun requestPhoneOtp(@Valid @RequestBody request: PhoneOtpRequest): ResponseEntity<Void> {
+    fun requestPhoneOtp(@Valid @RequestBody request: PhoneOtpRequest): ResponseEntity<Map<String, Any>> {
         // TODO: rate limiting — OTP request is a prime abuse target; strict per-phone rate limit
-        phoneOtpService.sendOtp(request.phone)
-        return ResponseEntity.noContent().build()  // 204 — don't leak whether phone exists
+        val verificationId = phoneOtpService.sendOtp(request.phone)
+        return ResponseEntity.ok(mapOf("verificationId" to verificationId))
     }
 
     @PostMapping("/phone/verify")
     fun verifyPhoneOtp(@Valid @RequestBody request: PhoneVerifyRequest): ResponseEntity<AuthResponse> {
         // TODO: rate limiting — limit verification attempts per phone number
-        val response = phoneOtpService.verifyOtp(request.phone, request.code)
+        val response = phoneOtpService.verifyOtp(request.verificationId, request.phone, request.code)
         return ResponseEntity.ok(response)
     }
 
