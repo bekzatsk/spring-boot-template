@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** Mobile/web clients authenticate with Google or Apple ID tokens and receive JWT access/refresh tokens that secure all API endpoints — the entire auth flow works out of the box
-**Current focus:** Phase 01 (v2) — Local authentication (email+password and phone+SMS OTP)
+**Current focus:** Phase 02 — Account linking (multi-provider User entity)
 
 ## Current Position
 
-Milestone: v2.0 Local Auth — COMPLETE
-Phase: 01-add-local-authentication-email-password-and-phone-sms-code-login
-Current Plan: 3 of 3 (COMPLETE)
-Last activity: 2026-03-02 - Completed quick task 3: Fix Flyway unsupported PostgreSQL 18.2 error by upgrading Flyway version
+Milestone: v2.0 Local Auth
+Phase: 02-implement-account-linking-logic-email-is-globally-unique-across-all-providers-one-user-one-email-one-account
+Current Plan: 1 of 2 (COMPLETE)
+Last activity: 2026-03-02 - Completed plan 02-01: Multi-provider User entity with @ElementCollection and V2 Flyway migration
 
-Progress: [███░░░░░░░] 100% (3/3 plans complete in active phase)
+Progress: [█████░░░░░] 50% (1/2 plans complete in active phase)
 
 ## Performance Metrics
 
@@ -96,11 +96,16 @@ Recent decisions affecting current work:
 - [Phase 01-03]: Phone users keyed on (LOCAL, phoneE164) — symmetric with email users (LOCAL, email); phone stored in both providerId and phone fields; email set to empty string (NOT NULL column)
 - [Phase 01-03]: normalizeToE164() requires '+' prefix — eliminates region ambiguity; no default region configured per research
 - [Quick-03]: flyway-database-postgresql added (BOM-managed 11.14.1, no explicit version) — Flyway 10+ requires this separate module for PostgreSQL support; spring-boot-starter-flyway only pulls flyway-core
+- [Phase 02-01]: User constructor takes only email — providers and providerIds are mutable body fields, not constructor params
+- [Phase 02-01]: FetchType.EAGER on both @ElementCollection fields (providers, providerIds) — tiny collections (max 3), needed after transaction closes (open-in-view=false)
+- [Phase 02-01]: Partial unique index on email WHERE email != '' — allows multiple phone users with empty email
+- [Phase 02-01]: LOCAL email users NOT migrated to user_provider_ids — LOCAL has no external provider ID; providers set entry is sufficient
 
 ### Roadmap Evolution
 
 - Phase 6 added: Restructure project into layered packages — config, user, authentication with model/repository/service/controller/dto/exception subpackages
 - Phase 1 (v2): Add LOCAL authentication — email+password and phone+SMS code login
+- Phase 2 added: Implement account linking logic — email is globally unique across all providers, one user = one email = one account
 
 ### Pending Todos
 
