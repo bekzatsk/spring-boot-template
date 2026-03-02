@@ -116,6 +116,7 @@ Recent decisions affecting current work:
 - [Phase 03-02]: ArgumentCaptor.capture() returns null in Kotlin — plain Mockito's capture() is incompatible with Kotlin non-null String params; doAnswer { invocation -> capturedCode = invocation.arguments[1] as String; null } is the correct workaround when mockito-kotlin is not on classpath
 - [Phase 03-02]: captureCodeOnSend() helper pattern — returns () -> String lambda; stub with doAnswer during setup, retrieve captured code after HTTP perform; decouples stubbing from code retrieval
 - [Quick-05]: verificationId (UUID) returned from /phone/request and required in /phone/verify — binds OTP to specific SmsVerification record, prevents phone-only brute-force; findById(UUID) replaces findActiveByPhone()
+- [Quick-06]: @Value("\${app.auth.sms.dev-code:}") with empty-string default — property absent in test/prod resolves to blank, triggering SecureRandom path; dev profile sets 123456; isNotBlank() conditional cleanly separates dev from prod without Spring profile checks in service class
 
 ### Roadmap Evolution
 
@@ -137,6 +138,7 @@ None.
 | 3 | Fix Flyway "Unsupported Database: PostgreSQL 18.2" — add flyway-database-postgresql module | 2026-03-02 | 0cc5bd8 | [3-fix-flyway-unsupported-postgresql-18-2-e](./quick/3-fix-flyway-unsupported-postgresql-18-2-e/) |
 | 4 | Fix RsaKeyPair bean NPE on startup — invert isNullOrBlank() conditional in RsaKeyConfig | 2026-03-02 | aef19cc | [4-fix-rsakeypair-bean-creation-failure-in-](./quick/4-fix-rsakeypair-bean-creation-failure-in-/) |
 | 5 | Add verificationId to phone OTP flow — /phone/request returns UUID, /phone/verify requires UUID | 2026-03-02 | 673106f | [5-add-smsverification-id-to-phone-otp-flow](./quick/5-add-smsverification-id-to-phone-otp-flow/) |
+| 6 | Dev profile uses hardcoded SMS OTP code 123456 — @Value config-driven, SecureRandom preserved for prod/test | 2026-03-02 | 3a8d486 | [6-dev-profile-uses-hardcoded-sms-code-1234](./quick/6-dev-profile-uses-hardcoded-sms-code-1234/) |
 
 ### Blockers/Concerns
 
@@ -145,5 +147,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Quick task 5 complete. Added verificationId UUID to phone OTP flow — /phone/request returns 200+JSON, /phone/verify requires UUID, findById replaces findActiveByPhone. 23 tests pass.
+Stopped at: Quick task 6 complete. Dev profile uses hardcoded SMS OTP code "123456" via @Value config injection; SecureRandom preserved for prod/test profiles; println debug line removed. 23 tests pass.
 Resume file: None
