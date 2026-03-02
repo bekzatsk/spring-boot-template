@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-01)
+See: .planning/PROJECT.md (updated 2026-03-02)
 
-**Core value:** Mobile/web clients authenticate with Google or Apple ID tokens and receive JWT access/refresh tokens that secure all API endpoints — the entire auth flow works out of the box
-**Current focus:** Phase 02 — Account linking (multi-provider User entity)
+**Core value:** Mobile/web clients can authenticate with Google, Apple, email+password, or phone+SMS OTP and receive JWT tokens. Account linking ensures one email = one user across all providers.
+**Current focus:** v2.0 milestone COMPLETE — all phases finished
 
 ## Current Position
 
-Milestone: v2.0 Local Auth
-Phase: 02-implement-account-linking-logic-email-is-globally-unique-across-all-providers-one-user-one-email-one-account
+Milestone: v2.0 Local Auth — COMPLETE
+Phase: 02-implement-account-linking-logic-email-is-globally-unique-across-all-providers-one-user-one-email-one-account (COMPLETE)
 Current Plan: 2 of 2 (COMPLETE)
-Last activity: 2026-03-02 - Completed plan 02-02: Service layer account linking logic, all 22 tests pass
+Last activity: 2026-03-02 - Phase 02 verified and complete. v2.0 milestone finished.
 
-Progress: [██████████] 100% (2/2 plans complete in active phase)
+Progress: [██████████] 100% (all phases complete in v2.0 milestone)
 
 ## Performance Metrics
 
@@ -133,5 +133,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed Phase 02 (account linking) — all 22 tests pass with multi-provider model. Pending verification.
+Stopped at: v2.0 milestone complete. Phase 02 (account linking) verified. All 22 tests pass.
 Resume file: None

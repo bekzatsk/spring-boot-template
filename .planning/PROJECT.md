@@ -2,11 +2,11 @@
 
 ## What This Is
 
-A production-ready Spring Boot 4 backend API template with stateless JWT authentication via Google and Apple OAuth2 ID token verification. Built with Kotlin on Java 25 with Virtual Threads. 1,293 lines of Kotlin across 6 phases, 33 requirements — all shipped. Designed as a reusable starting point: rename the package and artifact to bootstrap new projects with auth already wired.
+A production-ready Spring Boot 4 backend API template with stateless JWT authentication via Google OAuth2, Apple Sign-In, email+password, and phone+SMS OTP. Built with Kotlin on Java 25 with Virtual Threads. Multi-provider account linking: one email = one user = N providers. Designed as a reusable starting point: rename the package and artifact to bootstrap new projects with auth already wired.
 
 ## Core Value
 
-Mobile/web clients can authenticate with Google or Apple ID tokens and receive JWT access/refresh tokens that secure all API endpoints — the entire auth flow works out of the box.
+Mobile/web clients can authenticate with Google or Apple ID tokens, email+password, or phone+SMS OTP and receive JWT access/refresh tokens that secure all API endpoints. Account linking ensures one email = one user across all providers.
 
 ## Requirements
 
@@ -37,6 +37,13 @@ Mobile/web clients can authenticate with Google or Apple ID tokens and receive J
 - ✓ .env.example with all required environment variables documented — v1.0
 - ✓ Domain-based package layout: config/, user/, authentication/ with layered sub-packages — v1.0
 
+- ✓ Email+password local registration and login — v2.0
+- ✓ Phone+SMS OTP authentication via Twilio Verify — v2.0
+- ✓ Flyway-managed schema migrations (V1 initial, V2 account linking) — v2.0
+- ✓ Multi-provider User entity with @ElementCollection (providers Set, providerIds Map) — v2.0
+- ✓ Account linking: one email = one user across LOCAL, GOOGLE, APPLE providers — v2.0
+- ✓ Email-first lookup (findByEmail) as universal user identity key — v2.0
+
 ### Active
 
 (None — next milestone requirements TBD via `/gsd:new-milestone`)
@@ -48,15 +55,12 @@ Mobile/web clients can authenticate with Google or Apple ID tokens and receive J
 - Full OAuth2 Authorization Server — only using spring-authorization-server for JWT signing (JWKSource, JWT encoder)
 - Session-based auth — stateless JWT only
 - Rate limiting implementation — TODO markers only; implementation depends on deployment (API gateway vs in-app)
-- Email/password local registration — auth is exclusively via Google/Apple ID tokens
 - Admin panel or user management endpoints beyond /users/me
-- Flyway migrations — deferred to v2
-- Account linking (same email across providers) — deferred to v2
 
 ## Context
 
-- **Current state:** v1.0 shipped. 1,293 Kotlin LOC, 9 integration tests passing, 33 requirements validated.
-- **Tech stack:** Spring Boot 4.0.3, Kotlin, Java 25, Maven, PostgreSQL 18, Spring Security 7, Spring Authorization Server (JWT only).
+- **Current state:** v2.0 shipped. 22 integration tests passing. Local auth (email+password, phone+SMS OTP) and multi-provider account linking added on top of v1.0.
+- **Tech stack:** Spring Boot 4.0.3, Kotlin, Java 25, Maven, PostgreSQL 18, Spring Security 7, Spring Authorization Server (JWT only), Flyway, Twilio Verify, libphonenumber.
 - **Package structure:** `kz.innlab.template` with `config/`, `user/{model,repository,service,controller,dto}`, `authentication/{model,repository,service,controller,dto,exception,filter}`.
 - The "template" naming is a placeholder. When creating a new project, rename package and artifact.
 - Target clients: mobile apps (iOS/Android) and web SPAs that handle Google/Apple sign-in client-side and send ID tokens to the backend.
@@ -84,6 +88,10 @@ Mobile/web clients can authenticate with Google or Apple ID tokens and receive J
 | open-in-view: false | Prevents LazyInitializationException leaking into controllers; requires explicit JOIN FETCH | ✓ Good — fixed one bug (Quick-02) with JOIN FETCH pattern |
 | User entity as regular class (not data class) | data class equals/hashCode breaks Hibernate proxy equality | ✓ Good |
 | Jackson 3.x (tools.jackson.* namespace) | Spring Boot 4.x ships Jackson 3.x; old com.fasterxml namespace no longer works | ✓ Good |
+| Multi-provider User entity with @ElementCollection | providers Set + providerIds Map replaces single provider/providerId; FetchType.EAGER since tiny collections (max 3 entries) | ✓ Good |
+| Email-first account linking | findByEmail() as primary lookup; link provider to existing account if email matches | ✓ Good — one user per email across all providers |
+| Flyway for schema migrations | V1 initial schema, V2 account linking; disabled in test profile (H2 uses create-drop) | ✓ Good |
+| Twilio Verify for phone OTP | Interface abstraction (TwilioVerifyClient) for testability; E.164 format enforced | ✓ Good |
 
 ---
-*Last updated: 2026-03-01 after v1.0 milestone*
+*Last updated: 2026-03-02 after v2.0 milestone (Phase 02 — account linking)*
