@@ -62,3 +62,13 @@ Plans:
 Plans:
 - [x] 03-01-PLAN.md — SMS verification infrastructure + Twilio removal + endpoint/DTO renames + test rewrite — completed 2026-03-02
 - [x] 03-02-PLAN.md — Rewrite PhoneAuthIntegrationTest with doAnswer code capture, 7 tests, rate limiting test — completed 2026-03-02
+
+### Phase 4: Replace all UUID generation with UUID v7 — time-ordered IDs for chronological sorting and cursor-based pagination
+
+**Goal:** Replace @GeneratedValue(UUID v4) with application-assigned UUID v7 via uuid-creator 6.1.1 and a shared BaseEntity @MappedSuperclass implementing Persistable<UUID>, across all 3 JPA entities
+**Depends on:** Phase 3
+**Requirements:** [UUID7-01, UUID7-02, UUID7-03]
+**Plans:** 1 plan
+
+Plans:
+- [ ] 04-01-PLAN.md — Add uuid-creator dependency, create BaseEntity @MappedSuperclass, migrate all entities to UUID v7, remove id!! force-unwraps
