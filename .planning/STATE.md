@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Mobile/web clients can authenticate with Google, Apple, email+password, or phone+SMS OTP and receive JWT tokens. Account linking ensures one email = one user across all providers.
-**Current focus:** v2.0 milestone COMPLETE — all phases finished
+**Current focus:** Phase 03 — Replace Twilio Verify with self-managed SMS OTP (COMPLETE)
 
 ## Current Position
 
-Milestone: v2.0 Local Auth — COMPLETE
-Phase: 02-implement-account-linking-logic-email-is-globally-unique-across-all-providers-one-user-one-email-one-account (COMPLETE)
-Current Plan: 2 of 2 (COMPLETE)
-Last activity: 2026-03-02 - Phase 02 verified and complete. v2.0 milestone finished.
+Milestone: v3.0 Self-Managed SMS OTP — COMPLETE
+Phase: 03-replace-twilio-verify-with-self-managed-sms-code-generation-and-verification (COMPLETE)
+Current Plan: 1 of 1 (COMPLETE)
+Last activity: 2026-03-02 - Phase 03 plan 01 executed. Twilio removed, self-managed SMS OTP complete. All 22 tests pass.
 
-Progress: [██████████] 100% (all phases complete in v2.0 milestone)
+Progress: [██████████] 100% (phase 03 complete)
 
 ## Performance Metrics
 
@@ -35,6 +35,7 @@ Progress: [██████████] 100% (all phases complete in v2.0 mil
 | 06-restructure | 2/2 | 7 min | 3.5 min |
 | 01-local-auth (v2) | 3/3 | 12 min | 4 min |
 | 02-account-linking | 2/2 | 7 min | 3.5 min |
+| 03-self-managed-sms | 1/1 | 12 min | 12 min |
 
 **Recent Trend:**
 - Last 5 plans: 3 min, 4 min, 8 min, 3 min, 4 min
@@ -107,12 +108,18 @@ Recent decisions affecting current work:
 - [Phase 02-02]: LocalUserDetailsService checks AuthProvider.LOCAL in user.providers — prevents social-only users from local password auth
 - [Phase 02-02]: UserRepository.findByPhone added for phone user lookup — replaces old findByProviderAndProviderId(LOCAL, phone)
 - [Phase 02-02]: UserProfileResponse changed from single provider to providers list — API-breaking change for multi-provider model
+- [Phase 03-01]: ConsoleSmsService has no @Component — registered via @Bean @ConditionalOnMissingBean(SmsService::class) in SmsSchedulerConfig; future real SMS provider defines its own @Bean SmsService to override
+- [Phase 03-01]: PasswordEncoder.encode() is a Java method inferred as String? in Kotlin; !! operator required at call sites even though it never returns null
+- [Phase 03-01]: Tests pre-seed H2 with passwordEncoder.encode(knownCode)!! to exercise real BCrypt verification path; old approach of mocking checkVerification return value not applicable
+- [Phase 03-01]: mvnw clean required after deleting Kotlin source files — incremental compile leaves stale .class files in target/ causing BeanCreationException on test startup
+- [Phase 03-01]: Phone endpoint paths renamed /phone/request-otp -> /phone/request and /phone/verify-otp -> /phone/verify; DTO field phoneNumber -> phone
 
 ### Roadmap Evolution
 
 - Phase 6 added: Restructure project into layered packages — config, user, authentication with model/repository/service/controller/dto/exception subpackages
 - Phase 1 (v2): Add LOCAL authentication — email+password and phone+SMS code login
 - Phase 2 added: Implement account linking logic — email is globally unique across all providers, one user = one email = one account
+- Phase 3 added: Replace Twilio Verify with self-managed SMS code generation and verification
 
 ### Pending Todos
 
@@ -133,5 +140,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: v2.0 milestone complete. Phase 02 (account linking) verified. All 22 tests pass.
+Stopped at: Phase 03 plan 01 complete. Twilio replaced with self-managed SMS OTP. All 22 tests pass.
 Resume file: None

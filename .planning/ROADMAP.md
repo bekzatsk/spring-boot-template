@@ -60,5 +60,4 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — SMS verification infrastructure: SmsVerification entity, repository, SmsService/ConsoleSmsService, SmsVerificationService, V3 migration, scheduled cleanup, remove Twilio
-- [ ] 03-02-PLAN.md — API renames and test rewrite: endpoint/DTO field renames, PhoneAuthIntegrationTest rewrite with ArgumentCaptor
+- [x] 03-01-PLAN.md — SMS verification infrastructure + Twilio removal + endpoint/DTO renames + test rewrite — completed 2026-03-02
