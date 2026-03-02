@@ -87,11 +87,12 @@ class AppleAuthIntegrationTest {
             .andExpect(jsonPath("$.accessToken").exists())
             .andExpect(jsonPath("$.refreshToken").exists())
 
-        val user = userRepository.findByProviderAndProviderId(AuthProvider.APPLE, appleUserId)
+        val user = userRepository.findByEmail(email)
         assert(user != null) { "User should be created" }
         assert(user!!.email == email) { "Email should match" }
         assert(user.name == "Jane Doe") { "Name should be 'Jane Doe' but was '${user.name}'" }
-        assert(user.provider == AuthProvider.APPLE) { "Provider should be APPLE" }
+        assert(AuthProvider.APPLE in user.providers) { "Providers should contain APPLE" }
+        assert(user.providerIds[AuthProvider.APPLE] == appleUserId) { "Apple sub should be in providerIds" }
     }
 
     @Test
@@ -100,11 +101,10 @@ class AppleAuthIntegrationTest {
 
         // Pre-create an APPLE user (simulating a previously registered user)
         val existingUser = userRepository.save(
-            User(
-                email = "existing@example.com",
-                provider = AuthProvider.APPLE,
-                providerId = appleUserId
-            )
+            User(email = "existing@example.com").also {
+                it.providers.add(AuthProvider.APPLE)
+                it.providerIds[AuthProvider.APPLE] = appleUserId
+            }
         )
 
         // Subsequent login: JWT has sub but NO email claim
@@ -121,7 +121,7 @@ class AppleAuthIntegrationTest {
             .andExpect(jsonPath("$.refreshToken").exists())
 
         // No duplicate user created
-        val users = userRepository.findAll().filter { it.provider == AuthProvider.APPLE }
+        val users = userRepository.findAll().filter { AuthProvider.APPLE in it.providers }
         assert(users.size == 1) { "Should be exactly 1 APPLE user, found ${users.size}" }
         assert(users[0].id == existingUser.id) { "Should be the same user" }
     }
@@ -144,7 +144,7 @@ class AppleAuthIntegrationTest {
             .andExpect(jsonPath("$.refreshToken").exists())
 
         // AUTH-06: private relay email stored as-is without rejection
-        val user = userRepository.findByProviderAndProviderId(AuthProvider.APPLE, appleUserId)
+        val user = userRepository.findByEmail(privateRelayEmail)
         assert(user != null) { "User should be created with private relay email" }
         assert(user!!.email == privateRelayEmail) { "Private relay email should be stored" }
     }

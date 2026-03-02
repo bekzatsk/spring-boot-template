@@ -45,9 +45,9 @@ class LocalAuthIntegrationTest {
             .andExpect(jsonPath("$.accessToken").exists())
             .andExpect(jsonPath("$.refreshToken").exists())
 
-        val user = userRepository.findByProviderAndProviderId(AuthProvider.LOCAL, "test@example.com")
+        val user = userRepository.findByEmail("test@example.com")
         assert(user != null) { "User should be created in DB" }
-        assert(user!!.provider == AuthProvider.LOCAL) { "Provider should be LOCAL" }
+        assert(AuthProvider.LOCAL in user!!.providers) { "Providers should contain LOCAL" }
         assert(user.passwordHash != null) { "passwordHash should be set" }
         assert(user.passwordHash != "SecurePass123") { "Password must not be stored in plaintext" }
         assert(user.passwordHash!!.startsWith("{bcrypt}")) { "Password should be BCrypt-hashed but was: ${user.passwordHash}" }

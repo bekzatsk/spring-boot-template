@@ -62,11 +62,10 @@ class SecurityIntegrationTest {
     @Test
     fun `validToken returns 200 with user profile`() {
         val user = userRepository.save(
-            User(
-                email = "test@example.com",
-                provider = AuthProvider.GOOGLE,
-                providerId = "google-sub-${UUID.randomUUID()}"
-            )
+            User(email = "test@example.com").also {
+                it.providers.add(AuthProvider.GOOGLE)
+                it.providerIds[AuthProvider.GOOGLE] = "google-sub-${UUID.randomUUID()}"
+            }
         )
         val token = tokenService.generateAccessToken(user.id!!, setOf(Role.USER))
         mockMvc.perform(
@@ -93,11 +92,10 @@ class SecurityIntegrationTest {
     @Test
     fun `blankIdToken returns 400 with validation error`() {
         val user = userRepository.save(
-            User(
-                email = "test2@example.com",
-                provider = AuthProvider.GOOGLE,
-                providerId = "google-sub-${UUID.randomUUID()}"
-            )
+            User(email = "test2@example.com").also {
+                it.providers.add(AuthProvider.GOOGLE)
+                it.providerIds[AuthProvider.GOOGLE] = "google-sub-${UUID.randomUUID()}"
+            }
         )
         val token = tokenService.generateAccessToken(user.id!!, setOf(Role.USER))
 

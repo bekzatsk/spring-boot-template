@@ -72,10 +72,9 @@ class PhoneAuthIntegrationTest {
             .andExpect(jsonPath("$.refreshToken").exists())
 
         // User created with correct fields
-        val user = userRepository.findByProviderAndProviderId(AuthProvider.LOCAL, testPhone)
+        val user = userRepository.findByPhone(testPhone)
         assert(user != null) { "Phone user should be created in DB" }
-        assert(user!!.provider == AuthProvider.LOCAL) { "Provider should be LOCAL" }
-        assert(user.providerId == testPhone) { "ProviderId should be E.164 phone" }
+        assert(AuthProvider.LOCAL in user!!.providers) { "Providers should contain LOCAL" }
         assert(user.phone == testPhone) { "Phone field should be set to E.164 phone" }
     }
 
@@ -83,11 +82,10 @@ class PhoneAuthIntegrationTest {
     fun `verify OTP success for returning user finds existing user and returns tokens`() {
         // Pre-create a phone user
         val existingUser = userRepository.save(
-            User(
-                email = "",
-                provider = AuthProvider.LOCAL,
-                providerId = testPhone
-            ).also { it.phone = testPhone }
+            User(email = "").also {
+                it.providers.add(AuthProvider.LOCAL)
+                it.phone = testPhone
+            }
         )
 
         `when`(twilioVerifyClient.checkVerification(anyString(), anyString(), anyString()))
@@ -102,8 +100,8 @@ class PhoneAuthIntegrationTest {
             .andExpect(jsonPath("$.accessToken").exists())
             .andExpect(jsonPath("$.refreshToken").exists())
 
-        // No duplicate user created — exactly one LOCAL user with this phone
-        val users = userRepository.findAll().filter { it.provider == AuthProvider.LOCAL && it.providerId == testPhone }
+        // No duplicate user created — exactly one LOCAL phone user
+        val users = userRepository.findAll().filter { AuthProvider.LOCAL in it.providers && it.phone == testPhone }
         assert(users.size == 1) { "Should be exactly 1 phone user, found ${users.size}" }
         assert(users[0].id == existingUser.id) { "Should be the same existing user" }
     }
