@@ -51,3 +51,14 @@ Plans:
 Plans:
 - [ ] 02-01-PLAN.md — Entity + Migration: Rewrite User entity to multi-provider model, update UserRepository to findByEmail, create V2 Flyway migration
 - [ ] 02-02-PLAN.md — Service layer + Tests: Rewrite UserService/LocalAuthService/LocalUserDetailsService for account linking, update all test files
+
+### Phase 3: Replace Twilio Verify with self-managed SMS code generation and verification
+
+**Goal:** Replace Twilio Verify with fully self-managed SMS OTP: SecureRandom 6-digit codes, BCrypt-hashed storage in sms_verifications table, rate limiting (1/phone/60s), max 3 attempts, 5-min expiry, scheduled cleanup, SmsService interface with ConsoleSmsService default, endpoint/DTO renames, and comprehensive integration tests
+**Depends on:** Phase 2
+**Requirements:** [SMS-01, SMS-02, SMS-03, SMS-04, SMS-05, SMS-06, SMS-07, SMS-08, SMS-09]
+**Plans:** 2 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — SMS verification infrastructure: SmsVerification entity, repository, SmsService/ConsoleSmsService, SmsVerificationService, V3 migration, scheduled cleanup, remove Twilio
+- [ ] 03-02-PLAN.md — API renames and test rewrite: endpoint/DTO field renames, PhoneAuthIntegrationTest rewrite with ArgumentCaptor
