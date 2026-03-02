@@ -34,11 +34,11 @@ class RsaKeyConfig(
 
     @Bean
     fun rsaKeyPair(): KeyPair {
-        if (keystoreLocation != null && keystorePassword != null) {
+        if (!keystoreLocation.isNullOrBlank() && !keystorePassword.isNullOrBlank()) {
             logger.info("Loading RSA keypair from keystore: {}", keystoreLocation)
-            val resource = ClassPathResource(keystoreLocation)
+            val resource = ClassPathResource(keystoreLocation!!)
             val keyStore = KeyStore.getInstance("PKCS12")
-            keyStore.load(resource.inputStream, keystorePassword.toCharArray())
+            keyStore.load(resource.inputStream, keystorePassword!!.toCharArray())
             val privateKey = keyStore.getKey(keyAlias, keystorePassword.toCharArray()) as RSAPrivateKey
             val publicKey = keyStore.getCertificate(keyAlias).publicKey as RSAPublicKey
             return KeyPair(publicKey, privateKey)
