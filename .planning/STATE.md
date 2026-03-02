@@ -143,6 +143,7 @@ None.
 | 4 | Fix RsaKeyPair bean NPE on startup — invert isNullOrBlank() conditional in RsaKeyConfig | 2026-03-02 | aef19cc | [4-fix-rsakeypair-bean-creation-failure-in-](./quick/4-fix-rsakeypair-bean-creation-failure-in-/) |
 | 5 | Add verificationId to phone OTP flow — /phone/request returns UUID, /phone/verify requires UUID | 2026-03-02 | 673106f | [5-add-smsverification-id-to-phone-otp-flow](./quick/5-add-smsverification-id-to-phone-otp-flow/) |
 | 6 | Dev profile uses hardcoded SMS OTP code 123456 — @Value config-driven, SecureRandom preserved for prod/test | 2026-03-02 | 3a8d486 | [6-dev-profile-uses-hardcoded-sms-code-1234](./quick/6-dev-profile-uses-hardcoded-sms-code-1234/) |
+| 7 | Consolidate Flyway migrations into single V1 — complete 6-table schema, no gen_random_uuid, dev clean-on-validation-error | 2026-03-02 | e89675a | [7-consolidate-flyway-migrations-into-singl](./quick/7-consolidate-flyway-migrations-into-singl/) |
 
 ### Blockers/Concerns
 
@@ -151,5 +152,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Phase 04 complete. All JPA entities migrated to UUID v7 via shared BaseEntity with Persistable<UUID>. All id!! force-unwraps removed. 23 tests pass.
+Stopped at: Quick task 7 complete. Consolidated V1+V2+V3 Flyway migrations into single V1 with 6-table schema. Removed gen_random_uuid() defaults. Added clean-on-validation-error to dev profile. 23 tests pass.
 Resume file: None
