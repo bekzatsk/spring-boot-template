@@ -47,7 +47,7 @@ class AppleOAuth2Service(
             name = fullName
         )
 
-        val accessToken = tokenService.generateAccessToken(user.id!!, user.roles)
+        val accessToken = tokenService.generateAccessToken(user.id, user.roles)
         val refreshToken = refreshTokenService.createToken(user)
 
         return AuthResponse(accessToken = accessToken, refreshToken = refreshToken)

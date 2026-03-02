@@ -79,7 +79,7 @@ class AuthController(
     fun refresh(@Valid @RequestBody request: RefreshRequest): ResponseEntity<AuthResponse> {
         // TODO: rate limiting — refresh endpoint is a common abuse target; consider per-IP limit
         val (user, newRawToken) = refreshTokenService.rotate(request.refreshToken)
-        val accessToken = tokenService.generateAccessToken(user.id!!, user.roles)
+        val accessToken = tokenService.generateAccessToken(user.id, user.roles)
         return ResponseEntity.ok(AuthResponse(accessToken = accessToken, refreshToken = newRawToken))
     }
 

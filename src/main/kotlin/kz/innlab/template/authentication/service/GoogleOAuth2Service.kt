@@ -30,7 +30,7 @@ class GoogleOAuth2Service(
 
         val user = userService.findOrCreateGoogleUser(providerId, email, name, picture)
 
-        val accessToken = tokenService.generateAccessToken(user.id!!, user.roles)
+        val accessToken = tokenService.generateAccessToken(user.id, user.roles)
         val refreshToken = refreshTokenService.createToken(user)
 
         return AuthResponse(accessToken = accessToken, refreshToken = refreshToken)

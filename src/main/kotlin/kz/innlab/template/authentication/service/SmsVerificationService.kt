@@ -44,7 +44,7 @@ class SmsVerificationService(
             )
         )
         smsService.sendCode(phoneE164, code)
-        return saved.id!!
+        return saved.id
     }
 
     @Transactional

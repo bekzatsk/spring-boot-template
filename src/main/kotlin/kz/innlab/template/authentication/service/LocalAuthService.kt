@@ -51,7 +51,7 @@ class LocalAuthService(
             userRepository.save(newUser)
         }
 
-        val accessToken = tokenService.generateAccessToken(user.id!!, user.roles)
+        val accessToken = tokenService.generateAccessToken(user.id, user.roles)
         val refreshToken = refreshTokenService.createToken(user)
 
         return AuthResponse(accessToken = accessToken, refreshToken = refreshToken)
@@ -69,7 +69,7 @@ class LocalAuthService(
         val user = userRepository.findByEmail(email)
             ?: throw BadCredentialsException("User not found")
 
-        val accessToken = tokenService.generateAccessToken(user.id!!, user.roles)
+        val accessToken = tokenService.generateAccessToken(user.id, user.roles)
         val refreshToken = refreshTokenService.createToken(user)
 
         return AuthResponse(accessToken = accessToken, refreshToken = refreshToken)

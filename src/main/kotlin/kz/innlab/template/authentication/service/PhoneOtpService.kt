@@ -42,7 +42,7 @@ class PhoneOtpService(
             throw BadCredentialsException("Invalid or expired OTP")
         }
         val user = userService.findOrCreatePhoneUser(phoneE164)
-        val accessToken = tokenService.generateAccessToken(user.id!!, user.roles)
+        val accessToken = tokenService.generateAccessToken(user.id, user.roles)
         val refreshToken = refreshTokenService.createToken(user)
         return AuthResponse(accessToken = accessToken, refreshToken = refreshToken)
     }

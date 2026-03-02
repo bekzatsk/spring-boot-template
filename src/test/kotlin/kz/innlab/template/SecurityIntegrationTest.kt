@@ -67,7 +67,7 @@ class SecurityIntegrationTest {
                 it.providerIds[AuthProvider.GOOGLE] = "google-sub-${UUID.randomUUID()}"
             }
         )
-        val token = tokenService.generateAccessToken(user.id!!, setOf(Role.USER))
+        val token = tokenService.generateAccessToken(user.id, setOf(Role.USER))
         mockMvc.perform(
             get("/api/v1/users/me")
                 .header("Authorization", "Bearer $token")
@@ -97,7 +97,7 @@ class SecurityIntegrationTest {
                 it.providerIds[AuthProvider.GOOGLE] = "google-sub-${UUID.randomUUID()}"
             }
         )
-        val token = tokenService.generateAccessToken(user.id!!, setOf(Role.USER))
+        val token = tokenService.generateAccessToken(user.id, setOf(Role.USER))
 
         // Test with blank idToken
         mockMvc.perform(
