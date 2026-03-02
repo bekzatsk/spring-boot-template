@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Milestone: v3.0 Self-Managed SMS OTP — COMPLETE
 Phase: 03-replace-twilio-verify-with-self-managed-sms-code-generation-and-verification (COMPLETE)
 Current Plan: 2 of 2 (COMPLETE)
-Last activity: 2026-03-02 - Completed quick task 5: Add SmsVerification ID to phone OTP flow
+Last activity: 2026-03-02 - Completed quick task 6: Dev profile uses hardcoded SMS code 123456
 
 Progress: [██████████] 100% (phase 03 complete)
 
