@@ -114,3 +114,10 @@ None — no external service configuration required. All tests use H2 and mocked
 ---
 *Phase: 03-replace-twilio-verify-with-self-managed-sms-code-generation-and-verification*
 *Completed: 2026-03-02*
+
+## Self-Check: PASSED
+
+- FOUND: src/test/kotlin/kz/innlab/template/PhoneAuthIntegrationTest.kt
+- FOUND: .planning/phases/03-replace-twilio-verify-with-self-managed-sms-code-generation-and-verification/03-02-SUMMARY.md
+- FOUND: e937a73 (Task 2 commit)
+- FOUND: 13ca43d (docs/metadata commit)
