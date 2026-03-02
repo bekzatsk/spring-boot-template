@@ -61,3 +61,4 @@ Plans:
 
 Plans:
 - [x] 03-01-PLAN.md — SMS verification infrastructure + Twilio removal + endpoint/DTO renames + test rewrite — completed 2026-03-02
+- [x] 03-02-PLAN.md — Rewrite PhoneAuthIntegrationTest with doAnswer code capture, 7 tests, rate limiting test — completed 2026-03-02

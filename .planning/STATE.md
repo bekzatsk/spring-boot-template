@@ -11,8 +11,8 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 
 Milestone: v3.0 Self-Managed SMS OTP — COMPLETE
 Phase: 03-replace-twilio-verify-with-self-managed-sms-code-generation-and-verification (COMPLETE)
-Current Plan: 1 of 1 (COMPLETE)
-Last activity: 2026-03-02 - Phase 03 plan 01 executed. Twilio removed, self-managed SMS OTP complete. All 22 tests pass.
+Current Plan: 2 of 2 (COMPLETE)
+Last activity: 2026-03-02 - Phase 03 plan 02 executed. Integration tests rewritten with doAnswer code capture. 23 tests pass.
 
 Progress: [██████████] 100% (phase 03 complete)
 
@@ -35,7 +35,7 @@ Progress: [██████████] 100% (phase 03 complete)
 | 06-restructure | 2/2 | 7 min | 3.5 min |
 | 01-local-auth (v2) | 3/3 | 12 min | 4 min |
 | 02-account-linking | 2/2 | 7 min | 3.5 min |
-| 03-self-managed-sms | 1/1 | 12 min | 12 min |
+| 03-self-managed-sms | 2/2 | 15 min | 7.5 min |
 
 **Recent Trend:**
 - Last 5 plans: 3 min, 4 min, 8 min, 3 min, 4 min
@@ -113,6 +113,8 @@ Recent decisions affecting current work:
 - [Phase 03-01]: Tests pre-seed H2 with passwordEncoder.encode(knownCode)!! to exercise real BCrypt verification path; old approach of mocking checkVerification return value not applicable
 - [Phase 03-01]: mvnw clean required after deleting Kotlin source files — incremental compile leaves stale .class files in target/ causing BeanCreationException on test startup
 - [Phase 03-01]: Phone endpoint paths renamed /phone/request-otp -> /phone/request and /phone/verify-otp -> /phone/verify; DTO field phoneNumber -> phone
+- [Phase 03-02]: ArgumentCaptor.capture() returns null in Kotlin — plain Mockito's capture() is incompatible with Kotlin non-null String params; doAnswer { invocation -> capturedCode = invocation.arguments[1] as String; null } is the correct workaround when mockito-kotlin is not on classpath
+- [Phase 03-02]: captureCodeOnSend() helper pattern — returns () -> String lambda; stub with doAnswer during setup, retrieve captured code after HTTP perform; decouples stubbing from code retrieval
 
 ### Roadmap Evolution
 
@@ -140,5 +142,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Phase 03 plan 01 complete. Twilio replaced with self-managed SMS OTP. All 22 tests pass.
+Stopped at: Phase 03 plan 02 complete. Integration tests rewritten with doAnswer code capture. 23 tests pass.
 Resume file: None
