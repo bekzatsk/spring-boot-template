@@ -95,6 +95,7 @@ Recent decisions affecting current work:
 - [Phase 01-03]: TwilioVerifyClient interface abstracts Twilio API — @MockitoBean replaces only Twilio boundary in tests; full service layer exercised without network calls
 - [Phase 01-03]: Phone users keyed on (LOCAL, phoneE164) — symmetric with email users (LOCAL, email); phone stored in both providerId and phone fields; email set to empty string (NOT NULL column)
 - [Phase 01-03]: normalizeToE164() requires '+' prefix — eliminates region ambiguity; no default region configured per research
+- [Quick-03]: flyway-database-postgresql added (BOM-managed 11.14.1, no explicit version) — Flyway 10+ requires this separate module for PostgreSQL support; spring-boot-starter-flyway only pulls flyway-core
 
 ### Roadmap Evolution
 
@@ -111,6 +112,7 @@ None.
 |---|-------------|------|--------|-----------|
 | 1 | Fix DataSource 'url' not specified error — add default spring profile | 2026-03-01 | cd51f12 | [1-fix-datasource-url-not-specified-error-a](./quick/1-fix-datasource-url-not-specified-error-a/) |
 | 2 | Fix 500 on POST /api/v1/auth/refresh — JOIN FETCH User in findByTokenHash, add exception logging | 2026-03-01 | ce3560f | [2-fix-500-internal-server-error-on-api-v1-](./quick/2-fix-500-internal-server-error-on-api-v1-/) |
+| 3 | Fix Flyway "Unsupported Database: PostgreSQL 18.2" — add flyway-database-postgresql module | 2026-03-02 | 0cc5bd8 | [3-fix-flyway-unsupported-postgresql-18-2-e](./quick/3-fix-flyway-unsupported-postgresql-18-2-e/) |
 
 ### Blockers/Concerns
 
@@ -119,5 +121,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 01-03-PLAN.md — phone+SMS OTP auth with Twilio Verify API, TwilioVerifyClient abstraction, E.164 normalization, 6 integration tests, all 22 tests pass. Phase 01 (v2) COMPLETE.
+Stopped at: Completed Quick Task 3 — fix Flyway "Unsupported Database: PostgreSQL 18.2" by adding flyway-database-postgresql module (BOM-managed 11.14.1). All 22 tests pass.
 Resume file: None
