@@ -11,17 +11,17 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 
 Milestone: v2.0 Local Auth
 Phase: 02-implement-account-linking-logic-email-is-globally-unique-across-all-providers-one-user-one-email-one-account
-Current Plan: 1 of 2 (COMPLETE)
-Last activity: 2026-03-02 - Completed plan 02-01: Multi-provider User entity with @ElementCollection and V2 Flyway migration
+Current Plan: 2 of 2 (COMPLETE)
+Last activity: 2026-03-02 - Completed plan 02-02: Service layer account linking logic, all 22 tests pass
 
-Progress: [█████░░░░░] 50% (1/2 plans complete in active phase)
+Progress: [██████████] 100% (2/2 plans complete in active phase)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 5.9 min
-- Total execution time: 0.75 hours
+- Total plans completed: 10
+- Average duration: 5.4 min
+- Total execution time: 0.87 hours
 
 **By Phase:**
 
@@ -34,9 +34,10 @@ Progress: [█████░░░░░] 50% (1/2 plans complete in active pha
 | 05-hardening | 1/1 | 2 min | 2 min |
 | 06-restructure | 2/2 | 7 min | 3.5 min |
 | 01-local-auth (v2) | 3/3 | 12 min | 4 min |
+| 02-account-linking | 2/2 | 7 min | 3.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 13 min, 2 min, 3 min, 4 min, 8 min
+- Last 5 plans: 3 min, 4 min, 8 min, 3 min, 4 min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -51,7 +52,7 @@ Recent decisions affecting current work:
 - Spring MVC + Virtual Threads chosen over WebFlux — simpler model, sufficient concurrency
 - Spring Authorization Server used narrowly for JWKSource/NimbusJwtEncoder only — NOT full OAuth2 server
 - Refresh token rotation with 10-second grace window for mobile concurrent retry handling
-- Users keyed on (provider, providerId) composite — never by email
+- Users keyed on email (globally unique) with multi-provider support — findByEmail is primary lookup
 - OAuth2AuthorizationServerAutoConfiguration excluded from TemplateApplication — prevents competing SecurityFilterChain; Spring Boot 4.0.3 package is org.springframework.boot.security.oauth2.server.authorization.autoconfigure.servlet
 - Dev profile uses :default values for DB credentials (convenience), prod uses bare ${ENV_VAR} (SECU-09)
 - Kotlin all-open plugin configured for jakarta.persistence annotations (Entity, MappedSuperclass, Embeddable)
@@ -100,6 +101,12 @@ Recent decisions affecting current work:
 - [Phase 02-01]: FetchType.EAGER on both @ElementCollection fields (providers, providerIds) — tiny collections (max 3), needed after transaction closes (open-in-view=false)
 - [Phase 02-01]: Partial unique index on email WHERE email != '' — allows multiple phone users with empty email
 - [Phase 02-01]: LOCAL email users NOT migrated to user_provider_ids — LOCAL has no external provider ID; providers set entry is sufficient
+- [Phase 02-02]: UserService.findOrCreateGoogleUser uses findByEmail first — links GOOGLE provider to existing account if email matches
+- [Phase 02-02]: UserService.findOrCreateAppleUser uses findByAppleProviderId first (returning), then findByEmail (first login) — handles both Apple auth cases
+- [Phase 02-02]: LocalAuthService.register links LOCAL credentials to existing social accounts if email exists but passwordHash is null
+- [Phase 02-02]: LocalUserDetailsService checks AuthProvider.LOCAL in user.providers — prevents social-only users from local password auth
+- [Phase 02-02]: UserRepository.findByPhone added for phone user lookup — replaces old findByProviderAndProviderId(LOCAL, phone)
+- [Phase 02-02]: UserProfileResponse changed from single provider to providers list — API-breaking change for multi-provider model
 
 ### Roadmap Evolution
 
@@ -126,5 +133,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed Quick Task 3 — fix Flyway "Unsupported Database: PostgreSQL 18.2" by adding flyway-database-postgresql module (BOM-managed 11.14.1). All 22 tests pass.
+Stopped at: Completed Phase 02 (account linking) — all 22 tests pass with multi-provider model. Pending verification.
 Resume file: None
