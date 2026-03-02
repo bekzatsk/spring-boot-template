@@ -8,20 +8,21 @@ import kz.innlab.template.user.model.User
 import kz.innlab.template.user.repository.UserRepository
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.anyString
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doNothing
-import org.mockito.Mockito.verify as mockitoVerify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.MvcResult
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import tools.jackson.databind.json.JsonMapper
+import java.util.UUID
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -66,8 +67,19 @@ class PhoneAuthIntegrationTest {
         return { capturedCode ?: error("smsService.sendCode was not called") }
     }
 
+    /**
+     * Helper to extract verificationId from /phone/request response body.
+     * Response JSON: {"verificationId": "uuid-string"}
+     */
+    private fun extractVerificationId(result: MvcResult): String {
+        val body = result.response.contentAsString
+        val mapper = JsonMapper.builder().build()
+        val tree = mapper.readTree(body)
+        return tree.get("verificationId").asText()
+    }
+
     @Test
-    fun `request OTP success returns 204`() {
+    fun `request OTP success returns 200 with verificationId`() {
         doNothing().`when`(smsService).sendCode(anyString(), anyString())
 
         mockMvc.perform(
@@ -75,7 +87,8 @@ class PhoneAuthIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"phone": "$testPhone"}""")
         )
-            .andExpect(status().isNoContent)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.verificationId").exists())
     }
 
     @Test
@@ -84,21 +97,23 @@ class PhoneAuthIntegrationTest {
         val getCode = captureCodeOnSend()
 
         // Step 1: Request OTP — triggers real SmsVerificationService.sendCode -> real BCrypt hash stored in H2
-        mockMvc.perform(
+        val requestResult = mockMvc.perform(
             post("/api/v1/auth/phone/request")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"phone": "$testPhone"}""")
         )
-            .andExpect(status().isNoContent)
+            .andExpect(status().isOk)
+            .andReturn()
 
-        // Step 2: Extract captured code (set by doAnswer during the request above)
+        // Step 2: Extract verificationId and captured code
+        val verificationId = extractVerificationId(requestResult)
         val code = getCode()
 
-        // Step 3: Verify with captured code — triggers real SmsVerificationService.verifyCode -> real BCrypt match against H2
+        // Step 3: Verify with captured code and verificationId
         mockMvc.perform(
             post("/api/v1/auth/phone/verify")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"phone": "$testPhone", "code": "$code"}""")
+                .content("""{"verificationId": "$verificationId", "phone": "$testPhone", "code": "$code"}""")
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.accessToken").exists())
@@ -125,21 +140,23 @@ class PhoneAuthIntegrationTest {
         val getCode = captureCodeOnSend()
 
         // Step 1: Request OTP — triggers real code generation and H2 storage
-        mockMvc.perform(
+        val requestResult = mockMvc.perform(
             post("/api/v1/auth/phone/request")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"phone": "$testPhone"}""")
         )
-            .andExpect(status().isNoContent)
+            .andExpect(status().isOk)
+            .andReturn()
 
-        // Step 2: Extract captured code
+        // Step 2: Extract verificationId and captured code
+        val verificationId = extractVerificationId(requestResult)
         val code = getCode()
 
-        // Step 3: Verify with captured code
+        // Step 3: Verify with captured code and verificationId
         mockMvc.perform(
             post("/api/v1/auth/phone/verify")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"phone": "$testPhone", "code": "$code"}""")
+                .content("""{"verificationId": "$verificationId", "phone": "$testPhone", "code": "$code"}""")
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.accessToken").exists())
@@ -156,18 +173,22 @@ class PhoneAuthIntegrationTest {
         doNothing().`when`(smsService).sendCode(anyString(), anyString())
 
         // Step 1: Request OTP to create a real verification record in H2
-        mockMvc.perform(
+        val requestResult = mockMvc.perform(
             post("/api/v1/auth/phone/request")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"phone": "$testPhone"}""")
         )
-            .andExpect(status().isNoContent)
+            .andExpect(status().isOk)
+            .andReturn()
 
-        // Step 2: Verify with wrong code — real BCrypt match against H2 fails
+        // Step 2: Extract verificationId
+        val verificationId = extractVerificationId(requestResult)
+
+        // Step 3: Verify with wrong code — real BCrypt match against H2 fails
         mockMvc.perform(
             post("/api/v1/auth/phone/verify")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"phone": "$testPhone", "code": "000000"}""")
+                .content("""{"verificationId": "$verificationId", "phone": "$testPhone", "code": "000000"}""")
         )
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.error").value("Unauthorized"))
@@ -191,7 +212,7 @@ class PhoneAuthIntegrationTest {
         mockMvc.perform(
             post("/api/v1/auth/phone/verify")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"phone": "not-a-number", "code": "123456"}""")
+                .content("""{"verificationId": "${UUID.randomUUID()}", "phone": "not-a-number", "code": "123456"}""")
         )
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.error").value("Bad Request"))
@@ -202,13 +223,13 @@ class PhoneAuthIntegrationTest {
     fun `request OTP rate limited returns 409`() {
         doNothing().`when`(smsService).sendCode(anyString(), anyString())
 
-        // Step 1: First request succeeds
+        // Step 1: First request succeeds — returns 200 with verificationId
         mockMvc.perform(
             post("/api/v1/auth/phone/request")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"phone": "$testPhone"}""")
         )
-            .andExpect(status().isNoContent)
+            .andExpect(status().isOk)
 
         // Step 2: Immediate second request hits 60-second rate limit -> 409 Conflict
         // IllegalStateException from SmsVerificationService is caught by AuthExceptionHandler -> 409
