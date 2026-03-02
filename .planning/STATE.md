@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Mobile/web clients can authenticate with Google, Apple, email+password, or phone+SMS OTP and receive JWT tokens. Account linking ensures one email = one user across all providers.
-**Current focus:** Phase 03 — Replace Twilio Verify with self-managed SMS OTP (COMPLETE)
+**Current focus:** Phase 04 — Replace all UUID generation with UUID v7 (COMPLETE)
 
 ## Current Position
 
-Milestone: v3.0 Self-Managed SMS OTP — COMPLETE
-Phase: 03-replace-twilio-verify-with-self-managed-sms-code-generation-and-verification (COMPLETE)
-Current Plan: 2 of 2 (COMPLETE)
-Last activity: 2026-03-02 - Completed quick task 6: Dev profile uses hardcoded SMS code 123456
+Milestone: v4.0 UUID v7 — COMPLETE
+Phase: 04-replace-all-uuid-generation-with-uuid-v7-time-ordered-ids-for-chronological-sorting-and-cursor-based-pagination (COMPLETE)
+Current Plan: 1 of 1 (COMPLETE)
+Last activity: 2026-03-02 - Completed plan 04-01: UUID v7 migration — BaseEntity, all entities migrated, all id!! removed
 
-Progress: [██████████] 100% (phase 03 complete)
+Progress: [██████████] 100% (phase 04 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
-- Average duration: 5.4 min
-- Total execution time: 0.87 hours
+- Total plans completed: 11
+- Average duration: 5.2 min
+- Total execution time: 0.92 hours
 
 **By Phase:**
 
@@ -36,9 +36,10 @@ Progress: [██████████] 100% (phase 03 complete)
 | 01-local-auth (v2) | 3/3 | 12 min | 4 min |
 | 02-account-linking | 2/2 | 7 min | 3.5 min |
 | 03-self-managed-sms | 2/2 | 15 min | 7.5 min |
+| 04-uuid-v7 | 1/1 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 3 min, 4 min, 8 min, 3 min, 4 min
+- Last 5 plans: 4 min, 8 min, 3 min, 4 min, 3 min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -117,6 +118,8 @@ Recent decisions affecting current work:
 - [Phase 03-02]: captureCodeOnSend() helper pattern — returns () -> String lambda; stub with doAnswer during setup, retrieve captured code after HTTP perform; decouples stubbing from code retrieval
 - [Quick-05]: verificationId (UUID) returned from /phone/request and required in /phone/verify — binds OTP to specific SmsVerification record, prevents phone-only brute-force; findById(UUID) replaces findActiveByPhone()
 - [Quick-06]: @Value("\${app.auth.sms.dev-code:}") with empty-string default — property absent in test/prod resolves to blank, triggering SecureRandom path; dev profile sets 123456; isNotBlank() conditional cleanly separates dev from prod without Spring profile checks in service class
+- [Phase 04-01]: BaseEntity uses private _id field with override fun getId(): UUID = _id — avoids Kotlin JVM signature clash between property getter and Persistable<UUID>.getId()
+- [Phase 04-01]: No Flyway migration needed for UUID v7 — UUID column type accepts any UUID version; only generation strategy changed
 
 ### Roadmap Evolution
 
@@ -124,6 +127,7 @@ Recent decisions affecting current work:
 - Phase 1 (v2): Add LOCAL authentication — email+password and phone+SMS code login
 - Phase 2 added: Implement account linking logic — email is globally unique across all providers, one user = one email = one account
 - Phase 3 added: Replace Twilio Verify with self-managed SMS code generation and verification
+- Phase 4 added: Replace all UUID generation with UUID v7 — time-ordered IDs for chronological sorting and cursor-based pagination
 
 ### Pending Todos
 
@@ -147,5 +151,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Quick task 6 complete. Dev profile uses hardcoded SMS OTP code "123456" via @Value config injection; SecureRandom preserved for prod/test profiles; println debug line removed. 23 tests pass.
+Stopped at: Phase 04 complete. All JPA entities migrated to UUID v7 via shared BaseEntity with Persistable<UUID>. All id!! force-unwraps removed. 23 tests pass.
 Resume file: None

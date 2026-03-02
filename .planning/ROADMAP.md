@@ -71,4 +71,4 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 04-01-PLAN.md — Add uuid-creator dependency, create BaseEntity @MappedSuperclass, migrate all entities to UUID v7, remove id!! force-unwraps
+- [x] 04-01-PLAN.md — Add uuid-creator dependency, create BaseEntity @MappedSuperclass, migrate all entities to UUID v7, remove id!! force-unwraps — completed 2026-03-02
