@@ -4,11 +4,14 @@ import jakarta.validation.Valid
 import kz.innlab.template.authentication.dto.AppleAuthRequest
 import kz.innlab.template.authentication.dto.AuthRequest
 import kz.innlab.template.authentication.dto.AuthResponse
+import kz.innlab.template.authentication.dto.ForgotPasswordRequest
 import kz.innlab.template.authentication.dto.LocalLoginRequest
 import kz.innlab.template.authentication.dto.LocalRegisterRequest
 import kz.innlab.template.authentication.dto.PhoneOtpRequest
 import kz.innlab.template.authentication.dto.PhoneVerifyRequest
 import kz.innlab.template.authentication.dto.RefreshRequest
+import kz.innlab.template.authentication.dto.ResetPasswordRequest
+import kz.innlab.template.authentication.service.AccountManagementService
 import kz.innlab.template.authentication.service.AppleOAuth2Service
 import kz.innlab.template.authentication.service.GoogleOAuth2Service
 import kz.innlab.template.authentication.service.LocalAuthService
@@ -30,7 +33,8 @@ class AuthController(
     private val localAuthService: LocalAuthService,
     private val phoneOtpService: PhoneOtpService,
     private val refreshTokenService: RefreshTokenService,
-    private val tokenService: TokenService
+    private val tokenService: TokenService,
+    private val accountManagementService: AccountManagementService
 ) {
 
     @PostMapping("/google")
@@ -88,5 +92,19 @@ class AuthController(
         // TODO: rate limiting — optional; include in global auth rate limit policy
         refreshTokenService.revoke(request.refreshToken)
         return ResponseEntity.noContent().build()
+    }
+
+    @PostMapping("/forgot-password")
+    fun forgotPassword(@Valid @RequestBody request: ForgotPasswordRequest): ResponseEntity<Map<String, Any?>> {
+        // TODO: rate limiting
+        val verificationId = accountManagementService.requestPasswordReset(request.email)
+        return ResponseEntity.accepted().body(mapOf("verificationId" to verificationId))
+    }
+
+    @PostMapping("/reset-password")
+    fun resetPassword(@Valid @RequestBody request: ResetPasswordRequest): ResponseEntity<Void> {
+        // TODO: rate limiting
+        accountManagementService.resetPassword(request.verificationId, request.email, request.code, request.newPassword)
+        return ResponseEntity.ok().build()
     }
 }
