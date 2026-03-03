@@ -76,9 +76,10 @@ class NotificationController(
     fun sendToToken(
         @Valid @RequestBody request: SendToTokenRequest,
         @AuthenticationPrincipal jwt: Jwt
-    ): ResponseEntity<Map<String, UUID>> {
+    ): ResponseEntity<Map<String, Any>> {
         val userId = UUID.fromString(jwt.subject)
         val historyId = notificationService.sendToToken(userId, request.token, request.title, request.body, request.data)
+            ?: return ResponseEntity.ok(mapOf("skipped" to true, "reason" to "PUSH notifications disabled"))
         return ResponseEntity.accepted().body(mapOf("notificationId" to historyId))
     }
 
@@ -86,9 +87,10 @@ class NotificationController(
     fun sendMulticast(
         @Valid @RequestBody request: SendMulticastRequest,
         @AuthenticationPrincipal jwt: Jwt
-    ): ResponseEntity<Map<String, UUID>> {
+    ): ResponseEntity<Map<String, Any>> {
         val userId = UUID.fromString(jwt.subject)
         val historyId = notificationService.sendMulticast(userId, request.tokens, request.title, request.body, request.data)
+            ?: return ResponseEntity.ok(mapOf("skipped" to true, "reason" to "PUSH notifications disabled"))
         return ResponseEntity.accepted().body(mapOf("notificationId" to historyId))
     }
 
@@ -96,10 +98,11 @@ class NotificationController(
     fun sendToTopic(
         @Valid @RequestBody request: SendToTopicRequest,
         @AuthenticationPrincipal jwt: Jwt
-    ): ResponseEntity<Map<String, UUID>> {
+    ): ResponseEntity<Map<String, Any>> {
         val userId = UUID.fromString(jwt.subject)
         topicService.validateTopicExists(request.topic)
         val historyId = notificationService.sendToTopic(userId, request.topic, request.title, request.body, request.data)
+            ?: return ResponseEntity.ok(mapOf("skipped" to true, "reason" to "PUSH notifications disabled"))
         return ResponseEntity.accepted().body(mapOf("notificationId" to historyId))
     }
 

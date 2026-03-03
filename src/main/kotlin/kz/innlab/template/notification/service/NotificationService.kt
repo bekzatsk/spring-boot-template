@@ -1,5 +1,6 @@
 package kz.innlab.template.notification.service
 
+import kz.innlab.template.notification.model.NotificationChannel
 import kz.innlab.template.notification.model.NotificationHistory
 import kz.innlab.template.notification.model.NotificationType
 import kz.innlab.template.notification.repository.NotificationHistoryRepository
@@ -11,11 +12,16 @@ import java.util.UUID
 @Service
 class NotificationService(
     private val notificationHistoryRepository: NotificationHistoryRepository,
-    private val notificationDispatcher: NotificationDispatcher
+    private val notificationDispatcher: NotificationDispatcher,
+    private val notificationPreferenceService: NotificationPreferenceService
 ) {
 
     @Transactional
-    fun sendToToken(userId: UUID, token: String, title: String, body: String, data: Map<String, String>): UUID {
+    fun sendToToken(userId: UUID, token: String, title: String, body: String, data: Map<String, String>): UUID? {
+        if (!notificationPreferenceService.isChannelEnabled(userId, NotificationChannel.PUSH)) {
+            return null
+        }
+
         val history = NotificationHistory(userId, NotificationType.SINGLE, token, title, body)
         history.data = data.toString()
         notificationHistoryRepository.save(history)
@@ -25,7 +31,11 @@ class NotificationService(
     }
 
     @Transactional
-    fun sendMulticast(userId: UUID, tokens: List<String>, title: String, body: String, data: Map<String, String>): UUID {
+    fun sendMulticast(userId: UUID, tokens: List<String>, title: String, body: String, data: Map<String, String>): UUID? {
+        if (!notificationPreferenceService.isChannelEnabled(userId, NotificationChannel.PUSH)) {
+            return null
+        }
+
         require(tokens.size <= 500) { "Maximum 500 tokens per multicast" }
 
         val history = NotificationHistory(userId, NotificationType.MULTICAST, tokens.joinToString(","), title, body)
@@ -37,7 +47,11 @@ class NotificationService(
     }
 
     @Transactional
-    fun sendToTopic(userId: UUID, topic: String, title: String, body: String, data: Map<String, String>): UUID {
+    fun sendToTopic(userId: UUID, topic: String, title: String, body: String, data: Map<String, String>): UUID? {
+        if (!notificationPreferenceService.isChannelEnabled(userId, NotificationChannel.PUSH)) {
+            return null
+        }
+
         val history = NotificationHistory(userId, NotificationType.TOPIC, topic, title, body)
         history.data = data.toString()
         notificationHistoryRepository.save(history)
