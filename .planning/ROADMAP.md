@@ -72,3 +72,15 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md — Add uuid-creator dependency, create BaseEntity @MappedSuperclass, migrate all entities to UUID v7, remove id!! force-unwraps — completed 2026-03-02
+
+### Phase 5: Add account management — forgot password, change password, change email, change phone with self-managed verification codes
+
+**Goal:** Users can recover lost passwords via email verification code, change their password (with current password verification), change their email (with code sent to new email), and change their phone (with SMS code) — all using a shared VerificationCode infrastructure with rate limiting, max attempts, and BCrypt-hashed codes
+**Depends on:** Phase 4
+**Requirements:** [ACCT-01, ACCT-02, ACCT-03, ACCT-04, ACCT-05]
+**Plans:** 3 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Infrastructure: VerificationCode entity/repo/migration, EmailService/ConsoleEmailService, VerificationCodeService, config updates
+- [ ] 05-02-PLAN.md — Service + Controller: AccountManagementService (4 flows), AccountManagementController, DTOs, AuthController forgot-password endpoints
+- [ ] 05-03-PLAN.md — Integration tests: AccountManagementIntegrationTest with ~14 tests covering all flows, edge cases, and security properties
