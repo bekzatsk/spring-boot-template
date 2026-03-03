@@ -101,7 +101,12 @@ Plans:
   3. Authenticated user can subscribe or unsubscribe a device token to/from a named topic
   4. When FCM returns UNREGISTERED or INVALID_ARGUMENT, the stale token is automatically deleted from the database without manual intervention
   5. Sent notifications appear in the notification history table and are retrievable via GET /api/v1/notifications/history; dev profile with no Firebase credentials logs to console instead of failing
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Foundation: firebase-admin dependency, FirebaseConfig with double-init guard, V3 Flyway migration (device_tokens, notification_history, notification_topics), JPA entities, repositories
+- [ ] 01-02-PLAN.md — Services: PushService interface, FirebasePushService, ConsolePushService fallback, DeviceTokenService, NotificationService + async dispatcher, TopicService
+- [ ] 01-03-PLAN.md — Controllers + Tests: DTOs, NotificationController (10 endpoints), TopicAdminController, SecurityConfig admin rule, 12 integration tests
 
 ### Phase 2: Email Service and Notification Preferences
 **Goal:** Users can send emails (plain text, HTML, attachments) via SMTP with async delivery and retry, read their inbox and individual emails via IMAP, and configure which notification types they receive — backed by GreenMail integration tests
@@ -130,5 +135,5 @@ Plans:
 | 3. Self-managed SMS | v3.0 | 2/2 | Complete | 2026-03-02 |
 | 4. UUID v7 | v4.0 | 1/1 | Complete | 2026-03-02 |
 | 5. Account Management | v5.0 | 3/3 | Complete | 2026-03-03 |
-| 1. FCM Push Notifications | v6.0 | 0/TBD | Not started | - |
+| 1. FCM Push Notifications | v6.0 | 0/3 | Not started | - |
 | 2. Email Service and Notification Preferences | v6.0 | 0/TBD | Not started | - |
