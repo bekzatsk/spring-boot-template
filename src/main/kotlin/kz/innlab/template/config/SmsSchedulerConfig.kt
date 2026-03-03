@@ -1,7 +1,10 @@
 package kz.innlab.template.config
 
 import kz.innlab.template.authentication.repository.SmsVerificationRepository
+import kz.innlab.template.authentication.repository.VerificationCodeRepository
+import kz.innlab.template.authentication.service.ConsoleEmailService
 import kz.innlab.template.authentication.service.ConsoleSmsService
+import kz.innlab.template.authentication.service.EmailService
 import kz.innlab.template.authentication.service.SmsService
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
@@ -15,7 +18,8 @@ import java.time.Instant
 @Configuration
 @EnableScheduling
 class SmsSchedulerConfig(
-    private val smsVerificationRepository: SmsVerificationRepository
+    private val smsVerificationRepository: SmsVerificationRepository,
+    private val verificationCodeRepository: VerificationCodeRepository
 ) {
 
     companion object {
@@ -25,11 +29,16 @@ class SmsSchedulerConfig(
     @Scheduled(fixedRate = 600_000)
     @Transactional
     fun cleanupExpiredCodes() {
-        logger.debug("Running SMS verification cleanup job")
+        logger.debug("Running verification cleanup job")
         smsVerificationRepository.deleteExpiredOrUsed(Instant.now())
+        verificationCodeRepository.deleteExpiredOrUsed(Instant.now())
     }
 
     @Bean
     @ConditionalOnMissingBean(SmsService::class)
     fun smsService(): SmsService = ConsoleSmsService()
+
+    @Bean
+    @ConditionalOnMissingBean(EmailService::class)
+    fun emailService(): EmailService = ConsoleEmailService()
 }

@@ -51,6 +51,8 @@ app:
   auth:
     sms:
       dev-code: "123456"
+    verification:
+      dev-code: "123456"
 
 ---
 spring:
