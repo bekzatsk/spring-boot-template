@@ -4,6 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties(prefix = "app.mail")
 data class MailProperties(
+    val enabled: Boolean = false,
     val smtp: SmtpProperties = SmtpProperties(),
     val imap: ImapProperties = ImapProperties(),
     val retry: RetryProperties = RetryProperties()

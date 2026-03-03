@@ -12,7 +12,7 @@ import org.springframework.scheduling.annotation.Async
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
-class MailDispatcher(
+open class MailDispatcher(
     private val javaMailSender: JavaMailSender,
     private val mailHistoryRepository: MailHistoryRepository,
     private val mailProperties: MailProperties
@@ -24,7 +24,7 @@ class MailDispatcher(
 
     @Async
     @Transactional
-    fun dispatchEmail(
+    open fun dispatchEmail(
         historyId: UUID,
         to: String,
         subject: String,
@@ -76,7 +76,7 @@ class MailDispatcher(
         mailHistoryRepository.save(history)
     }
 
-    fun sendDirect(to: String, subject: String, textBody: String) {
+    open fun sendDirect(to: String, subject: String, textBody: String) {
         val message = SimpleMailMessage()
         message.from = mailProperties.smtp.from
         message.setTo(to)

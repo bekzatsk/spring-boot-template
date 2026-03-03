@@ -150,6 +150,13 @@
 			<version>2.1.3</version>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- Asynchronous assertion library for integration tests -->
+		<dependency>
+			<groupId>org.awaitility</groupId>
+			<artifactId>awaitility-kotlin</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>

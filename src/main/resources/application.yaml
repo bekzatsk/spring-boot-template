@@ -42,6 +42,7 @@ app:
   firebase:
     enabled: ${FIREBASE_ENABLED:false}
   mail:
+    enabled: ${MAIL_ENABLED:false}
     smtp:
       host: ${SMTP_HOST:}
       port: ${SMTP_PORT:587}
