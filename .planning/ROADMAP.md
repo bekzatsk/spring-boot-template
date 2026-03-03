@@ -118,7 +118,12 @@ Plans:
   3. Authenticated user can list their inbox (unread filter, pagination) and fetch a full individual email with body and attachment metadata via IMAP
   4. Authenticated user can mark an email as read or unread via the IMAP API
   5. Authenticated user can set notification preferences (push, email, or both) and subsequent notifications respect those preferences before dispatching
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Foundation: spring-boot-starter-mail, greenmail, MailProperties, V4 Flyway migration (mail_history, notification_preferences), JPA entities, repositories, MailService interface
+- [ ] 02-02-PLAN.md — Services: SmtpMailService (dual interface), MailDispatcher (@Async with retry), ConsoleMailService fallback, ImapService, NotificationPreferenceService, preference integration into NotificationService
+- [ ] 02-03-PLAN.md — Controllers + Tests: MailController (6 endpoints), preference endpoints on NotificationController, DTOs, GreenMail integration tests, preference integration tests
 
 ## Progress
 
@@ -136,4 +141,4 @@ Plans:
 | 4. UUID v7 | v4.0 | 1/1 | Complete | 2026-03-02 |
 | 5. Account Management | v5.0 | 3/3 | Complete | 2026-03-03 |
 | 1. FCM Push Notifications | v6.0 | 3/3 | Complete | 2026-03-03 |
-| 2. Email Service and Notification Preferences | v6.0 | 0/TBD | Not started | - |
+| 2. Email Service and Notification Preferences | v6.0 | 0/3 | Planned | - |
