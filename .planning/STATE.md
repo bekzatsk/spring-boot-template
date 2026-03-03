@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Mobile/web clients can authenticate with Google, Apple, email+password, or phone+SMS OTP and receive JWT tokens. Account linking ensures one email = one user across all providers.
-**Current focus:** Phase 04 — Replace all UUID generation with UUID v7 (COMPLETE)
+**Current focus:** Phase 05 — Add account management (forgot password, change password, change email, change phone)
 
 ## Current Position
 
-Milestone: v4.0 UUID v7 — COMPLETE
-Phase: 04-replace-all-uuid-generation-with-uuid-v7-time-ordered-ids-for-chronological-sorting-and-cursor-based-pagination (COMPLETE)
-Current Plan: 1 of 1 (COMPLETE)
-Last activity: 2026-03-02 - Completed quick task 7: Consolidate Flyway migrations into single V1
+Milestone: v5.0 Account Management
+Phase: 05-add-account-management-forgot-password-change-password-change-email-change-phone-with-self-managed-verification-codes (IN PROGRESS)
+Current Plan: 2 of 3
+Last activity: 2026-03-03 - Completed 05-01: Verification code infrastructure
 
-Progress: [██████████] 100% (phase 04 complete)
+Progress: [███░░░░░░░] 33% (1/3 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 5.2 min
-- Total execution time: 0.92 hours
+- Total plans completed: 12
+- Average duration: 5.0 min
+- Total execution time: 0.95 hours
 
 **By Phase:**
 
@@ -37,9 +37,10 @@ Progress: [██████████] 100% (phase 04 complete)
 | 02-account-linking | 2/2 | 7 min | 3.5 min |
 | 03-self-managed-sms | 2/2 | 15 min | 7.5 min |
 | 04-uuid-v7 | 1/1 | 3 min | 3 min |
+| 05-account-mgmt | 1/3 | 2 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 4 min, 8 min, 3 min, 4 min, 3 min
+- Last 5 plans: 8 min, 3 min, 4 min, 3 min, 2 min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -120,6 +121,9 @@ Recent decisions affecting current work:
 - [Quick-06]: @Value("\${app.auth.sms.dev-code:}") with empty-string default — property absent in test/prod resolves to blank, triggering SecureRandom path; dev profile sets 123456; isNotBlank() conditional cleanly separates dev from prod without Spring profile checks in service class
 - [Phase 04-01]: BaseEntity uses private _id field with override fun getId(): UUID = _id — avoids Kotlin JVM signature clash between property getter and Persistable<UUID>.getId()
 - [Phase 04-01]: No Flyway migration needed for UUID v7 — UUID column type accepts any UUID version; only generation strategy changed
+- [Phase 05-01]: VerificationCode uses VARCHAR(50) purpose column (not PostgreSQL ENUM) — H2 compatible, consistent with user_providers pattern
+- [Phase 05-01]: VerificationCodeService returns Pair<UUID, String> (verificationId, rawCode) — caller handles delivery via EmailService or SmsService
+- [Phase 05-01]: Dev profile app.auth.verification.dev-code: 123456 — consistent with SMS dev-code pattern
 
 ### Roadmap Evolution
 
@@ -128,6 +132,7 @@ Recent decisions affecting current work:
 - Phase 2 added: Implement account linking logic — email is globally unique across all providers, one user = one email = one account
 - Phase 3 added: Replace Twilio Verify with self-managed SMS code generation and verification
 - Phase 4 added: Replace all UUID generation with UUID v7 — time-ordered IDs for chronological sorting and cursor-based pagination
+- Phase 5 added: Add account management — forgot password, change password, change email, change phone with self-managed verification codes
 
 ### Pending Todos
 
@@ -151,6 +156,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-02
-Stopped at: Quick task 7 complete. Consolidated V1+V2+V3 Flyway migrations into single V1 with 6-table schema. Removed gen_random_uuid() defaults. Added clean-on-validation-error to dev profile. 23 tests pass.
+Last session: 2026-03-03
+Stopped at: Completed 05-01-PLAN.md — Verification code infrastructure (VerificationCode entity, VerificationCodeService, EmailService, V2 migration). 23 tests pass.
 Resume file: None
