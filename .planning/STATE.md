@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 Milestone: v5.0 Account Management — COMPLETE
 Phase: 05-add-account-management (COMPLETE)
 Current Plan: All phases complete
-Last activity: 2026-03-03 - Completed Phase 05: Account management (3/3 plans)
+Last activity: 2026-03-03 - Completed quick task 8: Fix _id column mapping in BaseEntity
 
 Progress: [██████████] 100% (all milestones complete)
 
@@ -152,6 +152,7 @@ None.
 | 5 | Add verificationId to phone OTP flow — /phone/request returns UUID, /phone/verify requires UUID | 2026-03-02 | 673106f | [5-add-smsverification-id-to-phone-otp-flow](./quick/5-add-smsverification-id-to-phone-otp-flow/) |
 | 6 | Dev profile uses hardcoded SMS OTP code 123456 — @Value config-driven, SecureRandom preserved for prod/test | 2026-03-02 | 3a8d486 | [6-dev-profile-uses-hardcoded-sms-code-1234](./quick/6-dev-profile-uses-hardcoded-sms-code-1234/) |
 | 7 | Consolidate Flyway migrations into single V1 — complete 6-table schema, no gen_random_uuid, dev clean-on-validation-error | 2026-03-02 | e89675a | [7-consolidate-flyway-migrations-into-singl](./quick/7-consolidate-flyway-migrations-into-singl/) |
+| 8 | Fix _id column mapping in BaseEntity — add @Column(name = "id") to match Flyway schema | 2026-03-03 | ef8d39a | [8-fix-id-column-mapping-in-baseentity-add-](./quick/8-fix-id-column-mapping-in-baseentity-add-/) |
 
 ### Blockers/Concerns
 
