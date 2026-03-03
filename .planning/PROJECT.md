@@ -54,7 +54,17 @@ Mobile/web clients can authenticate with Google or Apple ID tokens, email+passwo
 
 ### Active
 
-(None — next milestone requirements TBD via `/gsd:new-milestone`)
+## Current Milestone: v6.0 Notifications
+
+**Goal:** Integrate Firebase Cloud Messaging for push notifications (Android/iOS/Web) and build an email service with SMTP sending and IMAP/POP3 receiving.
+
+**Target features:**
+- Firebase Cloud Messaging — device token management, topic subscriptions, send to single/multiple/topic
+- Push notification payloads — title, body, custom data (JSON)
+- Email sending via SMTP — plain text, HTML, attachments, retry mechanism
+- Email receiving via IMAP/POP3 — inbox listing, unread messages
+- Backend API endpoints for push and email operations
+- Environment-variable-based configuration for Firebase and mail server credentials
 
 ### Out of Scope
 
@@ -107,4 +117,4 @@ Mobile/web clients can authenticate with Google or Apple ID tokens, email+passwo
 | Session revocation on password change | All refresh tokens deleted after password reset or change | ✓ Good — forces re-authentication on all devices |
 
 ---
-*Last updated: 2026-03-03 after v5.0 milestone (Phase 05 — account management)*
+*Last updated: 2026-03-03 after v6.0 milestone start (Notifications — FCM + Email)*

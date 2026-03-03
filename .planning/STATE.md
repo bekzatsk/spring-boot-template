@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** Mobile/web clients can authenticate with Google, Apple, email+password, or phone+SMS OTP and receive JWT tokens. Account linking ensures one email = one user across all providers. Full account management: forgot-password, change-password, change-email, change-phone.
-**Current focus:** v5.0 Milestone complete — all phases done
+**Current focus:** v6.0 Notifications — defining requirements
 
 ## Current Position
 
-Milestone: v5.0 Account Management — COMPLETE
-Phase: 05-add-account-management (COMPLETE)
-Current Plan: All phases complete
-Last activity: 2026-03-03 - Completed quick task 8: Fix _id column mapping in BaseEntity
+Milestone: v6.0 Notifications
+Phase: Not started (defining requirements)
+Current Plan: —
+Last activity: 2026-03-03 — Milestone v6.0 started
 
-Progress: [██████████] 100% (all milestones complete)
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -161,5 +161,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Phase 05 complete, v5.0 milestone complete. All 14 phases executed across 5 milestones. 37 tests pass.
+Stopped at: Milestone v6.0 Notifications started — defining requirements.
 Resume file: None
