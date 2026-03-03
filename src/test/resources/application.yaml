@@ -24,3 +24,7 @@ app:
       bundle-id: test-bundle-id
     refresh-token:
       expiry-days: 30
+    sms:
+      dev-code: ""
+    verification:
+      dev-code: ""
