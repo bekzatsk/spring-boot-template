@@ -11,10 +11,10 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 
 Milestone: v6.0 Notifications
 Phase: 1 of 2 (FCM Push Notifications)
-Current Plan: 01-02 (service layer)
-Last activity: 2026-03-03 — Plan 01-01 complete (Firebase SDK + data foundation)
+Current Plan: 01-03 (controllers + tests)
+Last activity: 2026-03-03 — Plan 01-02 complete (notification service layer)
 
-Progress: [███░░░░░░░] 33%
+Progress: [██████░░░░] 66%
 
 ## Performance Metrics
 
@@ -85,5 +85,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Plan 01-01 complete. Executing Plan 01-02 (service layer).
+Stopped at: Plan 01-02 complete. Executing Plan 01-03 (controllers + tests).
 Resume file: None
