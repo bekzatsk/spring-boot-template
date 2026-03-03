@@ -4,24 +4,24 @@
 
 See: .planning/PROJECT.md (updated 2026-03-03)
 
-**Core value:** Mobile/web clients can authenticate with Google, Apple, email+password, or phone+SMS OTP and receive JWT tokens. Account linking ensures one email = one user across all providers. Full account management: forgot-password, change-password, change-email, change-phone. Push notifications via FCM. Email service with SMTP send and IMAP receive.
-**Current focus:** v6.0 Notifications — Phase 1 complete, Phase 2 (Email Service) next
+**Core value:** Mobile/web clients can authenticate with Google, Apple, email+password, or phone+SMS OTP and receive JWT tokens. Account linking ensures one email = one user across all providers. Full account management: forgot-password, change-password, change-email, change-phone. Push notifications via FCM. Email service with SMTP send (async, retry) and IMAP receive. Notification preferences (opt-out model).
+**Current focus:** v6.0 Notifications — Phase 2 complete, milestone ready for completion
 
 ## Current Position
 
 Milestone: v6.0 Notifications
-Phase: 1 of 2 complete (FCM Push Notifications) — Phase 2 not yet planned
-Current Plan: — (phase 1 complete, phase 2 needs discuss/plan)
-Last activity: 2026-03-03 — Phase 1 complete and verified (14/14 requirements, 49 tests pass)
+Phase: 2 of 2 complete (Email Service and Notification Preferences)
+Current Plan: — (all plans complete)
+Last activity: 2026-03-03 — Phase 2 complete (3/3 plans, 63 tests pass)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
-- Average duration: 4.2 min
-- Total execution time: 1.15 hours
+- Total plans completed: 23
+- Average duration: 4.1 min
+- Total execution time: 1.5 hours
 
 **By Phase:**
 
@@ -39,10 +39,11 @@ Progress: [█████░░░░░] 50%
 | 04-uuid-v7 | 1/1 | 3 min | 3 min |
 | 05-account-mgmt | 3/3 | 6 min | 2 min |
 | 01-fcm-push (v6) | 3/3 | 9 min | 3 min |
+| 02-email-and-prefs (v6) | 3/3 | 18 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 2 min, 2 min, 3 min, 3 min, 3 min
-- Trend: stable
+- Last 5 plans: 3 min, 3 min, 5 min, 5 min, 8 min
+- Trend: stable (email/test plans slightly longer due to bean config debugging)
 
 *Updated after each plan completion*
 
@@ -58,8 +59,8 @@ Recent decisions affecting current work:
 - SmtpMailService implements both EmailService (existing auth codes) and MailService (new general email) — no changes to existing VerificationCodeService callers
 - IMAP Store opened and closed per-request in try/finally — never held as a Spring bean singleton; prevents connection-limit exhaustion
 - FCM and SMTP sends must be async from day one — JavaMailSender.send() uses synchronized blocks that pin Virtual Threads; FCM send is a 100-500ms HTTP call
-- Flyway V3 migration for device_tokens (next after existing V2) — never skip version numbers; H2 test profile keeps spring.flyway.enabled=false
-- Firebase service account credentials via FIREBASE_CREDENTIALS_JSON env var (base64) — never in src/main/resources/ or git
+- @ConditionalOnProperty(app.mail.enabled=true) gates SMTP beans — user @Configuration processes before auto-config, so @ConditionalOnBean(JavaMailSender) is unreliable
+- ConsoleEmailService (implements only EmailService) separate from ConsoleMailService (implements only MailService) — prevents NoUniqueBeanDefinitionException from dual-interface fallback
 
 ### Pending Todos
 
@@ -86,5 +87,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Phase 1 complete and verified. Phase 2 (Email Service) needs discuss/plan.
+Stopped at: v6.0 milestone complete — both phases (FCM Push, Email Service) done. Ready for milestone audit/completion.
 Resume file: None

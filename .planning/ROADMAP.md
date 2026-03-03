@@ -123,7 +123,7 @@ Plans:
 Plans:
 - [x] 02-01-PLAN.md — Foundation: spring-boot-starter-mail, greenmail, MailProperties, V4 Flyway migration (mail_history, notification_preferences), JPA entities, repositories, MailService interface — completed 2026-03-03
 - [x] 02-02-PLAN.md — Services: SmtpMailService (dual interface), MailDispatcher (@Async with retry), ConsoleMailService fallback, ImapService, NotificationPreferenceService, preference integration into NotificationService — completed 2026-03-03
-- [ ] 02-03-PLAN.md — Controllers + Tests: MailController (6 endpoints), preference endpoints on NotificationController, DTOs, GreenMail integration tests, preference integration tests
+- [x] 02-03-PLAN.md — Controllers + Tests: MailController (6 endpoints), preference endpoints on NotificationController, DTOs, GreenMail integration tests, preference integration tests — completed 2026-03-03
 
 ## Progress
 
@@ -141,4 +141,4 @@ Plans:
 | 4. UUID v7 | v4.0 | 1/1 | Complete | 2026-03-02 |
 | 5. Account Management | v5.0 | 3/3 | Complete | 2026-03-03 |
 | 1. FCM Push Notifications | v6.0 | 3/3 | Complete | 2026-03-03 |
-| 2. Email Service and Notification Preferences | v6.0 | 2/3 | In Progress | - |
+| 2. Email Service and Notification Preferences | v6.0 | 3/3 | Complete | 2026-03-03 |
