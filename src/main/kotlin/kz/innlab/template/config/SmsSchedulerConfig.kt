@@ -8,6 +8,7 @@ import kz.innlab.template.authentication.service.EmailService
 import kz.innlab.template.authentication.service.SmsService
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.scheduling.annotation.EnableScheduling
@@ -17,6 +18,7 @@ import java.time.Instant
 
 @Configuration
 @EnableScheduling
+@EnableConfigurationProperties(MailProperties::class)
 class SmsSchedulerConfig(
     private val smsVerificationRepository: SmsVerificationRepository,
     private val verificationCodeRepository: VerificationCodeRepository

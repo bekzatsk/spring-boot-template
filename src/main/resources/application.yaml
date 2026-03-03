@@ -8,6 +8,17 @@ spring:
       enabled: true
   jpa:
     open-in-view: false
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 server:
   port: 7070
@@ -30,6 +41,23 @@ app:
       max-per-user: ${NOTIFICATION_MAX_TOKENS_PER_USER:5}
   firebase:
     enabled: ${FIREBASE_ENABLED:false}
+  mail:
+    smtp:
+      host: ${SMTP_HOST:}
+      port: ${SMTP_PORT:587}
+      username: ${SMTP_USERNAME:}
+      password: ${SMTP_PASSWORD:}
+      from: ${SMTP_FROM:noreply@example.com}
+      ssl-enabled: ${SMTP_SSL_ENABLED:false}
+    imap:
+      host: ${IMAP_HOST:}
+      port: ${IMAP_PORT:993}
+      username: ${IMAP_USERNAME:}
+      password: ${IMAP_PASSWORD:}
+      ssl-enabled: ${IMAP_SSL_ENABLED:true}
+    retry:
+      max-attempts: ${MAIL_RETRY_MAX_ATTEMPTS:3}
+      delay-ms: ${MAIL_RETRY_DELAY_MS:5000}
 
 ---
 spring:
@@ -51,6 +79,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  mail:
+    host: ""
 
 app:
   auth:

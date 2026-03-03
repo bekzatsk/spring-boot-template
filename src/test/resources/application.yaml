@@ -33,3 +33,11 @@ app:
   notification:
     token:
       max-per-user: 5
+  mail:
+    smtp:
+      host: ""
+    imap:
+      host: ""
+    retry:
+      max-attempts: 1
+      delay-ms: 100
