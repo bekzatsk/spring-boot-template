@@ -11,17 +11,17 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 
 Milestone: v5.0 Account Management
 Phase: 05-add-account-management-forgot-password-change-password-change-email-change-phone-with-self-managed-verification-codes (IN PROGRESS)
-Current Plan: 2 of 3
-Last activity: 2026-03-03 - Completed 05-01: Verification code infrastructure
+Current Plan: 3 of 3
+Last activity: 2026-03-03 - Completed 05-02: Account management service and endpoints
 
-Progress: [███░░░░░░░] 33% (1/3 plans complete)
+Progress: [██████░░░░] 67% (2/3 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Average duration: 5.0 min
-- Total execution time: 0.95 hours
+- Total plans completed: 13
+- Average duration: 4.8 min
+- Total execution time: 0.98 hours
 
 **By Phase:**
 
@@ -37,10 +37,10 @@ Progress: [███░░░░░░░] 33% (1/3 plans complete)
 | 02-account-linking | 2/2 | 7 min | 3.5 min |
 | 03-self-managed-sms | 2/2 | 15 min | 7.5 min |
 | 04-uuid-v7 | 1/1 | 3 min | 3 min |
-| 05-account-mgmt | 1/3 | 2 min | 2 min |
+| 05-account-mgmt | 2/3 | 4 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 8 min, 3 min, 4 min, 3 min, 2 min
+- Last 5 plans: 3 min, 4 min, 3 min, 2 min, 2 min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -124,6 +124,9 @@ Recent decisions affecting current work:
 - [Phase 05-01]: VerificationCode uses VARCHAR(50) purpose column (not PostgreSQL ENUM) — H2 compatible, consistent with user_providers pattern
 - [Phase 05-01]: VerificationCodeService returns Pair<UUID, String> (verificationId, rawCode) — caller handles delivery via EmailService or SmsService
 - [Phase 05-01]: Dev profile app.auth.verification.dev-code: 123456 — consistent with SMS dev-code pattern
+- [Phase 05-02]: userId.toString() as identifier for CHANGE_EMAIL/CHANGE_PHONE — stable during email/phone change flow, rate limiting is per-user
+- [Phase 05-02]: forgot-password returns 202 Accepted with nullable verificationId — anti-enumeration (null when email not found)
+- [Phase 05-02]: Password reset/change revokes all refresh tokens — security best practice
 
 ### Roadmap Evolution
 
@@ -157,5 +160,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 05-01-PLAN.md — Verification code infrastructure (VerificationCode entity, VerificationCodeService, EmailService, V2 migration). 23 tests pass.
+Stopped at: Completed 05-02-PLAN.md — Account management service and endpoints (AccountManagementService, AccountManagementController, AuthController extended). 23 tests pass.
 Resume file: None
