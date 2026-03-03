@@ -11,10 +11,10 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 
 Milestone: v6.0 Notifications
 Phase: 1 of 2 (FCM Push Notifications)
-Current Plan: — (not started)
-Last activity: 2026-03-03 — Roadmap created for v6.0 Notifications (2 phases, 27 requirements)
+Current Plan: 01-02 (service layer)
+Last activity: 2026-03-03 — Plan 01-01 complete (Firebase SDK + data foundation)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -80,10 +80,10 @@ None.
 ### Blockers/Concerns
 
 - Developer note: If running Postgres.app locally on port 5432, create the `template` role or stop Postgres.app and use Docker only
-- Phase 1 risk: Run `mvn dependency:tree | grep google-http-client` after adding firebase-admin — both firebase-admin and google-api-client pull google-http-client; resolve with com.google.cloud:libraries-bom if version skew detected
+- Phase 1 risk: RESOLVED — libraries-bom 26.55.0 added to align google-http-client versions (unified at 1.46.1)
 
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: v6.0 roadmap created — Phase 1 (FCM Push Notifications) ready to plan.
+Stopped at: Plan 01-01 complete. Executing Plan 01-02 (service layer).
 Resume file: None
