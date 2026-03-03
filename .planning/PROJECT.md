@@ -44,6 +44,14 @@ Mobile/web clients can authenticate with Google or Apple ID tokens, email+passwo
 - ✓ Account linking: one email = one user across LOCAL, GOOGLE, APPLE providers — v2.0
 - ✓ Email-first lookup (findByEmail) as universal user identity key — v2.0
 
+- ✓ Self-managed SMS OTP (BCrypt-hashed, rate-limited, max attempts, scheduled cleanup) — v3.0
+- ✓ UUID v7 for all entities (time-ordered, cursor-pagination ready) — v4.0
+- ✓ Forgot-password via email verification code with anti-enumeration — v5.0
+- ✓ Change-password with current password verification and session revocation — v5.0
+- ✓ Change-email two-step flow with verification code to new email — v5.0
+- ✓ Change-phone two-step flow with SMS OTP to new phone — v5.0
+- ✓ Shared VerificationCode infrastructure with purpose discriminator — v5.0
+
 ### Active
 
 (None — next milestone requirements TBD via `/gsd:new-milestone`)
@@ -59,8 +67,8 @@ Mobile/web clients can authenticate with Google or Apple ID tokens, email+passwo
 
 ## Context
 
-- **Current state:** v2.0 shipped. 22 integration tests passing. Local auth (email+password, phone+SMS OTP) and multi-provider account linking added on top of v1.0.
-- **Tech stack:** Spring Boot 4.0.3, Kotlin, Java 25, Maven, PostgreSQL 18, Spring Security 7, Spring Authorization Server (JWT only), Flyway, Twilio Verify, libphonenumber.
+- **Current state:** v5.0 shipped. 37 integration tests passing. Full account management (forgot-password, change-password, change-email, change-phone) with shared verification code infrastructure, self-managed SMS OTP, UUID v7, and multi-provider account linking.
+- **Tech stack:** Spring Boot 4.0.3, Kotlin, Java 25, Maven, PostgreSQL 18, Spring Security 7, Spring Authorization Server (JWT only), Flyway, libphonenumber, uuid-creator.
 - **Package structure:** `kz.innlab.template` with `config/`, `user/{model,repository,service,controller,dto}`, `authentication/{model,repository,service,controller,dto,exception,filter}`.
 - The "template" naming is a placeholder. When creating a new project, rename package and artifact.
 - Target clients: mobile apps (iOS/Android) and web SPAs that handle Google/Apple sign-in client-side and send ID tokens to the backend.
@@ -91,7 +99,12 @@ Mobile/web clients can authenticate with Google or Apple ID tokens, email+passwo
 | Multi-provider User entity with @ElementCollection | providers Set + providerIds Map replaces single provider/providerId; FetchType.EAGER since tiny collections (max 3 entries) | ✓ Good |
 | Email-first account linking | findByEmail() as primary lookup; link provider to existing account if email matches | ✓ Good — one user per email across all providers |
 | Flyway for schema migrations | V1 initial schema, V2 account linking; disabled in test profile (H2 uses create-drop) | ✓ Good |
-| Twilio Verify for phone OTP | Interface abstraction (TwilioVerifyClient) for testability; E.164 format enforced | ✓ Good |
+| Twilio Verify for phone OTP | Interface abstraction (TwilioVerifyClient) for testability; E.164 format enforced | Replaced — v3.0 switched to self-managed SMS codes |
+| Self-managed SMS OTP | BCrypt-hashed codes, rate limiting, max attempts, scheduled cleanup; SmsService interface with ConsoleSmsService | ✓ Good — full control, no external dependency |
+| UUID v7 for all entities | Time-ordered IDs via uuid-creator; BaseEntity @MappedSuperclass with Persistable<UUID> | ✓ Good — enables chronological sorting and cursor pagination |
+| Shared VerificationCode infrastructure | Purpose-discriminated entity for forgot-password, change-email, change-phone; BCrypt hashing, rate limiting, max attempts | ✓ Good — eliminates code duplication across account flows |
+| Anti-enumeration on forgot-password | Always returns 202 Accepted with nullable verificationId; no email existence leakage | ✓ Good — security best practice |
+| Session revocation on password change | All refresh tokens deleted after password reset or change | ✓ Good — forces re-authentication on all devices |
 
 ---
-*Last updated: 2026-03-02 after v2.0 milestone (Phase 02 — account linking)*
+*Last updated: 2026-03-03 after v5.0 milestone (Phase 05 — account management)*

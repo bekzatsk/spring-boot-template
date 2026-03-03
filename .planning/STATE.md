@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-02)
+See: .planning/PROJECT.md (updated 2026-03-03)
 
-**Core value:** Mobile/web clients can authenticate with Google, Apple, email+password, or phone+SMS OTP and receive JWT tokens. Account linking ensures one email = one user across all providers.
-**Current focus:** Phase 05 — Add account management (forgot password, change password, change email, change phone)
+**Core value:** Mobile/web clients can authenticate with Google, Apple, email+password, or phone+SMS OTP and receive JWT tokens. Account linking ensures one email = one user across all providers. Full account management: forgot-password, change-password, change-email, change-phone.
+**Current focus:** v5.0 Milestone complete — all phases done
 
 ## Current Position
 
-Milestone: v5.0 Account Management
-Phase: 05-add-account-management-forgot-password-change-password-change-email-change-phone-with-self-managed-verification-codes (IN PROGRESS)
-Current Plan: 3 of 3 (COMPLETE)
-Last activity: 2026-03-03 - Completed 05-03: Account management integration tests
+Milestone: v5.0 Account Management — COMPLETE
+Phase: 05-add-account-management (COMPLETE)
+Current Plan: All phases complete
+Last activity: 2026-03-03 - Completed Phase 05: Account management (3/3 plans)
 
-Progress: [██████████] 100% (3/3 plans complete)
+Progress: [██████████] 100% (all milestones complete)
 
 ## Performance Metrics
 
@@ -160,5 +160,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed phase 05 — All 3 plans executed. Account management with forgot-password, change-password, change-email, change-phone. 37 tests pass.
+Stopped at: Phase 05 complete, v5.0 milestone complete. All 14 phases executed across 5 milestones. 37 tests pass.
 Resume file: None
