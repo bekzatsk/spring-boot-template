@@ -2,11 +2,11 @@
 
 ## What This Is
 
-A production-ready Spring Boot 4 backend API template with stateless JWT authentication via Google OAuth2, Apple Sign-In, email+password, and phone+SMS OTP. Built with Kotlin on Java 25 with Virtual Threads. Multi-provider account linking: one email = one user = N providers. Designed as a reusable starting point: rename the package and artifact to bootstrap new projects with auth already wired.
+A production-ready Spring Boot 4 backend API template with stateless JWT authentication via Google OAuth2, Apple Sign-In, email+password, and phone+SMS OTP. Firebase Cloud Messaging push notifications with device token management, topic subscriptions, and async dispatch. Built with Kotlin on Java 25 with Virtual Threads. Multi-provider account linking: one email = one user = N providers. Designed as a reusable starting point: rename the package and artifact to bootstrap new projects with auth already wired.
 
 ## Core Value
 
-Mobile/web clients can authenticate with Google or Apple ID tokens, email+password, or phone+SMS OTP and receive JWT access/refresh tokens that secure all API endpoints. Account linking ensures one email = one user across all providers.
+Mobile/web clients can authenticate with Google or Apple ID tokens, email+password, or phone+SMS OTP and receive JWT access/refresh tokens that secure all API endpoints. Account linking ensures one email = one user across all providers. Push notifications via Firebase Cloud Messaging with device token management, topic subscriptions, and notification history.
 
 ## Requirements
 
@@ -52,6 +52,15 @@ Mobile/web clients can authenticate with Google or Apple ID tokens, email+passwo
 - ✓ Change-phone two-step flow with SMS OTP to new phone — v5.0
 - ✓ Shared VerificationCode infrastructure with purpose discriminator — v5.0
 
+- ✓ Firebase Admin SDK with conditional activation (app.firebase.enabled) — v6.0
+- ✓ Device token registration with upsert and max-per-user limit — v6.0
+- ✓ Push notifications: single, multicast (500 max), and topic dispatch — v6.0
+- ✓ Async notification dispatch with PENDING/SENT/FAILED history tracking — v6.0
+- ✓ Stale token cleanup on FCM UNREGISTERED/INVALID_ARGUMENT — v6.0
+- ✓ Topic management with admin-only CRUD endpoints — v6.0
+- ✓ ConsolePushService dev fallback via @ConditionalOnMissingBean — v6.0
+- ✓ Cursor-based notification history pagination using UUID v7 ordering — v6.0
+
 ### Active
 
 ## Current Milestone: v6.0 Notifications
@@ -77,9 +86,9 @@ Mobile/web clients can authenticate with Google or Apple ID tokens, email+passwo
 
 ## Context
 
-- **Current state:** v5.0 shipped. 37 integration tests passing. Full account management (forgot-password, change-password, change-email, change-phone) with shared verification code infrastructure, self-managed SMS OTP, UUID v7, and multi-provider account linking.
-- **Tech stack:** Spring Boot 4.0.3, Kotlin, Java 25, Maven, PostgreSQL 18, Spring Security 7, Spring Authorization Server (JWT only), Flyway, libphonenumber, uuid-creator.
-- **Package structure:** `kz.innlab.template` with `config/`, `user/{model,repository,service,controller,dto}`, `authentication/{model,repository,service,controller,dto,exception,filter}`.
+- **Current state:** v6.0 Phase 1 shipped. 49 integration tests passing. FCM push notifications with device token management, async dispatch, topic subscriptions, and notification history. Full account management, self-managed SMS OTP, UUID v7, and multi-provider account linking.
+- **Tech stack:** Spring Boot 4.0.3, Kotlin, Java 25, Maven, PostgreSQL 18, Spring Security 7, Spring Authorization Server (JWT only), Flyway, libphonenumber, uuid-creator, firebase-admin 9.4.3.
+- **Package structure:** `kz.innlab.template` with `config/`, `user/{model,repository,service,controller,dto}`, `authentication/{model,repository,service,controller,dto,exception,filter}`, `notification/{model,repository,service,controller,dto}`, `shared/{model,error}`.
 - The "template" naming is a placeholder. When creating a new project, rename package and artifact.
 - Target clients: mobile apps (iOS/Android) and web SPAs that handle Google/Apple sign-in client-side and send ID tokens to the backend.
 - Server runs on port 7070.
@@ -115,6 +124,11 @@ Mobile/web clients can authenticate with Google or Apple ID tokens, email+passwo
 | Shared VerificationCode infrastructure | Purpose-discriminated entity for forgot-password, change-email, change-phone; BCrypt hashing, rate limiting, max attempts | ✓ Good — eliminates code duplication across account flows |
 | Anti-enumeration on forgot-password | Always returns 202 Accepted with nullable verificationId; no email existence leakage | ✓ Good — security best practice |
 | Session revocation on password change | All refresh tokens deleted after password reset or change | ✓ Good — forces re-authentication on all devices |
+| Firebase Admin SDK with conditional activation | @ConditionalOnProperty(app.firebase.enabled=true) gates FirebaseApp bean; double-init guard with FirebaseApp.getApps().isEmpty() | ✓ Good — dev/test profiles never touch Firebase |
+| Google Cloud libraries-bom for version alignment | firebase-admin and google-api-client both pull google-http-client at different versions; BOM aligns to single version | ✓ Good — prevents ClassNotFoundException at runtime |
+| NotificationDispatcher as separate @Async bean | Avoids Spring @Async self-invocation proxy bypass (Pitfall 4); NotificationService delegates to dispatcher | ✓ Good — async dispatch works correctly |
+| ConsolePushService via @ConditionalOnMissingBean | Mirrors ConsoleSmsService/ConsoleEmailService pattern; no @Component annotation, registered via @Bean in NotificationConfig | ✓ Good — consistent with existing patterns |
+| Send endpoints return 202 Accepted | Notifications are dispatched asynchronously; response includes notificationId for tracking; history shows PENDING until dispatch completes | ✓ Good — non-blocking API |
 
 ---
-*Last updated: 2026-03-03 after v6.0 milestone start (Notifications — FCM + Email)*
+*Last updated: 2026-03-03 after v6.0 Phase 1 complete (FCM Push Notifications)*

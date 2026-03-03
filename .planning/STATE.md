@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** Mobile/web clients can authenticate with Google, Apple, email+password, or phone+SMS OTP and receive JWT tokens. Account linking ensures one email = one user across all providers. Full account management: forgot-password, change-password, change-email, change-phone. Push notifications via FCM. Email service with SMTP send and IMAP receive.
-**Current focus:** v6.0 Notifications — Phase 1: FCM Push Notifications
+**Current focus:** v6.0 Notifications — Phase 1 complete, Phase 2 (Email Service) next
 
 ## Current Position
 
 Milestone: v6.0 Notifications
-Phase: 1 of 2 (FCM Push Notifications)
-Current Plan: All plans complete — awaiting verification
-Last activity: 2026-03-03 — Plan 01-03 complete (controllers + integration tests)
+Phase: 1 of 2 complete (FCM Push Notifications) — Phase 2 not yet planned
+Current Plan: — (phase 1 complete, phase 2 needs discuss/plan)
+Last activity: 2026-03-03 — Phase 1 complete and verified (14/14 requirements, 49 tests pass)
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
-- Average duration: 4.6 min
-- Total execution time: 1.0 hours
+- Total plans completed: 17
+- Average duration: 4.2 min
+- Total execution time: 1.15 hours
 
 **By Phase:**
 
@@ -38,9 +38,10 @@ Progress: [██████████] 100%
 | 03-self-managed-sms | 2/2 | 15 min | 7.5 min |
 | 04-uuid-v7 | 1/1 | 3 min | 3 min |
 | 05-account-mgmt | 3/3 | 6 min | 2 min |
+| 01-fcm-push (v6) | 3/3 | 9 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 4 min, 3 min, 2 min, 2 min, 2 min
+- Last 5 plans: 2 min, 2 min, 3 min, 3 min, 3 min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -80,10 +81,10 @@ None.
 ### Blockers/Concerns
 
 - Developer note: If running Postgres.app locally on port 5432, create the `template` role or stop Postgres.app and use Docker only
-- Phase 1 risk: RESOLVED — libraries-bom 26.55.0 added to align google-http-client versions (unified at 1.46.1)
+- RESOLVED: google-http-client version conflict resolved with libraries-bom 26.55.0 (unified at 1.46.1)
 
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Phase 1 all 3 plans complete. Awaiting verification.
+Stopped at: Phase 1 complete and verified. Phase 2 (Email Service) needs discuss/plan.
 Resume file: None
