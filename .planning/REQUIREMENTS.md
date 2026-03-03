@@ -9,15 +9,15 @@ Requirements for v6.0 Notifications milestone. Each maps to roadmap phases.
 
 ### Push Notifications (FCM)
 
-- [ ] **FCM-01**: Authenticated user can register a device token with platform type (ANDROID/IOS/WEB)
-- [ ] **FCM-02**: User can delete a device token (e.g., on logout)
-- [ ] **FCM-03**: User can send a push notification to a single device token with title, body, and custom data payload
-- [ ] **FCM-04**: User can send a push notification to multiple device tokens (batch/multicast, max 500 per request)
-- [ ] **FCM-05**: User can send a push notification to a topic
-- [ ] **FCM-06**: User can subscribe/unsubscribe a device token to/from a topic
-- [ ] **FCM-07**: Stale device tokens are automatically removed when FCM returns UNREGISTERED/INVALID_ARGUMENT errors
-- [ ] **FCM-08**: Firebase Admin SDK is initialized with service account credentials from environment variable, guarded against double-init
-- [ ] **FCM-09**: Dev profile logs notifications to console when Firebase credentials are not configured
+- [x] **FCM-01**: Authenticated user can register a device token with platform type (ANDROID/IOS/WEB)
+- [x] **FCM-02**: User can delete a device token (e.g., on logout)
+- [x] **FCM-03**: User can send a push notification to a single device token with title, body, and custom data payload
+- [x] **FCM-04**: User can send a push notification to multiple device tokens (batch/multicast, max 500 per request)
+- [x] **FCM-05**: User can send a push notification to a topic
+- [x] **FCM-06**: User can subscribe/unsubscribe a device token to/from a topic
+- [x] **FCM-07**: Stale device tokens are automatically removed when FCM returns UNREGISTERED/INVALID_ARGUMENT errors
+- [x] **FCM-08**: Firebase Admin SDK is initialized with service account credentials from environment variable, guarded against double-init
+- [x] **FCM-09**: Dev profile logs notifications to console when Firebase credentials are not configured
 
 ### Email Service
 
@@ -33,17 +33,17 @@ Requirements for v6.0 Notifications milestone. Each maps to roadmap phases.
 
 ### Notification Management
 
-- [ ] **NMGT-01**: Sent notifications are persisted in a notification history table (type, recipient, title, body, status, timestamp)
-- [ ] **NMGT-02**: User can view their notification history via API endpoint
+- [x] **NMGT-01**: Sent notifications are persisted in a notification history table (type, recipient, title, body, status, timestamp)
+- [x] **NMGT-02**: User can view their notification history via API endpoint
 - [ ] **NMGT-03**: User can configure notification preferences (which types to receive: push, email, or both)
 - [ ] **NMGT-04**: Notification preferences are checked before dispatching push/email notifications
 
 ### Infrastructure
 
-- [ ] **NFRA-01**: Flyway migration creates device_tokens table (UUID v7 PK, user_id FK, platform enum, token, timestamps)
-- [ ] **NFRA-02**: Flyway migration creates notification_history table
+- [x] **NFRA-01**: Flyway migration creates device_tokens table (UUID v7 PK, user_id FK, platform enum, token, timestamps)
+- [x] **NFRA-02**: Flyway migration creates notification_history table
 - [ ] **NFRA-03**: Flyway migration creates notification_preferences table
-- [ ] **NFRA-04**: New notification/ domain package follows existing project structure conventions (model/repository/service/controller/dto)
+- [x] **NFRA-04**: New notification/ domain package follows existing project structure conventions (model/repository/service/controller/dto)
 - [ ] **NFRA-05**: Integration tests use GreenMail (in-process SMTP/IMAP) and mocked Firebase
 
 ## v7.0 Requirements
@@ -81,15 +81,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FCM-01 | Phase 1 | Pending |
-| FCM-02 | Phase 1 | Pending |
-| FCM-03 | Phase 1 | Pending |
-| FCM-04 | Phase 1 | Pending |
-| FCM-05 | Phase 1 | Pending |
-| FCM-06 | Phase 1 | Pending |
-| FCM-07 | Phase 1 | Pending |
-| FCM-08 | Phase 1 | Pending |
-| FCM-09 | Phase 1 | Pending |
+| FCM-01 | Phase 1 | Complete |
+| FCM-02 | Phase 1 | Complete |
+| FCM-03 | Phase 1 | Complete |
+| FCM-04 | Phase 1 | Complete |
+| FCM-05 | Phase 1 | Complete |
+| FCM-06 | Phase 1 | Complete |
+| FCM-07 | Phase 1 | Complete |
+| FCM-08 | Phase 1 | Complete |
+| FCM-09 | Phase 1 | Complete |
 | MAIL-01 | Phase 2 | Pending |
 | MAIL-02 | Phase 2 | Pending |
 | MAIL-03 | Phase 2 | Pending |
@@ -99,14 +99,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MAIL-07 | Phase 2 | Pending |
 | MAIL-08 | Phase 2 | Pending |
 | MAIL-09 | Phase 2 | Pending |
-| NMGT-01 | Phase 1 | Pending |
-| NMGT-02 | Phase 1 | Pending |
+| NMGT-01 | Phase 1 | Complete |
+| NMGT-02 | Phase 1 | Complete |
 | NMGT-03 | Phase 2 | Pending |
 | NMGT-04 | Phase 2 | Pending |
-| NFRA-01 | Phase 1 | Pending |
-| NFRA-02 | Phase 1 | Pending |
+| NFRA-01 | Phase 1 | Complete |
+| NFRA-02 | Phase 1 | Complete |
 | NFRA-03 | Phase 2 | Pending |
-| NFRA-04 | Phase 1 | Pending |
+| NFRA-04 | Phase 1 | Complete |
 | NFRA-05 | Phase 2 | Pending |
 
 **Coverage:**
