@@ -25,6 +25,11 @@ app:
       bundle-id: ${APPLE_BUNDLE_ID:com.example.app}
     refresh-token:
       expiry-days: ${REFRESH_TOKEN_EXPIRY_DAYS:30}
+  notification:
+    token:
+      max-per-user: ${NOTIFICATION_MAX_TOKENS_PER_USER:5}
+  firebase:
+    enabled: ${FIREBASE_ENABLED:false}
 
 ---
 spring:
@@ -53,6 +58,8 @@ app:
       dev-code: "123456"
     verification:
       dev-code: "123456"
+  firebase:
+    enabled: false
 
 ---
 spring:
@@ -80,3 +87,5 @@ app:
       key-alias: ${JWT_KEY_ALIAS:jwt}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS}
+  firebase:
+    enabled: ${FIREBASE_ENABLED:true}

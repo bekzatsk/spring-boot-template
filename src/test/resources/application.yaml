@@ -28,3 +28,8 @@ app:
       dev-code: ""
     verification:
       dev-code: ""
+  firebase:
+    enabled: false
+  notification:
+    token:
+      max-per-user: 5
