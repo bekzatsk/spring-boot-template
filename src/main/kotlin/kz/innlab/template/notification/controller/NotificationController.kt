@@ -3,13 +3,17 @@ package kz.innlab.template.notification.controller
 import jakarta.validation.Valid
 import kz.innlab.template.notification.dto.DeviceTokenResponse
 import kz.innlab.template.notification.dto.NotificationHistoryResponse
+import kz.innlab.template.notification.dto.NotificationPreferenceRequest
+import kz.innlab.template.notification.dto.NotificationPreferenceResponse
 import kz.innlab.template.notification.dto.RegisterTokenRequest
 import kz.innlab.template.notification.dto.SendMulticastRequest
 import kz.innlab.template.notification.dto.SendToTokenRequest
 import kz.innlab.template.notification.dto.SendToTopicRequest
 import kz.innlab.template.notification.dto.TopicSubscribeRequest
+import kz.innlab.template.notification.model.NotificationChannel
 import kz.innlab.template.notification.model.Platform
 import kz.innlab.template.notification.service.DeviceTokenService
+import kz.innlab.template.notification.service.NotificationPreferenceService
 import kz.innlab.template.notification.service.NotificationService
 import kz.innlab.template.notification.service.TopicService
 import org.springframework.http.ResponseEntity
@@ -19,6 +23,7 @@ import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -30,7 +35,8 @@ import java.util.UUID
 class NotificationController(
     private val deviceTokenService: DeviceTokenService,
     private val notificationService: NotificationService,
-    private val topicService: TopicService
+    private val topicService: TopicService,
+    private val notificationPreferenceService: NotificationPreferenceService
 ) {
 
     // --- Token management ---
@@ -126,6 +132,39 @@ class NotificationController(
     ): ResponseEntity<Void> {
         topicService.unsubscribe(request.token, name)
         return ResponseEntity.ok().build()
+    }
+
+    // --- Preferences ---
+
+    @GetMapping("/preferences")
+    fun getPreferences(@AuthenticationPrincipal jwt: Jwt): ResponseEntity<NotificationPreferenceResponse> {
+        val userId = UUID.fromString(jwt.subject)
+        val prefs = notificationPreferenceService.getPreferences(userId)
+        return ResponseEntity.ok(
+            NotificationPreferenceResponse(
+                push = prefs[NotificationChannel.PUSH] ?: true,
+                email = prefs[NotificationChannel.EMAIL] ?: true
+            )
+        )
+    }
+
+    @PutMapping("/preferences")
+    fun updatePreferences(
+        @Valid @RequestBody request: NotificationPreferenceRequest,
+        @AuthenticationPrincipal jwt: Jwt
+    ): ResponseEntity<NotificationPreferenceResponse> {
+        val userId = UUID.fromString(jwt.subject)
+        val updates = mutableMapOf<NotificationChannel, Boolean>()
+        request.push?.let { updates[NotificationChannel.PUSH] = it }
+        request.email?.let { updates[NotificationChannel.EMAIL] = it }
+        notificationPreferenceService.updatePreferences(userId, updates)
+        val prefs = notificationPreferenceService.getPreferences(userId)
+        return ResponseEntity.ok(
+            NotificationPreferenceResponse(
+                push = prefs[NotificationChannel.PUSH] ?: true,
+                email = prefs[NotificationChannel.EMAIL] ?: true
+            )
+        )
     }
 
     // --- History ---
