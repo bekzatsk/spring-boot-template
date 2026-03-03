@@ -2,13 +2,10 @@ package kz.innlab.template.config
 
 import kz.innlab.template.authentication.repository.SmsVerificationRepository
 import kz.innlab.template.authentication.repository.VerificationCodeRepository
-import kz.innlab.template.authentication.service.ConsoleEmailService
 import kz.innlab.template.authentication.service.ConsoleSmsService
-import kz.innlab.template.authentication.service.EmailService
 import kz.innlab.template.authentication.service.SmsService
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
-import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.scheduling.annotation.EnableScheduling
@@ -18,7 +15,6 @@ import java.time.Instant
 
 @Configuration
 @EnableScheduling
-@EnableConfigurationProperties(MailProperties::class)
 class SmsSchedulerConfig(
     private val smsVerificationRepository: SmsVerificationRepository,
     private val verificationCodeRepository: VerificationCodeRepository
@@ -39,8 +35,4 @@ class SmsSchedulerConfig(
     @Bean
     @ConditionalOnMissingBean(SmsService::class)
     fun smsService(): SmsService = ConsoleSmsService()
-
-    @Bean
-    @ConditionalOnMissingBean(EmailService::class)
-    fun emailService(): EmailService = ConsoleEmailService()
 }
