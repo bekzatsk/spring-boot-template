@@ -28,7 +28,11 @@
 | 4. Apple Auth | v1.0 | 1/1 | Complete | 2026-03-01 |
 | 5. Hardening | v1.0 | 1/1 | Complete | 2026-03-01 |
 | 6. Restructure | v1.0 | 2/2 | Complete | 2026-03-01 |
-| 1. Local Auth (v2) | v2.0 | 2/3 | In Progress | — |
+| 1. Local Auth (v2) | v2.0 | 3/3 | Complete | 2026-03-02 |
+| 2. Account Linking | v3.0 | 2/2 | Complete | 2026-03-02 |
+| 3. Self-managed SMS | v3.0 | 2/2 | Complete | 2026-03-02 |
+| 4. UUID v7 | v4.0 | 1/1 | Complete | 2026-03-02 |
+| 5. Account Management | v5.0 | 3/3 | Complete | 2026-03-03 |
 
 ### Phase 1: Add LOCAL authentication — email+password and phone+SMS code login
 
@@ -81,6 +85,6 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Infrastructure: VerificationCode entity/repo/migration, EmailService/ConsoleEmailService, VerificationCodeService, config updates
-- [ ] 05-02-PLAN.md — Service + Controller: AccountManagementService (4 flows), AccountManagementController, DTOs, AuthController forgot-password endpoints
-- [ ] 05-03-PLAN.md — Integration tests: AccountManagementIntegrationTest with ~14 tests covering all flows, edge cases, and security properties
+- [x] 05-01-PLAN.md — Infrastructure: VerificationCode entity/repo/migration, EmailService/ConsoleEmailService, VerificationCodeService, config updates — completed 2026-03-03
+- [x] 05-02-PLAN.md — Service + Controller: AccountManagementService (4 flows), AccountManagementController, DTOs, AuthController forgot-password endpoints — completed 2026-03-03
+- [x] 05-03-PLAN.md — Integration tests: AccountManagementIntegrationTest with 14 tests covering all flows, edge cases, and security properties — completed 2026-03-03
