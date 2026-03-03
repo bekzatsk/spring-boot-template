@@ -1,6 +1,7 @@
 package kz.innlab.template.shared.model
 
 import com.github.f4b6a3.uuid.UuidCreator
+import jakarta.persistence.Column
 import jakarta.persistence.Id
 import jakarta.persistence.MappedSuperclass
 import jakarta.persistence.PostLoad
@@ -13,6 +14,7 @@ import java.util.UUID
 abstract class BaseEntity : Persistable<UUID> {
 
     @Id
+    @Column(name = "id")
     private val _id: UUID = UuidCreator.getTimeOrderedEpoch()
 
     @Transient
