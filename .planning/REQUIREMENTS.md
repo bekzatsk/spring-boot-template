@@ -81,39 +81,39 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FCM-01 | — | Pending |
-| FCM-02 | — | Pending |
-| FCM-03 | — | Pending |
-| FCM-04 | — | Pending |
-| FCM-05 | — | Pending |
-| FCM-06 | — | Pending |
-| FCM-07 | — | Pending |
-| FCM-08 | — | Pending |
-| FCM-09 | — | Pending |
-| MAIL-01 | — | Pending |
-| MAIL-02 | — | Pending |
-| MAIL-03 | — | Pending |
-| MAIL-04 | — | Pending |
-| MAIL-05 | — | Pending |
-| MAIL-06 | — | Pending |
-| MAIL-07 | — | Pending |
-| MAIL-08 | — | Pending |
-| MAIL-09 | — | Pending |
-| NMGT-01 | — | Pending |
-| NMGT-02 | — | Pending |
-| NMGT-03 | — | Pending |
-| NMGT-04 | — | Pending |
-| NFRA-01 | — | Pending |
-| NFRA-02 | — | Pending |
-| NFRA-03 | — | Pending |
-| NFRA-04 | — | Pending |
-| NFRA-05 | — | Pending |
+| FCM-01 | Phase 1 | Pending |
+| FCM-02 | Phase 1 | Pending |
+| FCM-03 | Phase 1 | Pending |
+| FCM-04 | Phase 1 | Pending |
+| FCM-05 | Phase 1 | Pending |
+| FCM-06 | Phase 1 | Pending |
+| FCM-07 | Phase 1 | Pending |
+| FCM-08 | Phase 1 | Pending |
+| FCM-09 | Phase 1 | Pending |
+| MAIL-01 | Phase 2 | Pending |
+| MAIL-02 | Phase 2 | Pending |
+| MAIL-03 | Phase 2 | Pending |
+| MAIL-04 | Phase 2 | Pending |
+| MAIL-05 | Phase 2 | Pending |
+| MAIL-06 | Phase 2 | Pending |
+| MAIL-07 | Phase 2 | Pending |
+| MAIL-08 | Phase 2 | Pending |
+| MAIL-09 | Phase 2 | Pending |
+| NMGT-01 | Phase 1 | Pending |
+| NMGT-02 | Phase 1 | Pending |
+| NMGT-03 | Phase 2 | Pending |
+| NMGT-04 | Phase 2 | Pending |
+| NFRA-01 | Phase 1 | Pending |
+| NFRA-02 | Phase 1 | Pending |
+| NFRA-03 | Phase 2 | Pending |
+| NFRA-04 | Phase 1 | Pending |
+| NFRA-05 | Phase 2 | Pending |
 
 **Coverage:**
 - v6.0 requirements: 27 total
-- Mapped to phases: 0
-- Unmapped: 27
+- Mapped to phases: 27
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after initial definition*
+*Last updated: 2026-03-03 after roadmap creation (v6.0 Notifications — all 27 requirements mapped)*

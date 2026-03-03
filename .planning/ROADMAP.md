@@ -3,6 +3,11 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1-6 (shipped 2026-03-01)
+- ✅ **v2.0 Local Auth** — Phase 1 (shipped 2026-03-02)
+- ✅ **v3.0 Account Linking + Self-managed SMS** — Phases 2-3 (shipped 2026-03-02)
+- ✅ **v4.0 UUID v7** — Phase 4 (shipped 2026-03-02)
+- ✅ **v5.0 Account Management** — Phase 5 (shipped 2026-03-03)
+- 🚧 **v6.0 Notifications** — Phases 1-2 (in progress)
 
 ## Phases
 
@@ -18,21 +23,8 @@
 
 </details>
 
-## Progress
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 1. Foundation | v1.0 | 2/2 | Complete | 2026-03-01 |
-| 2. Security Wiring | v1.0 | 2/2 | Complete | 2026-03-01 |
-| 3. Google Auth and Token Management | v1.0 | 2/2 | Complete | 2026-03-01 |
-| 4. Apple Auth | v1.0 | 1/1 | Complete | 2026-03-01 |
-| 5. Hardening | v1.0 | 1/1 | Complete | 2026-03-01 |
-| 6. Restructure | v1.0 | 2/2 | Complete | 2026-03-01 |
-| 1. Local Auth (v2) | v2.0 | 3/3 | Complete | 2026-03-02 |
-| 2. Account Linking | v3.0 | 2/2 | Complete | 2026-03-02 |
-| 3. Self-managed SMS | v3.0 | 2/2 | Complete | 2026-03-02 |
-| 4. UUID v7 | v4.0 | 1/1 | Complete | 2026-03-02 |
-| 5. Account Management | v5.0 | 3/3 | Complete | 2026-03-03 |
+<details>
+<summary>✅ v2.0–v5.0 Post-MVP (Phases 1-5) — SHIPPED 2026-03-03</summary>
 
 ### Phase 1: Add LOCAL authentication — email+password and phone+SMS code login
 
@@ -43,7 +35,7 @@
 Plans:
 - [x] 01-01-PLAN.md — Foundation: Maven dependencies (Flyway, Twilio, libphonenumber), AuthProvider.LOCAL, User entity columns, Flyway migrations — completed 2026-03-02
 - [x] 01-02-PLAN.md — Email+password auth: LocalUserDetailsService, LocalAuthService, DaoAuthenticationProvider, register/login endpoints, integration tests — completed 2026-03-02
-- [ ] 01-03-PLAN.md — Phone+SMS OTP auth: TwilioConfig, PhoneOtpService, E.164 normalization, request-otp/verify-otp endpoints, integration tests
+- [x] 01-03-PLAN.md — Phone+SMS OTP auth: TwilioConfig, PhoneOtpService, E.164 normalization, request-otp/verify-otp endpoints, integration tests — completed 2026-03-02
 
 ### Phase 2: Implement account linking logic — email is globally unique across all providers, one user = one email = one account
 
@@ -53,8 +45,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Entity + Migration: Rewrite User entity to multi-provider model, update UserRepository to findByEmail, create V2 Flyway migration
-- [ ] 02-02-PLAN.md — Service layer + Tests: Rewrite UserService/LocalAuthService/LocalUserDetailsService for account linking, update all test files
+- [x] 02-01-PLAN.md — Entity + Migration: Rewrite User entity to multi-provider model, update UserRepository to findByEmail, create V2 Flyway migration — completed 2026-03-02
+- [x] 02-02-PLAN.md — Service layer + Tests: Rewrite UserService/LocalAuthService/LocalUserDetailsService for account linking, update all test files — completed 2026-03-02
 
 ### Phase 3: Replace Twilio Verify with self-managed SMS code generation and verification
 
@@ -88,3 +80,55 @@ Plans:
 - [x] 05-01-PLAN.md — Infrastructure: VerificationCode entity/repo/migration, EmailService/ConsoleEmailService, VerificationCodeService, config updates — completed 2026-03-03
 - [x] 05-02-PLAN.md — Service + Controller: AccountManagementService (4 flows), AccountManagementController, DTOs, AuthController forgot-password endpoints — completed 2026-03-03
 - [x] 05-03-PLAN.md — Integration tests: AccountManagementIntegrationTest with 14 tests covering all flows, edge cases, and security properties — completed 2026-03-03
+
+</details>
+
+---
+
+### 🚧 v6.0 Notifications (In Progress)
+
+**Milestone Goal:** Firebase Cloud Messaging push notifications (device tokens, topics, batch send) and a full email service (SMTP send with attachments and retry, IMAP/POP3 receive) with notification history and preference management.
+
+## Phase Details
+
+### Phase 1: FCM Push Notifications
+**Goal:** Users can register device tokens, send push notifications to individual devices and topics, and the system automatically cleans up stale tokens — with Firebase initialized safely and a console fallback for dev
+**Depends on:** v5.0 (Phase 5 complete)
+**Requirements:** FCM-01, FCM-02, FCM-03, FCM-04, FCM-05, FCM-06, FCM-07, FCM-08, FCM-09, NMGT-01, NMGT-02, NFRA-01, NFRA-02, NFRA-04
+**Success Criteria** (what must be TRUE):
+  1. Authenticated user can register a device token (Android/iOS/Web) via POST /api/v1/notifications/tokens and delete it via DELETE /api/v1/notifications/tokens/{deviceId}
+  2. Authenticated user can send a push notification to a single token, up to 500 tokens (multicast), or a topic via the notifications API — all with title, body, and custom data payload
+  3. Authenticated user can subscribe or unsubscribe a device token to/from a named topic
+  4. When FCM returns UNREGISTERED or INVALID_ARGUMENT, the stale token is automatically deleted from the database without manual intervention
+  5. Sent notifications appear in the notification history table and are retrievable via GET /api/v1/notifications/history; dev profile with no Firebase credentials logs to console instead of failing
+**Plans**: TBD
+
+### Phase 2: Email Service and Notification Preferences
+**Goal:** Users can send emails (plain text, HTML, attachments) via SMTP with async delivery and retry, read their inbox and individual emails via IMAP, and configure which notification types they receive — backed by GreenMail integration tests
+**Depends on:** Phase 1
+**Requirements:** MAIL-01, MAIL-02, MAIL-03, MAIL-04, MAIL-05, MAIL-06, MAIL-07, MAIL-08, MAIL-09, NMGT-03, NMGT-04, NFRA-03, NFRA-05
+**Success Criteria** (what must be TRUE):
+  1. Authenticated user can send an email with plain text or HTML body and optional file attachments via the mail API — send is non-blocking and returns immediately
+  2. Failed email sends are automatically retried up to the configured max attempts with configurable delay; dev profile with no SMTP configured logs to console instead of failing
+  3. Authenticated user can list their inbox (unread filter, pagination) and fetch a full individual email with body and attachment metadata via IMAP
+  4. Authenticated user can mark an email as read or unread via the IMAP API
+  5. Authenticated user can set notification preferences (push, email, or both) and subsequent notifications respect those preferences before dispatching
+**Plans**: TBD
+
+## Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Foundation | v1.0 | 2/2 | Complete | 2026-03-01 |
+| 2. Security Wiring | v1.0 | 2/2 | Complete | 2026-03-01 |
+| 3. Google Auth and Token Management | v1.0 | 2/2 | Complete | 2026-03-01 |
+| 4. Apple Auth | v1.0 | 1/1 | Complete | 2026-03-01 |
+| 5. Hardening | v1.0 | 1/1 | Complete | 2026-03-01 |
+| 6. Restructure | v1.0 | 2/2 | Complete | 2026-03-01 |
+| 1. Local Auth | v2.0 | 3/3 | Complete | 2026-03-02 |
+| 2. Account Linking | v3.0 | 2/2 | Complete | 2026-03-02 |
+| 3. Self-managed SMS | v3.0 | 2/2 | Complete | 2026-03-02 |
+| 4. UUID v7 | v4.0 | 1/1 | Complete | 2026-03-02 |
+| 5. Account Management | v5.0 | 3/3 | Complete | 2026-03-03 |
+| 1. FCM Push Notifications | v6.0 | 0/TBD | Not started | - |
+| 2. Email Service and Notification Preferences | v6.0 | 0/TBD | Not started | - |

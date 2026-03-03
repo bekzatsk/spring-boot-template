@@ -4,15 +4,15 @@
 
 See: .planning/PROJECT.md (updated 2026-03-03)
 
-**Core value:** Mobile/web clients can authenticate with Google, Apple, email+password, or phone+SMS OTP and receive JWT tokens. Account linking ensures one email = one user across all providers. Full account management: forgot-password, change-password, change-email, change-phone.
-**Current focus:** v6.0 Notifications — defining requirements
+**Core value:** Mobile/web clients can authenticate with Google, Apple, email+password, or phone+SMS OTP and receive JWT tokens. Account linking ensures one email = one user across all providers. Full account management: forgot-password, change-password, change-email, change-phone. Push notifications via FCM. Email service with SMTP send and IMAP receive.
+**Current focus:** v6.0 Notifications — Phase 1: FCM Push Notifications
 
 ## Current Position
 
 Milestone: v6.0 Notifications
-Phase: Not started (defining requirements)
-Current Plan: —
-Last activity: 2026-03-03 — Milestone v6.0 started
+Phase: 1 of 2 (FCM Push Notifications)
+Current Plan: — (not started)
+Last activity: 2026-03-03 — Roadmap created for v6.0 Notifications (2 phases, 27 requirements)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -52,90 +52,13 @@ Progress: [░░░░░░░░░░] 0%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- Spring MVC + Virtual Threads chosen over WebFlux — simpler model, sufficient concurrency
-- Spring Authorization Server used narrowly for JWKSource/NimbusJwtEncoder only — NOT full OAuth2 server
-- Refresh token rotation with 10-second grace window for mobile concurrent retry handling
-- Users keyed on email (globally unique) with multi-provider support — findByEmail is primary lookup
-- OAuth2AuthorizationServerAutoConfiguration excluded from TemplateApplication — prevents competing SecurityFilterChain; Spring Boot 4.0.3 package is org.springframework.boot.security.oauth2.server.authorization.autoconfigure.servlet
-- Dev profile uses :default values for DB credentials (convenience), prod uses bare ${ENV_VAR} (SECU-09)
-- Kotlin all-open plugin configured for jakarta.persistence annotations (Entity, MappedSuperclass, Embeddable)
-- User entity is a regular Kotlin class (not data class) — data class equals/hashCode breaks Hibernate proxy equality
-- Manual equals/hashCode on id field only for JPA entities — safe for transient (null id) and persistent entities
-- NimbusJwtDecoder.withJwkSource() used over OAuth2AuthorizationServerConfiguration.jwtDecoder() — avoids Authorization Server coupling
-- Dev profile auto-generates in-memory RSA keypair — tokens do not persist across restarts (acceptable for dev)
-- Jackson 3.x (tools.jackson.* namespace) used for ObjectMapper in error handlers — not com.fasterxml.jackson
-- AuthenticationEntryPoint registered in both exceptionHandling and oauth2ResourceServer DSL (Pitfall 4 per research)
-- Spring Boot 4.x @AutoConfigureMockMvc is in org.springframework.boot.webmvc.test.autoconfigure — not boot.test.autoconfigure.web.servlet
-- H2 test-scoped dependency added — enables full @SpringBootTest with JPA without a running PostgreSQL instance
-- JwtTokenService omits JwsHeader in JwtEncoderParameters — NimbusJwtEncoder infers RS256 from RSA JWKSource automatically
-- [Phase 03-01]: Grace window replay returns 409 Conflict (not replacement raw token) — raw tokens not stored per TOKN-02; mobile client retries with token received from first successful rotation
-- [Phase 03-01]: deleteAllByUser uses JPQL DELETE (not derived deleteBy) to avoid N+1 entity loading on family revocation
-- [Phase 03-02]: GoogleIdTokenVerifier.verify() returns null on invalid token — checked explicitly, throws BadCredentialsException caught by GlobalExceptionHandler
-- [Phase 03-02]: Test application.yaml must include app.auth config — test YAML overrides main YAML; auth section missing caused context init failure
-- [Phase 03-02]: SecurityIntegrationTest /users/me creates real User in H2 — required because UserController now does real DB lookup instead of returning JWT claims
-- [Phase 04-01]: @MockitoBean is from org.springframework.test.context.bean.override.mockito (Spring 7.x) — not from spring-boot-test; mockito-kotlin not on classpath; use plain Mockito.when()/anyString()
-- [Phase 04-01]: refreshTokenRepository.deleteAll() must precede userRepository.deleteAll() in test @BeforeEach — FK constraint from refresh_tokens.user_id prevents deleting users with active tokens
-- [Phase 04-01]: appleJwtDecoder bean named explicitly and injected with @Qualifier("appleJwtDecoder") — prevents NoUniqueBeanDefinitionException with resource server JwtDecoder from RsaKeyConfig
-- [Phase 04-01]: JwtException from NimbusJwtDecoder.decode() wrapped as BadCredentialsException — JwtException not handled by GlobalExceptionHandler (would produce 500 without wrap)
-- [Phase 05-01]: Maven Wrapper 3.3+ does not require maven-wrapper.jar — only maven-wrapper.properties needed; wrapperVersion=3.3.4
-- [Phase 05-01]: H2Dialect auto-detection preferred — removing explicit database-platform eliminates HHH90000025 deprecation warning in Hibernate 7.x
-- [Phase 05-01]: Rate limiting markers as // TODO comments (not stubs) — zero runtime behavior change, found via grep "TODO: rate limiting"
-- [Quick-02]: JOIN FETCH rt.user on findByTokenHash fixes LazyInitializationException — open-in-view=false means persistence context closes before controller layer; fetching eagerly avoids re-opening transaction in AuthController
-- [Quick-02]: SLF4J logger in GlobalExceptionHandler companion object — all catch-all handlers must log with logger.error() before returning 500 so unhandled exceptions are diagnosable
-- [Phase 06-01]: GlobalExceptionHandler renamed to AuthExceptionHandler and placed in authentication/exception — semantically belongs with auth domain, not shared error utilities
-- [Phase 06-01]: TokenGracePeriodException extracted from RefreshTokenService into its own file — single-responsibility for exception definitions
-- [Phase 06-01]: ErrorResponse kept in shared/error (not moved) — generic DTO used by both authentication and user domains
-- [Phase 06-01]: authentication/error/ package replaced by authentication/filter/ — filter handlers belong with filter layer, not generic error handling
-- [Phase 06]: JwtTokenService renamed to TokenService — clearer name without JWT implementation detail leaking into service name
-- [Phase 06]: GoogleAuthService renamed to GoogleOAuth2Service — explicit OAuth2 protocol reference; AppleAuthService renamed to AppleOAuth2Service — symmetric naming
-- [Phase 06]: Clean Maven build required after moving compiled classes — incremental compile left stale .class files causing ConflictingBeanDefinitionException
-- [Phase 01-01 v2]: V1 migration includes all columns (including password_hash and phone) — no V2 needed for greenfield project; single migration for complete target schema
-- [Phase 01-01 v2]: spring-boot-starter-flyway used (not bare flyway-core) — Boot 4.x requires starter for auto-configuration
-- [Phase 01-01 v2]: Flyway disabled in test profile (spring.flyway.enabled=false) — H2 incompatible with PostgreSQL-specific DDL (gen_random_uuid, TIMESTAMPTZ); H2 create-drop preserved for tests
-- [Phase 01-01 v2]: Twilio config added as ${ENV_VAR:placeholder} in common section now — Plans 02/03 reference app.auth.twilio.* without modifying application.yaml again
-- [Phase 01-02 v2]: localAuthenticationManager bean uses ProviderManager(DaoAuthenticationProvider) — separate from resource server JWT auth to avoid interference
-- [Phase 01-02 v2]: LocalUserDetailsService scopes loadUserByUsername to (LOCAL, email) lookup — prevents cross-provider credential leakage from Google/Apple users
-- [Phase 01-02 v2]: IllegalStateException -> 409 Conflict via AuthExceptionHandler — consistent with TokenGracePeriodException -> 409 pattern for resource conflicts
-- [Phase 01-03]: TwilioVerifyClient interface abstracts Twilio API — @MockitoBean replaces only Twilio boundary in tests; full service layer exercised without network calls
-- [Phase 01-03]: Phone users keyed on (LOCAL, phoneE164) — symmetric with email users (LOCAL, email); phone stored in both providerId and phone fields; email set to empty string (NOT NULL column)
-- [Phase 01-03]: normalizeToE164() requires '+' prefix — eliminates region ambiguity; no default region configured per research
-- [Quick-03]: flyway-database-postgresql added (BOM-managed 11.14.1, no explicit version) — Flyway 10+ requires this separate module for PostgreSQL support; spring-boot-starter-flyway only pulls flyway-core
-- [Phase 02-01]: User constructor takes only email — providers and providerIds are mutable body fields, not constructor params
-- [Phase 02-01]: FetchType.EAGER on both @ElementCollection fields (providers, providerIds) — tiny collections (max 3), needed after transaction closes (open-in-view=false)
-- [Phase 02-01]: Partial unique index on email WHERE email != '' — allows multiple phone users with empty email
-- [Phase 02-01]: LOCAL email users NOT migrated to user_provider_ids — LOCAL has no external provider ID; providers set entry is sufficient
-- [Phase 02-02]: UserService.findOrCreateGoogleUser uses findByEmail first — links GOOGLE provider to existing account if email matches
-- [Phase 02-02]: UserService.findOrCreateAppleUser uses findByAppleProviderId first (returning), then findByEmail (first login) — handles both Apple auth cases
-- [Phase 02-02]: LocalAuthService.register links LOCAL credentials to existing social accounts if email exists but passwordHash is null
-- [Phase 02-02]: LocalUserDetailsService checks AuthProvider.LOCAL in user.providers — prevents social-only users from local password auth
-- [Phase 02-02]: UserRepository.findByPhone added for phone user lookup — replaces old findByProviderAndProviderId(LOCAL, phone)
-- [Phase 02-02]: UserProfileResponse changed from single provider to providers list — API-breaking change for multi-provider model
-- [Phase 03-01]: ConsoleSmsService has no @Component — registered via @Bean @ConditionalOnMissingBean(SmsService::class) in SmsSchedulerConfig; future real SMS provider defines its own @Bean SmsService to override
-- [Phase 03-01]: PasswordEncoder.encode() is a Java method inferred as String? in Kotlin; !! operator required at call sites even though it never returns null
-- [Phase 03-01]: Tests pre-seed H2 with passwordEncoder.encode(knownCode)!! to exercise real BCrypt verification path; old approach of mocking checkVerification return value not applicable
-- [Phase 03-01]: mvnw clean required after deleting Kotlin source files — incremental compile leaves stale .class files in target/ causing BeanCreationException on test startup
-- [Phase 03-01]: Phone endpoint paths renamed /phone/request-otp -> /phone/request and /phone/verify-otp -> /phone/verify; DTO field phoneNumber -> phone
-- [Phase 03-02]: ArgumentCaptor.capture() returns null in Kotlin — plain Mockito's capture() is incompatible with Kotlin non-null String params; doAnswer { invocation -> capturedCode = invocation.arguments[1] as String; null } is the correct workaround when mockito-kotlin is not on classpath
-- [Phase 03-02]: captureCodeOnSend() helper pattern — returns () -> String lambda; stub with doAnswer during setup, retrieve captured code after HTTP perform; decouples stubbing from code retrieval
-- [Quick-05]: verificationId (UUID) returned from /phone/request and required in /phone/verify — binds OTP to specific SmsVerification record, prevents phone-only brute-force; findById(UUID) replaces findActiveByPhone()
-- [Quick-06]: @Value("\${app.auth.sms.dev-code:}") with empty-string default — property absent in test/prod resolves to blank, triggering SecureRandom path; dev profile sets 123456; isNotBlank() conditional cleanly separates dev from prod without Spring profile checks in service class
-- [Phase 04-01]: BaseEntity uses private _id field with override fun getId(): UUID = _id — avoids Kotlin JVM signature clash between property getter and Persistable<UUID>.getId()
-- [Phase 04-01]: No Flyway migration needed for UUID v7 — UUID column type accepts any UUID version; only generation strategy changed
-- [Phase 05-01]: VerificationCode uses VARCHAR(50) purpose column (not PostgreSQL ENUM) — H2 compatible, consistent with user_providers pattern
-- [Phase 05-01]: VerificationCodeService returns Pair<UUID, String> (verificationId, rawCode) — caller handles delivery via EmailService or SmsService
-- [Phase 05-01]: Dev profile app.auth.verification.dev-code: 123456 — consistent with SMS dev-code pattern
-- [Phase 05-02]: userId.toString() as identifier for CHANGE_EMAIL/CHANGE_PHONE — stable during email/phone change flow, rate limiting is per-user
-- [Phase 05-02]: forgot-password returns 202 Accepted with nullable verificationId — anti-enumeration (null when email not found)
-- [Phase 05-02]: Password reset/change revokes all refresh tokens — security best practice
-
-### Roadmap Evolution
-
-- Phase 6 added: Restructure project into layered packages — config, user, authentication with model/repository/service/controller/dto/exception subpackages
-- Phase 1 (v2): Add LOCAL authentication — email+password and phone+SMS code login
-- Phase 2 added: Implement account linking logic — email is globally unique across all providers, one user = one email = one account
-- Phase 3 added: Replace Twilio Verify with self-managed SMS code generation and verification
-- Phase 4 added: Replace all UUID generation with UUID v7 — time-ordered IDs for chronological sorting and cursor-based pagination
-- Phase 5 added: Add account management — forgot password, change password, change email, change phone with self-managed verification codes
+- Firebase Admin SDK singleton guarded by FirebaseApp.getApps().isEmpty() — prevents double-init crash; set app.firebase.enabled=false in test profile
+- ConsolePushService registered via @ConditionalOnMissingBean(PushService) — mirrors existing SmsService/EmailService fallback pattern exactly
+- SmtpMailService implements both EmailService (existing auth codes) and MailService (new general email) — no changes to existing VerificationCodeService callers
+- IMAP Store opened and closed per-request in try/finally — never held as a Spring bean singleton; prevents connection-limit exhaustion
+- FCM and SMTP sends must be async from day one — JavaMailSender.send() uses synchronized blocks that pin Virtual Threads; FCM send is a 100-500ms HTTP call
+- Flyway V3 migration for device_tokens (next after existing V2) — never skip version numbers; H2 test profile keeps spring.flyway.enabled=false
+- Firebase service account credentials via FIREBASE_CREDENTIALS_JSON env var (base64) — never in src/main/resources/ or git
 
 ### Pending Todos
 
@@ -157,9 +80,10 @@ None.
 ### Blockers/Concerns
 
 - Developer note: If running Postgres.app locally on port 5432, create the `template` role or stop Postgres.app and use Docker only
+- Phase 1 risk: Run `mvn dependency:tree | grep google-http-client` after adding firebase-admin — both firebase-admin and google-api-client pull google-http-client; resolve with com.google.cloud:libraries-bom if version skew detected
 
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Milestone v6.0 Notifications started — defining requirements.
+Stopped at: v6.0 roadmap created — Phase 1 (FCM Push Notifications) ready to plan.
 Resume file: None
