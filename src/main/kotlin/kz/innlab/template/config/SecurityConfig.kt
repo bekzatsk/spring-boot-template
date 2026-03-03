@@ -44,6 +44,7 @@ class SecurityConfig(
             authorizeHttpRequests {
                 authorize(HttpMethod.OPTIONS, "/**", permitAll)
                 authorize("/api/v1/auth/**", permitAll)
+                authorize("/api/v1/admin/**", hasRole("ADMIN"))
                 authorize("/api/**", authenticated)
                 authorize(anyRequest, permitAll)
             }
