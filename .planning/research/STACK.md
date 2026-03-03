@@ -183,3 +183,218 @@ Note: `nimbus-jose-jwt` (10.8) is pulled **transitively** by the authorization s
 
 *Stack research for: Spring Boot 4 JWT Auth Template — Google/Apple ID token verification, Spring Security 7, Spring Data JPA, Docker*
 *Researched: 2026-03-01*
+
+---
+
+---
+
+# v6.0 Stack Additions: FCM Push Notifications + Email SMTP/IMAP
+
+**Domain:** Firebase Cloud Messaging + Email (SMTP sending, IMAP receiving) on Spring Boot 4 / Kotlin
+**Researched:** 2026-03-03
+**Confidence:** HIGH (firebase-admin version verified against official Firebase release notes; spring-boot-starter-mail is a first-party Spring Boot starter managed by Boot BOM)
+
+---
+
+## New Dependencies for v6.0
+
+### Core Technologies (NEW — not previously in project)
+
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| `firebase-admin` | **9.8.0** | Firebase Cloud Messaging — send push notifications to device tokens, topics, and conditions | Only official Google-supported JVM SDK for FCM. Handles OAuth2 service account auth, HTTP/2 transport (default since 9.4.0), token refresh, error mapping, and retries automatically. No viable alternative for FCM on JVM. |
+| `spring-boot-starter-mail` | managed by Boot 4.0.3 BOM | SMTP sending via `JavaMailSender`; provides Jakarta Mail `Session` bean reused by IMAP receive | First-party Spring Boot starter. Auto-configures `JavaMailSenderImpl` from `spring.mail.*` properties. Zero boilerplate for sending plain text, HTML, and attachments. |
+| `spring-integration-mail` | managed by Boot 4.0.3 BOM | IMAP/POP3 inbox polling via `ImapMailReceiver` and `ImapIdleChannelAdapter` | Spring's standard module for mail receiving. Handles folder lifecycle, IMAP IDLE keep-alive, message parsing, and auto-acknowledgement. Far less error-prone than raw Jakarta Mail `Store`/`Folder` management. |
+
+### Supporting Libraries (test scope)
+
+| Library | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| `greenmail-junit5` | **2.1.3** | In-process SMTP + IMAP server for integration tests | Add as `test` scope. Integrates with existing JUnit 5 / H2 test setup. Enables testing the full send-and-receive path without an external mail server. |
+
+### Development Tools
+
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| Mailpit | Local SMTP + IMAP server for dev (Docker) | Actively maintained successor to MailHog. Catches outbound SMTP and exposes IMAP for receive path testing. Run via `docker run -p 1025:1025 -p 8025:8025 axllent/mailpit`. |
+| Firebase Emulator Suite | Local FCM testing without real device tokens | `firebase emulators:start --only messaging`. Point `FirebaseMessaging` at emulator via `FIREBASE_EMULATOR_HOST` env var. |
+
+---
+
+## Maven Dependency Additions (pom.xml)
+
+```xml
+<!-- ===== FCM PUSH NOTIFICATIONS ===== -->
+<!-- firebase-admin 9.8.0 — released 2026-02-25 -->
+<dependency>
+    <groupId>com.google.firebase</groupId>
+    <artifactId>firebase-admin</artifactId>
+    <version>9.8.0</version>
+</dependency>
+
+<!-- ===== EMAIL SMTP SENDING ===== -->
+<!-- Version managed by Spring Boot 4.0.3 BOM — do NOT pin -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-mail</artifactId>
+</dependency>
+
+<!-- ===== EMAIL IMAP/POP3 RECEIVING ===== -->
+<!-- Version managed by Spring Boot 4.0.3 BOM — do NOT pin -->
+<dependency>
+    <groupId>org.springframework.integration</groupId>
+    <artifactId>spring-integration-mail</artifactId>
+</dependency>
+
+<!-- ===== TEST: IN-PROCESS MAIL SERVER ===== -->
+<dependency>
+    <groupId>com.icegreen</groupId>
+    <artifactId>greenmail-junit5</artifactId>
+    <version>2.1.3</version>
+    <scope>test</scope>
+</dependency>
+```
+
+---
+
+## application.yml Additions
+
+```yaml
+# ===== SMTP SENDING =====
+spring:
+  mail:
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+# ===== IMAP RECEIVING (custom — not auto-configured by Boot) =====
+app:
+  mail:
+    imap:
+      host: ${IMAP_HOST}
+      port: ${IMAP_PORT:993}
+      username: ${IMAP_USERNAME}
+      password: ${IMAP_PASSWORD}
+      folder: ${IMAP_FOLDER:INBOX}
+      ssl: ${IMAP_SSL:true}
+
+# ===== FIREBASE FCM =====
+app:
+  firebase:
+    credentials-file: ${FIREBASE_CREDENTIALS_FILE:}
+    credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
+    project-id: ${FIREBASE_PROJECT_ID}
+```
+
+---
+
+## Alternatives Considered
+
+| Recommended | Alternative | When to Use Alternative |
+|-------------|-------------|-------------------------|
+| `firebase-admin` 9.8.0 | Raw FCM HTTP v1 API via `RestClient` | Never — the SDK adds service account auth, token rotation, HTTP/2 transport, error mapping, and message builder DSL for free. Rolling it manually is ~300 lines of auth plumbing. |
+| `spring-boot-starter-mail` | Raw `jakarta.mail` / `javax.mail` | Never for new code — the Boot starter is a strict superset at zero additional cost. |
+| `spring-integration-mail` for IMAP receive | `JavaMailSender` + manual `Store.getFolder()` | Only if Spring Integration's BOM version creates a classpath conflict (extremely unlikely — managed by Boot BOM). Manual `Store`/`Folder` code is verbose, error-prone on reconnect, and misses IDLE push. |
+| GreenMail (integration tests) | Mockito-mocked `JavaMailSender` | Use mocks for unit tests of service classes. Use GreenMail for integration tests that need real IMAP receive coverage (verifying the full send → store → fetch path). |
+| Mailpit (local dev) | MailHog | MailHog has been unmaintained since 2022. Mailpit is its actively developed successor with an identical Docker interface. |
+
+---
+
+## What NOT to Add for v6.0
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| FCM Legacy HTTP API (`https://fcm.googleapis.com/fcm/send`) | Google shut it down June 20, 2024. All requests return errors. | FCM HTTP v1 API via `firebase-admin` SDK (handles this automatically). |
+| `firebase-admin` < 9.0.0 | Versions before 9.0 used the now-shutdown FCM legacy API. Version 9.x targets HTTP v1. | `firebase-admin` 9.8.0. |
+| `javax.mail` / `com.sun.mail:javax.mail` | Old pre-Jakarta namespace. Incompatible with Spring Boot 3+ / Jakarta EE 9+. | `jakarta.mail` (pulled automatically by `spring-boot-starter-mail` — no explicit declaration needed). |
+| `spring-boot-starter-thymeleaf` (unless HTML email is in scope) | Adds template engine and classpath scanning overhead for a feature not in the v6.0 requirements. | Add only if HTML email bodies are needed; use `MimeMessageHelper.setText(html, true)` with a Thymeleaf `TemplateEngine` bean. |
+| Storing Firebase service account JSON in source control | The JSON file contains a private RSA key. Committing it is a critical secret leak. | Inject via `FIREBASE_CREDENTIALS_JSON` env var (base64-encoded) or mount credentials file at deploy time via `FIREBASE_CREDENTIALS_FILE`. |
+
+---
+
+## Stack Patterns for v6.0
+
+**FCM — sending to individual device tokens:**
+- Store device tokens in a `DeviceToken` entity: `userId FK`, `platform ENUM(ANDROID, IOS, WEB)`, `token VARCHAR`, `lastSeen TIMESTAMP`
+- Use `Message.builder().setToken(token).setNotification(...).putAllData(data).build()`
+- Tokens rotate; `lastSeen` enables stale token cleanup. Handle `FirebaseMessagingException` with `UNREGISTERED` error code to delete stale tokens.
+
+**FCM — sending to topics:**
+- Use `FirebaseMessaging.getInstance().subscribeToTopic(tokens, topic)` server-side
+- Use `Message.builder().setTopic(topic).build()` to send
+- No device token list management needed; FCM handles fanout. Best for broadcast notifications.
+
+**SMTP — sending with retry:**
+- Wrap `JavaMailSender.send()` in `@Retryable(maxAttempts = 3, backoff = @Backoff(delay = 1000))`
+- Add `spring-retry` (managed by Boot BOM) and `@EnableRetry` on a `@Configuration` class
+- Only needed if transient SMTP failures are a concern (e.g., external SMTP relay).
+
+**IMAP — polling receive:**
+- Use `ImapMailReceiver` in a `@Scheduled` method for simple polling
+- Use `ImapIdleChannelAdapter` for push-based IDLE (server pushes new messages); better for low-latency scenarios
+- Both are available in `spring-integration-mail`; choose based on latency requirements
+
+**Firebase credentials — initialization:**
+```kotlin
+@Configuration
+class FirebaseConfig(
+    @Value("\${app.firebase.credentials-json:}") private val credentialsJson: String,
+    @Value("\${app.firebase.credentials-file:}") private val credentialsFile: String,
+    @Value("\${app.firebase.project-id}") private val projectId: String,
+) {
+    @Bean
+    fun firebaseApp(): FirebaseApp {
+        val options = FirebaseOptions.builder()
+            .setCredentials(resolveCredentials())
+            .setProjectId(projectId)
+            .build()
+        return if (FirebaseApp.getApps().isEmpty()) FirebaseApp.initializeApp(options)
+        else FirebaseApp.getInstance()
+    }
+
+    private fun resolveCredentials(): GoogleCredentials =
+        when {
+            credentialsJson.isNotBlank() ->
+                GoogleCredentials.fromStream(credentialsJson.toByteArray().inputStream())
+            credentialsFile.isNotBlank() ->
+                GoogleCredentials.fromStream(File(credentialsFile).inputStream())
+            else ->
+                GoogleCredentials.getApplicationDefault() // falls back to GOOGLE_APPLICATION_CREDENTIALS
+        }
+}
+```
+
+---
+
+## Version Compatibility (v6.0 additions)
+
+| Component | Version | Compatible With | Notes |
+|-----------|---------|-----------------|-------|
+| `firebase-admin` | 9.8.0 | Java 8+, Java 25 confirmed compatible | Pulls `google-auth-library-oauth2-http`, `google-http-client`, Guava transitively. No conflict with Spring Boot 4 BOM. |
+| `firebase-admin` 9.8.0 | `google-api-client` 2.9.0 (already in project) | Both pull `google-http-client`. If version conflict surfaces, import `com.google.cloud:libraries-bom` as a BOM in `<dependencyManagement>` to align all Google library versions. |
+| `spring-boot-starter-mail` | Boot 4.0.3 BOM (managed) | Jakarta Mail (jakarta.mail-api); Spring MVC | Version managed by Boot — do not pin. |
+| `spring-integration-mail` | Boot 4.0.3 BOM (managed, Spring Integration 7.x) | `spring-boot-starter-mail` (shares Jakarta Mail session) | Spring Integration 7.x is the Boot 4 aligned version. Do not pin. |
+| `greenmail-junit5` | 2.1.3 | JUnit 5, Jakarta Mail, Java 11+ | Test scope only. Compatible with existing H2 + JUnit 5 test infrastructure. |
+
+---
+
+## Sources (v6.0)
+
+- [Firebase Admin Java SDK Release Notes](https://firebase.google.com/support/release-notes/admin/java) — confirmed 9.8.0 as latest stable (released 2026-02-25). HIGH confidence.
+- [Firebase Admin Java SDK GitHub](https://github.com/firebase/firebase-admin-java) — Maven coordinates `com.google.firebase:firebase-admin`, Java 8+ requirement. HIGH confidence.
+- [Spring Boot Email Reference Docs](https://docs.spring.io/spring-boot/reference/io/email.html) — `spring-boot-starter-mail` auto-configuration, `JavaMailSender` bean, `spring.mail.*` properties. HIGH confidence.
+- [Spring Integration Mail Reference](https://docs.spring.io/spring-integration/reference/mail.html) — `ImapMailReceiver`, `ImapIdleChannelAdapter`, message receiving patterns. HIGH confidence.
+- [FCM HTTP v1 Migration Guide](https://firebase.google.com/docs/cloud-messaging/migrate-v1) — legacy API shutdown confirmed June 20, 2024. HIGH confidence.
+- WebSearch: firebase-admin 9.x Spring Boot integration patterns (2025-2026) — corroborates SDK usage patterns. MEDIUM confidence.
+
+---
+
+*Stack additions for: v6.0 Notifications milestone — FCM push notifications + SMTP/IMAP email*
+*Researched: 2026-03-03*
