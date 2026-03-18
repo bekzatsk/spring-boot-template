@@ -83,6 +83,17 @@ Plans:
 
 </details>
 
+### Phase 3: Add Swagger (OpenAPI)
+
+**Goal:** Auto-generated API documentation via springdoc-openapi with Swagger UI accessible at /swagger-ui/index.html, global JWT Bearer security scheme, clean endpoint grouping with @Tag, and proper hiding of @AuthenticationPrincipal parameters
+**Requirements:** [SWAGGER-01, SWAGGER-02, SWAGGER-03, SWAGGER-04, SWAGGER-05]
+**Depends on:** v6.0 Phase 2
+**Plans:** 2 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Foundation: springdoc-openapi + jackson2 dependencies, OpenApiConfig with JWT Bearer scheme, SecurityConfig permits, springdoc YAML config
+- [ ] 03-02-PLAN.md — Controller annotations: @Tag on all 6 controllers, @Operation(security = []) on AuthController, @Parameter(hidden = true) on all @AuthenticationPrincipal params
+
 ---
 
 ### 🚧 v6.0 Notifications (In Progress)
@@ -142,3 +153,4 @@ Plans:
 | 5. Account Management | v5.0 | 3/3 | Complete | 2026-03-03 |
 | 1. FCM Push Notifications | v6.0 | 3/3 | Complete | 2026-03-03 |
 | 2. Email Service and Notification Preferences | v6.0 | 3/3 | Complete | 2026-03-03 |
+| 3. Add Swagger (OpenAPI) | — | 0/2 | Planned | — |
