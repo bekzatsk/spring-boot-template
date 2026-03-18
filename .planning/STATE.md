@@ -1,3 +1,20 @@
+---
+gsd_state_version: 1.0
+milestone: v6.0
+milestone_name: Notifications
+current_plan: — (all plans complete)
+status: unknown
+stopped_at: Completed 03-add-swagger-openapi/03-01-PLAN.md
+last_updated: "2026-03-18T06:08:26.996Z"
+last_activity: 2026-03-03 — Phase 2 complete (3/3 plans, 63 tests pass)
+progress:
+  total_phases: 3
+  completed_phases: 2
+  total_plans: 8
+  completed_plans: 7
+  percent: 88
+---
+
 # Project State
 
 ## Project Reference
@@ -5,16 +22,16 @@
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** Mobile/web clients can authenticate with Google, Apple, email+password, or phone+SMS OTP and receive JWT tokens. Account linking ensures one email = one user across all providers. Full account management: forgot-password, change-password, change-email, change-phone. Push notifications via FCM. Email service with SMTP send (async, retry) and IMAP receive. Notification preferences (opt-out model).
-**Current focus:** v6.0 Notifications — Phase 2 complete, milestone ready for completion
+**Current focus:** Phase 3 (Add Swagger/OpenAPI) — Plan 01 complete
 
 ## Current Position
 
 Milestone: v6.0 Notifications
-Phase: 2 of 2 complete (Email Service and Notification Preferences)
-Current Plan: — (all plans complete)
-Last activity: 2026-03-03 — Phase 2 complete (3/3 plans, 63 tests pass)
+Phase: 3 of 3 in progress (Add Swagger/OpenAPI)
+Current Plan: 03-01 complete — Plan 02 next (if exists)
+Last activity: 2026-03-18 — Phase 3 Plan 01 complete (springdoc + OpenApiConfig + security permit rules)
 
-Progress: [██████████] 100%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -45,6 +62,8 @@ Progress: [██████████] 100%
 - Last 5 plans: 3 min, 3 min, 5 min, 5 min, 8 min
 - Trend: stable (email/test plans slightly longer due to bean config debugging)
 
+| 03-add-swagger-openapi | 1/2 | 2 min | 2 min |
+
 *Updated after each plan completion*
 
 ## Accumulated Context
@@ -61,6 +80,7 @@ Recent decisions affecting current work:
 - FCM and SMTP sends must be async from day one — JavaMailSender.send() uses synchronized blocks that pin Virtual Threads; FCM send is a 100-500ms HTTP call
 - @ConditionalOnProperty(app.mail.enabled=true) gates SMTP beans — user @Configuration processes before auto-config, so @ConditionalOnBean(JavaMailSender) is unreliable
 - ConsoleEmailService (implements only EmailService) separate from ConsoleMailService (implements only MailService) — prevents NoUniqueBeanDefinitionException from dual-interface fallback
+- [Phase 03-add-swagger-openapi]: Use springdoc-openapi-starter-webmvc-ui 3.0.2 + spring-boot-jackson2 stop-gap for Jackson 2/3 coexistence; global bearerAuth security scheme via addSecurityItem in OpenApiConfig
 
 ### Pending Todos
 
@@ -90,6 +110,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-03
-Stopped at: v6.0 milestone complete — both phases (FCM Push, Email Service) done. Ready for milestone audit/completion.
+Last session: 2026-03-18T06:08:26.994Z
+Stopped at: Completed 03-add-swagger-openapi/03-01-PLAN.md
 Resume file: None

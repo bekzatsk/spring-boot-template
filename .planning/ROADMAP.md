@@ -88,7 +88,7 @@ Plans:
 **Goal:** Auto-generated API documentation via springdoc-openapi with Swagger UI accessible at /swagger-ui/index.html, global JWT Bearer security scheme, clean endpoint grouping with @Tag, and proper hiding of @AuthenticationPrincipal parameters
 **Requirements:** [SWAGGER-01, SWAGGER-02, SWAGGER-03, SWAGGER-04, SWAGGER-05]
 **Depends on:** v6.0 Phase 2
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 03-01-PLAN.md — Foundation: springdoc-openapi + jackson2 dependencies, OpenApiConfig with JWT Bearer scheme, SecurityConfig permits, springdoc YAML config
@@ -142,7 +142,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 1. Foundation | v1.0 | 2/2 | Complete | 2026-03-01 |
 | 2. Security Wiring | v1.0 | 2/2 | Complete | 2026-03-01 |
-| 3. Google Auth and Token Management | v1.0 | 2/2 | Complete | 2026-03-01 |
+| 3. Google Auth and Token Management | 1/2 | In Progress|  | 2026-03-01 |
 | 4. Apple Auth | v1.0 | 1/1 | Complete | 2026-03-01 |
 | 5. Hardening | v1.0 | 1/1 | Complete | 2026-03-01 |
 | 6. Restructure | v1.0 | 2/2 | Complete | 2026-03-01 |
