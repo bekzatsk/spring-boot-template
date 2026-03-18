@@ -1,8 +1,8 @@
-    # Spring Boot Auth Template
+# Spring Boot Auth Template
 
-JWT-based authentication template with multi-provider social login, local email+password, phone+SMS OTP, token rotation, and account management.
+JWT-based authentication template with multi-provider social login, local email+password, phone+SMS OTP, token rotation, account management, push notifications via Firebase Cloud Messaging, and email service with SMTP/IMAP support.
 
-**Stack:** Spring Boot 4.0.3 / Kotlin 2.2.21 / Java 24 / PostgreSQL 18 / Flyway
+**Stack:** Spring Boot 4.0.3 / Kotlin / Java 25 / PostgreSQL 18 / Flyway / Firebase Admin SDK
 
 ## Quick Start
 
@@ -153,6 +153,134 @@ All endpoints require `Authorization: Bearer {accessToken}`.
 }
 ```
 
+### Push Notifications — Authenticated (`/api/v1/notifications`)
+
+Firebase Cloud Messaging integration for sending push notifications to mobile apps (Android/iOS) and web browsers.
+
+#### `POST /notifications/push/token`
+Register or update a device token for the authenticated user.
+```json
+{ "token": "fcm-device-token", "deviceType": "ANDROID | IOS | WEB" }
+```
+**200 OK** — token stored | **400** invalid token
+
+#### `DELETE /notifications/push/token`
+Remove a device token (e.g., on logout).
+```json
+{ "token": "fcm-device-token" }
+```
+**204 No Content**
+
+#### `POST /notifications/push/subscribe`
+Subscribe a device token to a topic.
+```json
+{ "token": "fcm-device-token", "topic": "news" }
+```
+**200 OK** — subscribed
+
+#### `POST /notifications/push/unsubscribe`
+Unsubscribe a device token from a topic.
+```json
+{ "token": "fcm-device-token", "topic": "news" }
+```
+**200 OK** — unsubscribed
+
+#### `POST /notifications/push/send`
+Send a push notification to a single device, multiple devices, or a topic.
+```json
+{
+  "target": {
+    "type": "TOKEN | TOKENS | TOPIC",
+    "value": "fcm-token | [tokens] | topic-name"
+  },
+  "notification": {
+    "title": "New message",
+    "body": "You have a new notification"
+  },
+  "data": {
+    "orderId": "12345",
+    "action": "OPEN_ORDER"
+  }
+}
+```
+**200 OK** — `{ "successCount": 1, "failureCount": 0 }` | **400** invalid payload
+
+**Notification payload:**
+- `title` — notification title (displayed in system tray)
+- `body` — notification body text
+- `data` — custom key-value pairs (JSON object, delivered to app even in background)
+
+**Target types:**
+- `TOKEN` — single device token
+- `TOKENS` — array of device tokens (max 500 per request)
+- `TOPIC` — all devices subscribed to a topic
+
+### Email — Authenticated (`/api/v1/notifications`)
+
+Email service with SMTP sending and IMAP/POP3 receiving.
+
+#### `POST /notifications/email/send`
+Send an email.
+```json
+{
+  "to": ["recipient@example.com"],
+  "cc": ["cc@example.com"],
+  "bcc": [],
+  "subject": "Hello",
+  "body": "<h1>Hello</h1><p>World</p>",
+  "contentType": "HTML | TEXT",
+  "attachments": [
+    {
+      "filename": "report.pdf",
+      "content": "base64-encoded-content",
+      "contentType": "application/pdf"
+    }
+  ]
+}
+```
+**202 Accepted** — `{ "messageId": "uuid" }` | **400** invalid payload
+
+Supports plain text, HTML, and file attachments. Failed sends are retried automatically (configurable retry count and delay).
+
+#### `GET /notifications/email/inbox`
+Fetch emails from the configured mailbox via IMAP/POP3.
+```json
+// Query params: ?folder=INBOX&unreadOnly=true&limit=20&offset=0
+```
+**200 OK**
+```json
+{
+  "emails": [
+    {
+      "messageId": "string",
+      "from": "sender@example.com",
+      "to": ["recipient@example.com"],
+      "subject": "Hello",
+      "body": "...",
+      "receivedAt": "2026-03-03T10:00:00Z",
+      "read": false,
+      "attachments": [
+        { "filename": "file.pdf", "contentType": "application/pdf", "size": 1024 }
+      ]
+    }
+  ],
+  "total": 42,
+  "unread": 5
+}
+```
+
+#### `GET /notifications/email/{messageId}`
+Fetch a single email with full body and attachments.
+
+**200 OK** — full email object | **404** message not found
+
+#### `PATCH /notifications/email/{messageId}`
+Mark email as read/unread.
+```json
+{ "read": true }
+```
+**200 OK** — updated
+
 ## Token Management
 
 | Token | Format | Expiry | Storage |
@@ -186,7 +314,7 @@ Phone-only users have `email = ""` (NOT NULL constraint) and are keyed on `(LOCA
 
 ## Database Schema
 
-6 tables managed by Flyway:
+Tables managed by Flyway:
 
 ```
 users                   — id, email, name, picture, password_hash, phone
@@ -196,6 +324,7 @@ user_roles              — user_id, role (USER|ADMIN)
 refresh_tokens          — id, user_id, token_hash, expires_at, revoked, used_at
 sms_verifications       — id, phone, code_hash, expires_at, used, attempts
 verification_codes      — id, user_id, identifier, purpose, code_hash, new_value, expires_at
+device_tokens           — id, user_id, token, device_type, created_at, updated_at
 ```
 
 All primary keys are UUID v7 (time-ordered, RFC 9562) via `uuid-creator`.
@@ -217,6 +346,13 @@ src/main/kotlin/kz/innlab/template/
 │                           GoogleOAuth2Service, AppleOAuth2Service, PhoneOtpService,
 │                           AccountManagementService, VerificationCodeService,
 │                           SmsVerificationService, EmailService, SmsService
+├── notification/
+│   ├── controller/         NotificationController
+│   ├── dto/                Push/email request/response data classes
+│   ├── model/              DeviceToken, DeviceType
+│   ├── repository/         DeviceTokenRepository
+│   └── service/            FirebaseMessagingService, EmailSenderService,
+│                           EmailReceiverService, DeviceTokenService
 ├── user/
 │   ├── controller/         UserController
 │   ├── dto/                UserProfileResponse
@@ -225,11 +361,42 @@ src/main/kotlin/kz/innlab/template/
 │   └── service/            UserService
 ├── config/                 SecurityConfig, RsaKeyConfig, CorsProperties,
 │                           GoogleAuthConfig, AppleAuthConfig, LocalAuthConfig,
-│                           SmsSchedulerConfig
+│                           SmsSchedulerConfig, FirebaseConfig, EmailConfig
 ├── shared/
 │   ├── error/              ErrorResponse
 │   └── model/              BaseEntity (UUID v7 + Persistable)
 └── TemplateApplication.kt
+```
+
+## Rename Project
+
+Use the included script to rename the package, application class, and all configs:
+
+```bash
+./rename-project.sh <new_package> <new_project_name>
+
+# Example:
+./rename-project.sh com.innlab.cakeup cakeup
+```
+
+This will:
+- Move `src/main/kotlin/kz/innlab/template/` -> `src/main/kotlin/com/innlab/cakeup/`
+- Update all `package` and `import` declarations in Kotlin files
+- Rename `TemplateApplication` -> `CakeupApplication`
+- Update `pom.xml` (groupId, artifactId, name)
+- Update `application.yaml`, `.env`, `docker-compose.yml`
+- Clean the `target/` directory
+
+After renaming:
+```bash
+# Create the new database
+createdb cakeup
+
+# Verify build
+./mvnw clean compile
+
+# Run tests
+./mvnw test
 ```
 
 ## Configuration
@@ -249,6 +416,56 @@ src/main/kotlin/kz/innlab/template/
 | `JWT_KEY_ALIAS` | No | `jwt` | Key alias in keystore |
 | `REFRESH_TOKEN_EXPIRY_DAYS` | No | `30` | Refresh token TTL |
 | `APP_CORS_ALLOWED_ORIGINS` | Prod | localhost:3000,5173,8082 | Allowed CORS origins |
+| `FIREBASE_CREDENTIALS_PATH` | Prod | — | Path to Firebase service account JSON |
+| `SMTP_HOST` | Prod | — | SMTP server host |
+| `SMTP_PORT` | No | `587` | SMTP server port |
+| `SMTP_USERNAME` | Prod | — | SMTP username |
+| `SMTP_PASSWORD` | Prod | — | SMTP password |
+| `SMTP_SSL_ENABLED` | No | `true` | Enable SSL/TLS for SMTP |
+| `IMAP_HOST` | Prod | — | IMAP/POP3 server host |
+| `IMAP_PORT` | No | `993` | IMAP server port |
+| `IMAP_USERNAME` | Prod | — | IMAP username |
+| `IMAP_PASSWORD` | Prod | — | IMAP password |
+| `IMAP_PROTOCOL` | No | `imaps` | Protocol: `imaps` or `pop3s` |
+| `EMAIL_FROM` | Prod | — | Default sender email address |
+| `EMAIL_RETRY_MAX_ATTEMPTS` | No | `3` | Max retry attempts for failed sends |
+| `EMAIL_RETRY_DELAY_MS` | No | `5000` | Delay between retries (ms) |
+
+### Firebase Setup
+
+1. Go to [Firebase Console](https://console.firebase.google.com/) → Project Settings → Service Accounts
+2. Click **Generate new private key** → download JSON file
+3. Set `FIREBASE_CREDENTIALS_PATH` to the file path
+
+Dev profile: Firebase is optional — notifications are logged to console if credentials are not configured.
+
+### Email Setup
+
+Configure SMTP for sending and IMAP/POP3 for receiving:
+
+```yaml
+# application.yaml (dev profile example)
+app:
+  email:
+    smtp:
+      host: smtp.gmail.com
+      port: 587
+      username: ${SMTP_USERNAME:}
+      password: ${SMTP_PASSWORD:}
+      ssl-enabled: true
+    imap:
+      host: imap.gmail.com
+      port: 993
+      username: ${IMAP_USERNAME:}
+      password: ${IMAP_PASSWORD:}
+      protocol: imaps
+    from: noreply@example.com
+    retry:
+      max-attempts: 3
+      delay-ms: 5000
+```
+
+Dev profile: emails are logged to console if SMTP is not configured.
 
 ### Dev Profile
 
@@ -256,6 +473,8 @@ src/main/kotlin/kz/innlab/template/
 - PostgreSQL at `localhost:5432/template`
 - Flyway `clean-on-validation-error: true`
 - SMS/email codes logged to console (`dev-code: "123456"`)
+- Firebase notifications logged to console (no credentials required)
+- Email sending logged to console (no SMTP required)
 
 ### Prod Profile
 
@@ -263,6 +482,8 @@ src/main/kotlin/kz/innlab/template/
 - Flyway strict validation (`out-of-order: false`)
 - No dev codes — SecureRandom 6-digit codes
 - Email/SMS delivery via pluggable services (`@ConditionalOnMissingBean`)
+- Firebase Cloud Messaging via service account credentials
+- SMTP/IMAP via configured mail server
 
 ### Generate JWT Keystore (production)
 
@@ -292,10 +513,10 @@ All errors follow a consistent format:
 
 | Status | When |
 |--------|------|
-| 400 | Validation failure, invalid phone format |
+| 400 | Validation failure, invalid phone format, invalid notification payload |
 | 401 | Invalid credentials, invalid/expired token or code |
 | 403 | Authenticated but insufficient permissions |
-| 404 | User not found |
+| 404 | User not found, email message not found |
 | 409 | Email/phone taken, rate limit, grace window, duplicate registration |
 | 500 | Unexpected server error (logged) |
 
@@ -315,6 +536,6 @@ All errors follow a consistent format:
 Test config: H2 in-memory, Flyway disabled, `create-drop` DDL, `@MockitoBean` for external boundaries (GoogleIdTokenVerifier, AppleJwtDecoder, SmsService, EmailService).
 
 ```bash
-./mvnw test                    # Run all 37 tests
+./mvnw test                    # Run all tests
 ./mvnw test -pl . -Dtest=AccountManagementIntegrationTest  # Single class
 ```
