@@ -1,5 +1,7 @@
 package kz.innlab.template.authentication.controller
 
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import kz.innlab.template.authentication.dto.AppleAuthRequest
 import kz.innlab.template.authentication.dto.AuthRequest
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
+@Tag(name = "Authentication", description = "Public auth endpoints - no JWT required")
 @RequestMapping("/api/v1/auth")
 class AuthController(
     private val googleOAuth2Service: GoogleOAuth2Service,
@@ -37,6 +40,7 @@ class AuthController(
     private val accountManagementService: AccountManagementService
 ) {
 
+    @Operation(summary = "Authenticate with Google ID token", security = [])
     @PostMapping("/google")
     fun googleLogin(@Valid @RequestBody request: AuthRequest): ResponseEntity<AuthResponse> {
         // TODO: rate limiting — add per-IP or per-client rate limit here before delegating to service
@@ -44,6 +48,7 @@ class AuthController(
         return ResponseEntity.ok(response)
     }
 
+    @Operation(summary = "Authenticate with Apple ID token", security = [])
     @PostMapping("/apple")
     fun appleLogin(@Valid @RequestBody request: AppleAuthRequest): ResponseEntity<AuthResponse> {
         // TODO: rate limiting — add per-IP or per-client rate limit here before delegating to service
@@ -51,6 +56,7 @@ class AuthController(
         return ResponseEntity.ok(response)
     }
 
+    @Operation(summary = "Register with email and password", security = [])
     @PostMapping("/local/register")
     fun localRegister(@Valid @RequestBody request: LocalRegisterRequest): ResponseEntity<AuthResponse> {
         // TODO: rate limiting
@@ -58,6 +64,7 @@ class AuthController(
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 
+    @Operation(summary = "Login with email and password", security = [])
     @PostMapping("/local/login")
     fun localLogin(@Valid @RequestBody request: LocalLoginRequest): ResponseEntity<AuthResponse> {
         // TODO: rate limiting
@@ -65,6 +72,7 @@ class AuthController(
         return ResponseEntity.ok(response)
     }
 
+    @Operation(summary = "Request SMS OTP code for phone authentication", security = [])
     @PostMapping("/phone/request")
     fun requestPhoneOtp(@Valid @RequestBody request: PhoneOtpRequest): ResponseEntity<Map<String, Any>> {
         // TODO: rate limiting — OTP request is a prime abuse target; strict per-phone rate limit
@@ -72,6 +80,7 @@ class AuthController(
         return ResponseEntity.ok(mapOf("verificationId" to verificationId))
     }
 
+    @Operation(summary = "Verify SMS OTP code and authenticate", security = [])
     @PostMapping("/phone/verify")
     fun verifyPhoneOtp(@Valid @RequestBody request: PhoneVerifyRequest): ResponseEntity<AuthResponse> {
         // TODO: rate limiting — limit verification attempts per phone number
@@ -79,6 +88,7 @@ class AuthController(
         return ResponseEntity.ok(response)
     }
 
+    @Operation(summary = "Refresh access token using refresh token", security = [])
     @PostMapping("/refresh")
     fun refresh(@Valid @RequestBody request: RefreshRequest): ResponseEntity<AuthResponse> {
         // TODO: rate limiting — refresh endpoint is a common abuse target; consider per-IP limit
@@ -87,6 +97,7 @@ class AuthController(
         return ResponseEntity.ok(AuthResponse(accessToken = accessToken, refreshToken = newRawToken))
     }
 
+    @Operation(summary = "Revoke a refresh token", security = [])
     @PostMapping("/revoke")
     fun revoke(@Valid @RequestBody request: RefreshRequest): ResponseEntity<Void> {
         // TODO: rate limiting — optional; include in global auth rate limit policy
@@ -94,6 +105,7 @@ class AuthController(
         return ResponseEntity.noContent().build()
     }
 
+    @Operation(summary = "Request password reset verification code", security = [])
     @PostMapping("/forgot-password")
     fun forgotPassword(@Valid @RequestBody request: ForgotPasswordRequest): ResponseEntity<Map<String, Any?>> {
         // TODO: rate limiting
@@ -101,6 +113,7 @@ class AuthController(
         return ResponseEntity.accepted().body(mapOf("verificationId" to verificationId))
     }
 
+    @Operation(summary = "Reset password with verification code", security = [])
     @PostMapping("/reset-password")
     fun resetPassword(@Valid @RequestBody request: ResetPasswordRequest): ResponseEntity<Void> {
         // TODO: rate limiting
