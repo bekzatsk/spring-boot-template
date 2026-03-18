@@ -1,5 +1,7 @@
 package kz.innlab.template.notification.controller
 
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import kz.innlab.template.notification.dto.DeviceTokenResponse
 import kz.innlab.template.notification.dto.NotificationHistoryResponse
@@ -31,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 @RestController
+@Tag(name = "Notifications", description = "Push notifications, device tokens, topics, preferences, and history")
 @RequestMapping("/api/v1/notifications")
 class NotificationController(
     private val deviceTokenService: DeviceTokenService,
@@ -44,7 +47,7 @@ class NotificationController(
     @PostMapping("/tokens")
     fun registerToken(
         @Valid @RequestBody request: RegisterTokenRequest,
-        @AuthenticationPrincipal jwt: Jwt
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<DeviceTokenResponse> {
         val userId = UUID.fromString(jwt.subject)
         val platform = Platform.valueOf(request.platform.uppercase())
@@ -53,7 +56,7 @@ class NotificationController(
     }
 
     @GetMapping("/tokens")
-    fun listTokens(@AuthenticationPrincipal jwt: Jwt): ResponseEntity<List<DeviceTokenResponse>> {
+    fun listTokens(@Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt): ResponseEntity<List<DeviceTokenResponse>> {
         val userId = UUID.fromString(jwt.subject)
         val tokens = deviceTokenService.listByUser(userId).map { DeviceTokenResponse.from(it) }
         return ResponseEntity.ok(tokens)
@@ -62,7 +65,7 @@ class NotificationController(
     @DeleteMapping("/tokens/{deviceId}")
     fun deleteToken(
         @PathVariable deviceId: String,
-        @AuthenticationPrincipal jwt: Jwt
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Void> {
         val userId = UUID.fromString(jwt.subject)
         deviceTokenService.deleteByDeviceId(userId, deviceId)
@@ -70,7 +73,7 @@ class NotificationController(
     }
 
     @DeleteMapping("/tokens")
-    fun deleteAllTokens(@AuthenticationPrincipal jwt: Jwt): ResponseEntity<Void> {
+    fun deleteAllTokens(@Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt): ResponseEntity<Void> {
         val userId = UUID.fromString(jwt.subject)
         deviceTokenService.deleteAllByUser(userId)
         return ResponseEntity.noContent().build()
@@ -81,7 +84,7 @@ class NotificationController(
     @PostMapping("/send/token")
     fun sendToToken(
         @Valid @RequestBody request: SendToTokenRequest,
-        @AuthenticationPrincipal jwt: Jwt
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Map<String, Any>> {
         val userId = UUID.fromString(jwt.subject)
         val historyId = notificationService.sendToToken(userId, request.token, request.title, request.body, request.data)
@@ -92,7 +95,7 @@ class NotificationController(
     @PostMapping("/send/multicast")
     fun sendMulticast(
         @Valid @RequestBody request: SendMulticastRequest,
-        @AuthenticationPrincipal jwt: Jwt
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Map<String, Any>> {
         val userId = UUID.fromString(jwt.subject)
         val historyId = notificationService.sendMulticast(userId, request.tokens, request.title, request.body, request.data)
@@ -103,7 +106,7 @@ class NotificationController(
     @PostMapping("/send/topic")
     fun sendToTopic(
         @Valid @RequestBody request: SendToTopicRequest,
-        @AuthenticationPrincipal jwt: Jwt
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Map<String, Any>> {
         val userId = UUID.fromString(jwt.subject)
         topicService.validateTopicExists(request.topic)
@@ -118,7 +121,7 @@ class NotificationController(
     fun subscribe(
         @PathVariable name: String,
         @Valid @RequestBody request: TopicSubscribeRequest,
-        @AuthenticationPrincipal jwt: Jwt
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Void> {
         topicService.subscribe(request.token, name)
         return ResponseEntity.ok().build()
@@ -128,7 +131,7 @@ class NotificationController(
     fun unsubscribe(
         @PathVariable name: String,
         @Valid @RequestBody request: TopicSubscribeRequest,
-        @AuthenticationPrincipal jwt: Jwt
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Void> {
         topicService.unsubscribe(request.token, name)
         return ResponseEntity.ok().build()
@@ -137,7 +140,7 @@ class NotificationController(
     // --- Preferences ---
 
     @GetMapping("/preferences")
-    fun getPreferences(@AuthenticationPrincipal jwt: Jwt): ResponseEntity<NotificationPreferenceResponse> {
+    fun getPreferences(@Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt): ResponseEntity<NotificationPreferenceResponse> {
         val userId = UUID.fromString(jwt.subject)
         val prefs = notificationPreferenceService.getPreferences(userId)
         return ResponseEntity.ok(
@@ -151,7 +154,7 @@ class NotificationController(
     @PutMapping("/preferences")
     fun updatePreferences(
         @Valid @RequestBody request: NotificationPreferenceRequest,
-        @AuthenticationPrincipal jwt: Jwt
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<NotificationPreferenceResponse> {
         val userId = UUID.fromString(jwt.subject)
         val updates = mutableMapOf<NotificationChannel, Boolean>()
@@ -173,7 +176,7 @@ class NotificationController(
     fun getHistory(
         @RequestParam(required = false) cursor: UUID?,
         @RequestParam(defaultValue = "20") size: Int,
-        @AuthenticationPrincipal jwt: Jwt
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<List<NotificationHistoryResponse>> {
         val userId = UUID.fromString(jwt.subject)
         val history = notificationService.getHistory(userId, cursor, size.coerceIn(1, 100))

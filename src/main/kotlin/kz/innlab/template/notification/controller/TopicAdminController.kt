@@ -1,5 +1,6 @@
 package kz.innlab.template.notification.controller
 
+import io.swagger.v3.oas.annotations.tags.Tag
 import kz.innlab.template.notification.dto.TopicResponse
 import kz.innlab.template.notification.service.TopicService
 import org.springframework.http.ResponseEntity
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
+@Tag(name = "Admin - Topics", description = "Topic management (requires ADMIN role)")
 @RequestMapping("/api/v1/admin/topics")
 class TopicAdminController(
     private val topicService: TopicService

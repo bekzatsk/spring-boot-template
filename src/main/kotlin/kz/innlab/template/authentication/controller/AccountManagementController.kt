@@ -1,5 +1,7 @@
 package kz.innlab.template.authentication.controller
 
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import kz.innlab.template.authentication.dto.ChangeEmailRequest
 import kz.innlab.template.authentication.dto.ChangePasswordRequest
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 @RestController
+@Tag(name = "Account Management", description = "Change password, email, and phone for authenticated users")
 @RequestMapping("/api/v1/users/me")
 class AccountManagementController(
     private val accountManagementService: AccountManagementService
@@ -24,7 +27,7 @@ class AccountManagementController(
 
     @PostMapping("/change-password")
     fun changePassword(
-        @AuthenticationPrincipal jwt: Jwt,
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: ChangePasswordRequest
     ): ResponseEntity<Void> {
         // TODO: rate limiting
@@ -36,7 +39,7 @@ class AccountManagementController(
 
     @PostMapping("/change-email/request")
     fun requestChangeEmail(
-        @AuthenticationPrincipal jwt: Jwt,
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: ChangeEmailRequest
     ): ResponseEntity<Map<String, Any>> {
         // TODO: rate limiting
@@ -48,7 +51,7 @@ class AccountManagementController(
 
     @PostMapping("/change-email/verify")
     fun verifyChangeEmail(
-        @AuthenticationPrincipal jwt: Jwt,
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: VerifyChangeEmailRequest
     ): ResponseEntity<Void> {
         // TODO: rate limiting
@@ -60,7 +63,7 @@ class AccountManagementController(
 
     @PostMapping("/change-phone/request")
     fun requestChangePhone(
-        @AuthenticationPrincipal jwt: Jwt,
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: ChangePhoneRequest
     ): ResponseEntity<Map<String, Any>> {
         // TODO: rate limiting
@@ -72,7 +75,7 @@ class AccountManagementController(
 
     @PostMapping("/change-phone/verify")
     fun verifyChangePhone(
-        @AuthenticationPrincipal jwt: Jwt,
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: VerifyChangePhoneRequest
     ): ResponseEntity<Void> {
         // TODO: rate limiting

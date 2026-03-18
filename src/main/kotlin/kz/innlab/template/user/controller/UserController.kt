@@ -1,5 +1,7 @@
 package kz.innlab.template.user.controller
 
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.tags.Tag
 import kz.innlab.template.user.dto.UserProfileResponse
 import kz.innlab.template.user.service.UserService
 import org.springframework.http.ResponseEntity
@@ -11,13 +13,14 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 @RestController
+@Tag(name = "Users", description = "User profile endpoints")
 @RequestMapping("/api/v1/users")
 class UserController(
     private val userService: UserService
 ) {
 
     @GetMapping("/me")
-    fun getCurrentUser(@AuthenticationPrincipal jwt: Jwt): ResponseEntity<UserProfileResponse> {
+    fun getCurrentUser(@Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt): ResponseEntity<UserProfileResponse> {
         val userId = UUID.fromString(jwt.subject)
         val user = userService.findById(userId)
         return ResponseEntity.ok(UserProfileResponse.from(user))

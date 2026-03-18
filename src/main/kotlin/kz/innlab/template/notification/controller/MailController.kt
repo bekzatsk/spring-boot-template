@@ -1,5 +1,7 @@
 package kz.innlab.template.notification.controller
 
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import kz.innlab.template.notification.dto.EmailMessageResponse
 import kz.innlab.template.notification.dto.InboxMessageResponse
@@ -27,6 +29,7 @@ import org.springframework.web.multipart.MultipartFile
 import java.util.UUID
 
 @RestController
+@Tag(name = "Email", description = "Send emails via SMTP, read inbox via IMAP, mail history")
 @RequestMapping("/api/v1/mail")
 class MailController(
     private val mailService: MailService,
@@ -39,7 +42,7 @@ class MailController(
     @PostMapping("/send")
     fun sendEmail(
         @Valid @RequestBody request: SendEmailRequest,
-        @AuthenticationPrincipal jwt: Jwt
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Map<String, UUID>> {
         val userId = UUID.fromString(jwt.subject)
         val mailId = mailService.sendEmail(
@@ -56,7 +59,7 @@ class MailController(
     fun sendEmailWithAttachments(
         @Valid @RequestPart("email") request: SendEmailRequest,
         @RequestPart("files") files: List<MultipartFile>,
-        @AuthenticationPrincipal jwt: Jwt
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Map<String, UUID>> {
         val userId = UUID.fromString(jwt.subject)
         val attachments = files.map { file ->
@@ -84,7 +87,7 @@ class MailController(
         @RequestParam(defaultValue = "0") offset: Int,
         @RequestParam(defaultValue = "20") size: Int,
         @RequestParam(defaultValue = "false") unreadOnly: Boolean,
-        @AuthenticationPrincipal jwt: Jwt
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Map<String, Any>> {
         val page = imapService.listInbox(offset, size.coerceIn(1, 100), unreadOnly)
         return ResponseEntity.ok(
@@ -100,7 +103,7 @@ class MailController(
     @GetMapping("/inbox/{messageNumber}")
     fun getMessage(
         @PathVariable messageNumber: Int,
-        @AuthenticationPrincipal jwt: Jwt
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<EmailMessageResponse> {
         val msg = imapService.getMessage(messageNumber)
         return ResponseEntity.ok(EmailMessageResponse.from(msg))
@@ -109,7 +112,7 @@ class MailController(
     @PutMapping("/inbox/{messageNumber}/read")
     fun markRead(
         @PathVariable messageNumber: Int,
-        @AuthenticationPrincipal jwt: Jwt
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Void> {
         imapService.markRead(messageNumber)
         return ResponseEntity.ok().build()
@@ -118,7 +121,7 @@ class MailController(
     @DeleteMapping("/inbox/{messageNumber}/read")
     fun markUnread(
         @PathVariable messageNumber: Int,
-        @AuthenticationPrincipal jwt: Jwt
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Void> {
         imapService.markUnread(messageNumber)
         return ResponseEntity.ok().build()
@@ -130,7 +133,7 @@ class MailController(
     fun getHistory(
         @RequestParam(required = false) cursor: UUID?,
         @RequestParam(defaultValue = "20") size: Int,
-        @AuthenticationPrincipal jwt: Jwt
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<List<MailHistoryResponse>> {
         val userId = UUID.fromString(jwt.subject)
         val pageable = PageRequest.of(0, size.coerceIn(1, 100))
