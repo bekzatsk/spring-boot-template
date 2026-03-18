@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Notifications
-current_plan: — (all plans complete)
+current_plan: 03-01 complete — Plan 02 next (if exists)
 status: unknown
-stopped_at: Completed 03-add-swagger-openapi/03-01-PLAN.md
-last_updated: "2026-03-18T06:08:26.996Z"
-last_activity: 2026-03-03 — Phase 2 complete (3/3 plans, 63 tests pass)
+stopped_at: Completed 03-add-swagger-openapi/03-02-PLAN.md
+last_updated: "2026-03-18T06:20:20.050Z"
+last_activity: 2026-03-18 — Phase 3 Plan 01 complete (springdoc + OpenApiConfig + security permit rules)
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
   percent: 88
 ---
 
@@ -65,6 +65,7 @@ Progress: [█████████░] 88%
 | 03-add-swagger-openapi | 1/2 | 2 min | 2 min |
 
 *Updated after each plan completion*
+| Phase 03-add-swagger-openapi P02 | 9min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,8 @@ Recent decisions affecting current work:
 - @ConditionalOnProperty(app.mail.enabled=true) gates SMTP beans — user @Configuration processes before auto-config, so @ConditionalOnBean(JavaMailSender) is unreliable
 - ConsoleEmailService (implements only EmailService) separate from ConsoleMailService (implements only MailService) — prevents NoUniqueBeanDefinitionException from dual-interface fallback
 - [Phase 03-add-swagger-openapi]: Use springdoc-openapi-starter-webmvc-ui 3.0.2 + spring-boot-jackson2 stop-gap for Jackson 2/3 coexistence; global bearerAuth security scheme via addSecurityItem in OpenApiConfig
+- [Phase 03-add-swagger-openapi]: @Operation(security = []) per-endpoint on AuthController (not class-level) to explicitly document all 10 public endpoints
+- [Phase 03-add-swagger-openapi]: @Parameter(hidden = true) always paired inline with @AuthenticationPrincipal Jwt to keep OpenAPI spec clean — established as project pattern
 
 ### Pending Todos
 
@@ -110,6 +113,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-18T06:08:26.994Z
-Stopped at: Completed 03-add-swagger-openapi/03-01-PLAN.md
+Last session: 2026-03-18T06:20:20.048Z
+Stopped at: Completed 03-add-swagger-openapi/03-02-PLAN.md
 Resume file: None
