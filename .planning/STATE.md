@@ -79,6 +79,10 @@ None.
 | 7 | Consolidate Flyway migrations into single V1 — complete 6-table schema, no gen_random_uuid, dev clean-on-validation-error | 2026-03-02 | e89675a | [7-consolidate-flyway-migrations-into-singl](./quick/7-consolidate-flyway-migrations-into-singl/) |
 | 8 | Fix _id column mapping in BaseEntity — add @Column(name = "id") to match Flyway schema | 2026-03-03 | ef8d39a | [8-fix-id-column-mapping-in-baseentity-add-](./quick/8-fix-id-column-mapping-in-baseentity-add-/) |
 
+### Roadmap Evolution
+
+- Phase 3 added: add Swagger (OpenAPI)
+
 ### Blockers/Concerns
 
 - Developer note: If running Postgres.app locally on port 5432, create the `template` role or stop Postgres.app and use Docker only
