@@ -5,7 +5,7 @@ milestone_name: Notifications
 current_plan: 03-01 complete — Plan 02 next (if exists)
 status: unknown
 stopped_at: Completed 03-add-swagger-openapi/03-02-PLAN.md
-last_updated: "2026-03-18T06:20:20.050Z"
+last_updated: "2026-03-18T06:26:19.465Z"
 last_activity: 2026-03-18 — Phase 3 Plan 01 complete (springdoc + OpenApiConfig + security permit rules)
 progress:
   total_phases: 3
