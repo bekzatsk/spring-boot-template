@@ -143,6 +143,19 @@
 			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
 
+		<!-- OpenAPI / Swagger UI -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>3.0.2</version>
+		</dependency>
+		<!-- Jackson 2 stop-gap: required because swagger-core still depends on Jackson 2,
+		     while Spring Boot 4 defaults to Jackson 3. Remove when springdoc upgrades swagger-core. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-jackson2</artifactId>
+		</dependency>
+
 		<!-- In-process SMTP/IMAP server for integration tests -->
 		<dependency>
 			<groupId>com.icegreen</groupId>
