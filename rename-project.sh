@@ -44,9 +44,9 @@ for part in "${PARTS[@]}"; do
 done
 NEW_APP_CLASS+="Application"
 
-# Directory paths
-OLD_PATH="${OLD_PACKAGE//./\/}"
-NEW_PATH="${NEW_PACKAGE//./\/}"
+# Directory paths (tr avoids bash escaping issues with //)
+OLD_PATH="$(echo "$OLD_PACKAGE" | tr '.' '/')"
+NEW_PATH="$(echo "$NEW_PACKAGE" | tr '.' '/')"
 
 echo "============================================="
 echo "  Spring Boot Project Renamer"
@@ -91,9 +91,14 @@ for base in src/main/kotlin src/test/kotlin; do
         mkdir -p "$base/$NEW_PATH"
         # Copy contents (not the directory itself)
         cp -R "$base/$OLD_PATH/"* "$base/$NEW_PATH/" 2>/dev/null || true
-        # Remove old directory tree from the root of old package
-        OLD_ROOT="${OLD_PACKAGE%%.*}"
-        rm -rf "$base/$OLD_ROOT"
+        # Remove only the old leaf directory (safe even if old/new share a common prefix)
+        rm -rf "$base/$OLD_PATH"
+        # Clean up empty parent directories left behind
+        OLD_PARENT="$(dirname "$base/$OLD_PATH")"
+        while [ "$OLD_PARENT" != "$base" ]; do
+            rmdir "$OLD_PARENT" 2>/dev/null || break
+            OLD_PARENT="$(dirname "$OLD_PARENT")"
+        done
         echo "  Moved $base/$OLD_PATH -> $base/$NEW_PATH"
     fi
 done
@@ -151,6 +156,8 @@ MAIN_YAML="src/main/resources/application.yaml"
 if [ -f "$MAIN_YAML" ]; then
     replace_in_file "$MAIN_YAML" "name: ${OLD_ARTIFACT}" "name: ${NEW_ARTIFACT}"
     replace_in_file "$MAIN_YAML" "DB_NAME:${OLD_ARTIFACT}" "DB_NAME:${NEW_ARTIFACT}"
+    # Update springdoc packages-to-scan and any other package references
+    replace_in_file "$MAIN_YAML" "${OLD_PACKAGE}" "${NEW_PACKAGE}"
     echo "  Updated $MAIN_YAML"
 fi
 
