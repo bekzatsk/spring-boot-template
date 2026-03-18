@@ -373,10 +373,10 @@ src/main/kotlin/kz/innlab/template/
 Use the included script to rename the package, application class, and all configs:
 
 ```bash
-./rename-project.sh <new_package> <new_project_name>
+./script/rename-project.sh <new_package> <new_project_name>
 
 # Example:
-./rename-project.sh com.innlab.cakeup cakeup
+./script/rename-project.sh com.innlab.cakeup cakeup
 ```
 
 This will:
