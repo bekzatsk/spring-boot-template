@@ -8,17 +8,6 @@ spring:
       enabled: true
   jpa:
     open-in-view: false
-  mail:
-    host: ${SMTP_HOST:}
-    port: ${SMTP_PORT:587}
-    username: ${SMTP_USERNAME:}
-    password: ${SMTP_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
   flyway:
     locations: classpath:db/migration/auth
 
@@ -53,6 +42,10 @@ app:
     enabled: ${FIREBASE_ENABLED:false}
   mail:
     enabled: ${MAIL_ENABLED:false}
+    encryption-key: ${MAIL_ENCRYPTION_KEY:}
+    external:
+      base-url: ${MAIL_EXTERNAL_BASE_URL:}
+      master-key: ${MAIL_EXTERNAL_MASTER_KEY:}
     smtp:
       host: ${SMTP_HOST:}
       port: ${SMTP_PORT:587}

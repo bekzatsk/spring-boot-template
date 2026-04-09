@@ -17,8 +17,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
-  mail:
-    host: ""
 
 app:
   cors:

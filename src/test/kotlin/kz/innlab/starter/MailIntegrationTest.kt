@@ -54,10 +54,6 @@ class MailIntegrationTest {
         @DynamicPropertySource
         fun configureMailProperties(registry: DynamicPropertyRegistry) {
             registry.add("app.mail.enabled") { "true" }
-            registry.add("spring.mail.host") { "localhost" }
-            registry.add("spring.mail.port") { greenMail.smtp.port }
-            registry.add("spring.mail.properties.mail.smtp.auth") { "false" }
-            registry.add("spring.mail.properties.mail.smtp.starttls.enable") { "false" }
             registry.add("app.mail.smtp.host") { "localhost" }
             registry.add("app.mail.smtp.port") { greenMail.smtp.port }
             registry.add("app.mail.smtp.username") { "" }

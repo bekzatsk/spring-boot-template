@@ -2,6 +2,7 @@ package kz.innlab.starter.config
 
 import kz.innlab.starter.authentication.filter.ApiAccessDeniedHandler
 import kz.innlab.starter.authentication.filter.ApiAuthenticationEntryPoint
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -31,6 +32,7 @@ class SecurityConfig(
 
     @Bean
     @ConditionalOnProperty(name = ["app.auth.security.enabled"], havingValue = "true", matchIfMissing = true)
+    @ConditionalOnMissingBean(SecurityFilterChain::class)
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http {
             csrf { disable() }

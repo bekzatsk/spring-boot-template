@@ -52,6 +52,7 @@ class RsaKeyConfig(
     }
 
     @Bean
+    @ConditionalOnMissingBean(JWKSource::class)
     fun jwkSource(keyPair: KeyPair): JWKSource<SecurityContext> {
         val rsaKey = RSAKey.Builder(keyPair.public as RSAPublicKey)
             .privateKey(keyPair.private as RSAPrivateKey)
