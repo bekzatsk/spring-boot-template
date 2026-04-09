@@ -5,14 +5,14 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.0.3</version>
+		<version>4.0.5</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>kz.innlab</groupId>
-	<artifactId>template</artifactId>
+	<artifactId>auth-spring-boot-starter</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>template</name>
-	<description>Spring Boot Auth Template with JWT, OAuth2, and social login</description>
+	<name>auth-spring-boot-starter</name>
+	<description>Spring Boot Starter for JWT authentication with Google, Apple, local, and phone OTP login</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -176,10 +176,6 @@
 		<sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
 		<testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
 		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
 			<plugin>
 				<groupId>org.jetbrains.kotlin</groupId>
 				<artifactId>kotlin-maven-plugin</artifactId>
