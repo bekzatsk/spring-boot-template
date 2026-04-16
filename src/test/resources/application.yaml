@@ -19,8 +19,10 @@ app:
       - http://localhost:5173
   auth:
     google:
+      enabled: true
       client-id: test-client-id
     apple:
+      enabled: true
       bundle-id: test-bundle-id
     refresh-token:
       expiry-days: 30

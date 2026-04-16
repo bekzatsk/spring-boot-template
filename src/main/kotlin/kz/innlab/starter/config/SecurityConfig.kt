@@ -2,11 +2,11 @@ package kz.innlab.starter.config
 
 import kz.innlab.starter.authentication.filter.ApiAccessDeniedHandler
 import kz.innlab.starter.authentication.filter.ApiAuthenticationEntryPoint
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.annotation.Order
 import org.springframework.http.HttpMethod
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
@@ -22,18 +22,19 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties(CorsProperties::class)
+@EnableConfigurationProperties(CorsProperties::class, AuthSecurityProperties::class)
 class SecurityConfig(
     private val corsProperties: CorsProperties,
+    private val authSecurityProperties: AuthSecurityProperties,
     private val jwtDecoder: JwtDecoder,
     private val authenticationEntryPoint: ApiAuthenticationEntryPoint,
     private val accessDeniedHandler: ApiAccessDeniedHandler
 ) {
 
     @Bean
+    @Order(100)
     @ConditionalOnProperty(name = ["app.auth.security.enabled"], havingValue = "true", matchIfMissing = true)
-    @ConditionalOnMissingBean(SecurityFilterChain::class)
-    fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
+    fun authSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http {
             csrf { disable() }
             httpBasic { disable() }
@@ -53,14 +54,15 @@ class SecurityConfig(
                 authorize("/v3/api-docs/**", permitAll)
                 authorize("/v3/api-docs.yaml", permitAll)
                 authorize("/api/v1/auth/**", permitAll)
+                // Consumer-defined public paths
+                authSecurityProperties.publicPaths.forEach { path ->
+                    authorize(path, permitAll)
+                }
                 authorize("/api/v1/admin/**", hasRole("ADMIN"))
                 authorize("/api/**", authenticated)
                 authorize(anyRequest, permitAll)
             }
             oauth2ResourceServer {
-                // TODO: rate limiting — to rate-limit authenticated API requests, insert a custom
-                // OncePerRequestFilter before BearerTokenAuthenticationFilter:
-                //   http.addFilterBefore(myRateLimitFilter, BearerTokenAuthenticationFilter::class.java)
                 jwt {
                     jwtDecoder = this@SecurityConfig.jwtDecoder
                     jwtAuthenticationConverter = jwtAuthenticationConverter()

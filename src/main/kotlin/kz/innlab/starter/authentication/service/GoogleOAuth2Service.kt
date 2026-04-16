@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-@ConditionalOnProperty(name = ["app.auth.google.enabled"], havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = ["app.auth.google.enabled"], havingValue = "true")
 class GoogleOAuth2Service(
     private val googleIdTokenVerifier: GoogleIdTokenVerifier,
     private val userService: UserService,

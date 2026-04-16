@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-@ConditionalOnProperty(name = ["app.auth.google.enabled"], havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = ["app.auth.google.enabled"], havingValue = "true")
 class GoogleAuthConfig(
     @Value("\${app.auth.google.client-id}")
     private val googleClientId: String

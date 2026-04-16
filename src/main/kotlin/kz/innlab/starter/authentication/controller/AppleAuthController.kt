@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @Tag(name = "Authentication", description = "Public auth endpoints - no JWT required")
 @RequestMapping("/api/v1/auth")
-@ConditionalOnProperty(name = ["app.auth.apple.enabled"], havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = ["app.auth.apple.enabled"], havingValue = "true")
 class AppleAuthController(
     private val appleOAuth2Service: AppleOAuth2Service
 ) {

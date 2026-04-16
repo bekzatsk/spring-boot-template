@@ -7,9 +7,6 @@ spring:
     driver-class-name: org.postgresql.Driver
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
-  flyway:
-    enabled: true
-    clean-on-validation-error: true
   jpa:
     hibernate:
       ddl-auto: validate

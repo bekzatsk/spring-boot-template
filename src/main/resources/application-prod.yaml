@@ -3,11 +3,6 @@ spring:
     url: ${DATABASE_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
-  flyway:
-    enabled: true
-    baseline-on-migrate: false
-    validate-on-migrate: true
-    out-of-order: false
   jpa:
     hibernate:
       ddl-auto: validate

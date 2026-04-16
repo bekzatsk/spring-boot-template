@@ -19,7 +19,7 @@ private const val APPLE_JWKS_URI = "https://appleid.apple.com/auth/keys"
 private const val APPLE_ISSUER = "https://appleid.apple.com"
 
 @Configuration
-@ConditionalOnProperty(name = ["app.auth.apple.enabled"], havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = ["app.auth.apple.enabled"], havingValue = "true")
 class AppleAuthConfig(
     @Value("\${app.auth.apple.bundle-id}")
     private val appleBundleId: String
