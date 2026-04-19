@@ -12,7 +12,7 @@ import org.hibernate.annotations.CreationTimestamp
 import java.time.Instant
 
 @Entity
-@Table(name = "refresh_tokens")
+@Table(name = "refresh_tokens", schema = "auth")
 class RefreshToken(
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)

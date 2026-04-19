@@ -9,6 +9,7 @@ import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -21,7 +22,8 @@ class LocalAuthService(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
     private val tokenService: TokenService,
-    private val refreshTokenService: RefreshTokenService
+    private val refreshTokenService: RefreshTokenService,
+    @Value("\${app.auth.registration.enabled:true}") private val registrationEnabled: Boolean = true
 ) {
 
     /**
@@ -45,6 +47,9 @@ class LocalAuthService(
             if (existing.name == null && name != null) existing.name = name
             userRepository.save(existing)
         } else {
+            if (!registrationEnabled) {
+                throw IllegalStateException("Registration is currently disabled")
+            }
             // New user
             val newUser = User(email = email)
             newUser.providers.add(AuthProvider.LOCAL)

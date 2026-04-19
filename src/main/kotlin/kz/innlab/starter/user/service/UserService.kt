@@ -3,6 +3,7 @@ package kz.innlab.starter.user.service
 import kz.innlab.starter.user.model.AuthProvider
 import kz.innlab.starter.user.model.User
 import kz.innlab.starter.user.repository.UserRepository
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.stereotype.Service
@@ -11,7 +12,8 @@ import java.util.UUID
 
 @Service
 class UserService(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    @Value("\${app.auth.registration.enabled:true}") private val registrationEnabled: Boolean = true
 ) {
 
     @Transactional
@@ -30,6 +32,9 @@ class UserService(
             if (existing.name == null && name != null) existing.name = name
             if (existing.picture == null && picture != null) existing.picture = picture
             return userRepository.save(existing)
+        }
+        if (!registrationEnabled) {
+            throw IllegalStateException("Registration is currently disabled")
         }
         return userRepository.save(
             User(email = email).also {
@@ -69,6 +74,9 @@ class UserService(
         }
 
         // Step 4: Create new user
+        if (!registrationEnabled) {
+            throw IllegalStateException("Registration is currently disabled")
+        }
         return userRepository.save(
             User(email = resolvedEmail).also {
                 it.providers.add(AuthProvider.APPLE)
@@ -88,6 +96,9 @@ class UserService(
         val existing = userRepository.findByPhone(phoneE164)
         if (existing != null) return existing
 
+        if (!registrationEnabled) {
+            throw IllegalStateException("Registration is currently disabled")
+        }
         return userRepository.save(
             User(email = "").also {
                 it.providers.add(AuthProvider.LOCAL)

@@ -18,7 +18,7 @@ import org.hibernate.annotations.UpdateTimestamp
 import java.time.Instant
 
 @Entity
-@Table(name = "users")
+@Table(name = "users", schema = "auth")
 class User(
     @Column(nullable = false)
     var email: String,
@@ -38,6 +38,7 @@ class User(
     @Enumerated(EnumType.STRING)
     @CollectionTable(
         name = "user_providers",
+        schema = "auth",
         joinColumns = [JoinColumn(name = "user_id")],
         uniqueConstraints = [UniqueConstraint(columnNames = ["user_id", "provider"])]
     )
@@ -47,6 +48,7 @@ class User(
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
         name = "user_provider_ids",
+        schema = "auth",
         joinColumns = [JoinColumn(name = "user_id")],
         uniqueConstraints = [UniqueConstraint(columnNames = ["user_id", "provider"])]
     )
@@ -57,7 +59,7 @@ class User(
 
     @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
-    @CollectionTable(name = "user_roles", joinColumns = [JoinColumn(name = "user_id")])
+    @CollectionTable(name = "user_roles", schema = "auth", joinColumns = [JoinColumn(name = "user_id")])
     @Column(name = "role")
     var roles: MutableSet<Role> = mutableSetOf(Role.USER)
 

@@ -10,7 +10,7 @@ import java.time.Instant
 import java.util.UUID
 
 @Entity
-@Table(name = "device_tokens")
+@Table(name = "device_tokens", schema = "auth")
 class DeviceToken(
     @Column(name = "user_id", nullable = false)
     var userId: UUID,

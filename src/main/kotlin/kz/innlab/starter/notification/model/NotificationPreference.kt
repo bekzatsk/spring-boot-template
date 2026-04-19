@@ -10,7 +10,7 @@ import java.time.Instant
 import java.util.UUID
 
 @Entity
-@Table(name = "notification_preferences")
+@Table(name = "notification_preferences", schema = "auth")
 class NotificationPreference(
     @Column(name = "user_id", nullable = false)
     var userId: UUID,

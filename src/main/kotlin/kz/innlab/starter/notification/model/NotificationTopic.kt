@@ -7,7 +7,7 @@ import kz.innlab.starter.shared.model.BaseEntity
 import java.time.Instant
 
 @Entity
-@Table(name = "notification_topics")
+@Table(name = "notification_topics", schema = "auth")
 class NotificationTopic(
     @Column(unique = true, nullable = false)
     var name: String

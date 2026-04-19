@@ -11,7 +11,7 @@ import java.time.Instant
 import java.util.UUID
 
 @Entity
-@Table(name = "verification_codes")
+@Table(name = "verification_codes", schema = "auth")
 class VerificationCode(
     @Column(name = "identifier", nullable = false)
     val identifier: String,

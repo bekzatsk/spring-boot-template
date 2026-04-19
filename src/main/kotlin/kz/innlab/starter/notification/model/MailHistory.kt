@@ -10,7 +10,7 @@ import java.time.Instant
 import java.util.UUID
 
 @Entity
-@Table(name = "mail_history")
+@Table(name = "mail_history", schema = "auth")
 class MailHistory(
     @Column(name = "user_id", nullable = false)
     var userId: UUID,

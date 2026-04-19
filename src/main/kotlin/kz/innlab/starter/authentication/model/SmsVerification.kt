@@ -8,7 +8,7 @@ import org.hibernate.annotations.CreationTimestamp
 import java.time.Instant
 
 @Entity
-@Table(name = "sms_verifications")
+@Table(name = "sms_verifications", schema = "auth")
 class SmsVerification(
     @Column(name = "phone", nullable = false)
     val phone: String,

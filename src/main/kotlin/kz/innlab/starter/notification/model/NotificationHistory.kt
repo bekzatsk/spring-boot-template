@@ -10,7 +10,7 @@ import java.time.Instant
 import java.util.UUID
 
 @Entity
-@Table(name = "notification_history")
+@Table(name = "notification_history", schema = "auth")
 class NotificationHistory(
     @Column(name = "user_id", nullable = false)
     var userId: UUID,
