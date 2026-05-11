@@ -31,6 +31,17 @@ app:
       enabled: ${AUTH_LOCAL_ENABLED:true}
     phone:
       enabled: ${AUTH_PHONE_ENABLED:true}
+    telegram:
+      enabled: ${AUTH_TELEGRAM_ENABLED:false}
+      bot-token: ${TELEGRAM_BOT_TOKEN:}
+      bot-username: ${TELEGRAM_BOT_USERNAME:MathHubBot}
+      webhook-secret: ${TELEGRAM_WEBHOOK_SECRET:}
+      session-ttl-seconds: ${AUTH_SESSION_TTL:300}
+      code-length: ${AUTH_CODE_LENGTH:6}
+      max-attempts: ${AUTH_MAX_ATTEMPTS:3}
+      resend-cooldown-seconds: ${AUTH_RESEND_COOLDOWN:60}
+      max-sessions-per-ip-per-hour: 5
+      max-sessions-per-telegram-user-per-hour: 3
     refresh-token:
       expiry-days: ${REFRESH_TOKEN_EXPIRY_DAYS:30}
   notification:

@@ -54,6 +54,7 @@ class SecurityConfig(
                 authorize("/v3/api-docs/**", permitAll)
                 authorize("/v3/api-docs.yaml", permitAll)
                 authorize("/api/v1/auth/**", permitAll)
+                authorize("/telegram/webhook", permitAll)
                 // Consumer-defined public paths
                 authSecurityProperties.publicPaths.forEach { path ->
                     authorize(path, permitAll)

@@ -27,6 +27,17 @@ app:
     apple:
       enabled: true
       bundle-id: test-bundle-id
+    telegram:
+      enabled: true
+      bot-username: TestBot
+      webhook-secret: test-secret
+      session-ttl-seconds: 300
+      code-length: 6
+      max-attempts: 3
+      resend-cooldown-seconds: 60
+      max-sessions-per-ip-per-hour: 5
+      max-sessions-per-telegram-user-per-hour: 3
+      dev-code: ""
     refresh-token:
       expiry-days: 30
     sms:

@@ -107,6 +107,30 @@ class UserService(
         )
     }
 
+    @Transactional
+    fun findOrCreateTelegramUser(telegramUserId: Long, telegramUsername: String?): User {
+        val existing = userRepository.findByTelegramUserId(telegramUserId)
+        if (existing != null) {
+            if (telegramUsername != null && existing.telegramUsername != telegramUsername) {
+                existing.telegramUsername = telegramUsername
+                return userRepository.save(existing)
+            }
+            return existing
+        }
+
+        if (!registrationEnabled) {
+            throw IllegalStateException("Registration is currently disabled")
+        }
+        return userRepository.save(
+            User(email = "").also {
+                it.providers.add(AuthProvider.TELEGRAM)
+                it.providerIds[AuthProvider.TELEGRAM] = telegramUserId.toString()
+                it.telegramUserId = telegramUserId
+                it.telegramUsername = telegramUsername
+            }
+        )
+    }
+
     @Transactional(readOnly = true)
     fun findById(id: UUID): User =
         userRepository.findById(id).orElseThrow { AccessDeniedException("User not found") }

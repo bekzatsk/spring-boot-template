@@ -34,6 +34,12 @@ class User(
     @Column(name = "phone", unique = true)
     var phone: String? = null  // E.164 format; set for LOCAL phone users
 
+    @Column(name = "telegram_user_id", unique = true)
+    var telegramUserId: Long? = null
+
+    @Column(name = "telegram_username")
+    var telegramUsername: String? = null
+
     @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
     @CollectionTable(

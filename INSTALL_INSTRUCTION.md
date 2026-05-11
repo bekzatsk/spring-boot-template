@@ -528,6 +528,8 @@ app:
       enabled: false
     phone:
       enabled: false
+    telegram:
+      enabled: false
   firebase:
     enabled: false
   mail:
@@ -575,6 +577,11 @@ app:
       bundle-id: ${APPLE_BUNDLE_ID}
     phone:
       enabled: true
+    telegram:
+      enabled: true
+      bot-token: ${TELEGRAM_BOT_TOKEN}
+      bot-username: ${TELEGRAM_BOT_USERNAME}
+      webhook-secret: ${TELEGRAM_WEBHOOK_SECRET}
     refresh-token:
       expiry-days: 30
 
@@ -636,6 +643,15 @@ app:
 | `app.auth.apple.enabled` | boolean | `true` | Apple Sign In |
 | `app.auth.apple.bundle-id` | string | `com.example.app` | Apple app bundle ID |
 | `app.auth.phone.enabled` | boolean | `true` | Phone + SMS OTP login |
+| `app.auth.telegram.enabled` | boolean | `false` | Telegram bot authentication |
+| `app.auth.telegram.bot-token` | string | — | Telegram Bot API token |
+| `app.auth.telegram.bot-username` | string | `MathHubBot` | Telegram bot username (for deep link URL). Also returned in `TelegramInitResponse.botUsername` (any leading `@` stripped) so frontends can render `@<username>` without parsing the URL. |
+| `app.auth.telegram.webhook-secret` | string | — | Secret token for webhook validation |
+| `app.auth.telegram.session-ttl-seconds` | int | `300` | Auth session TTL (5 min) |
+| `app.auth.telegram.max-attempts` | int | `3` | Max code verification attempts per session |
+| `app.auth.telegram.resend-cooldown-seconds` | int | `60` | Cooldown between code resends |
+| `app.auth.telegram.max-sessions-per-ip-per-hour` | int | `5` | IP rate limit |
+| `app.auth.telegram.max-sessions-per-telegram-user-per-hour` | int | `3` | Per-user rate limit |
 | `app.auth.refresh-token.expiry-days` | int | `30` | Refresh token TTL in days |
 
 ### JWT (Production Only)
@@ -697,6 +713,7 @@ Set `FIREBASE_CREDENTIALS_PATH` env variable pointing to the service account JSO
 |----------|------|-------------|
 | `app.auth.sms.dev-code` | string | Fixed SMS code for dev (e.g. `123456`) |
 | `app.auth.verification.dev-code` | string | Fixed email verification code for dev |
+| `app.auth.telegram.dev-code` | string | Fixed Telegram verification code for dev |
 
 ---
 
@@ -723,6 +740,14 @@ class MyServiceOverrides {
             // your implementation
         }
     }
+
+    // Telegram bot message sender (real Telegram Bot API)
+    @Bean
+    fun telegramBotService(): TelegramBotService = object : TelegramBotService {
+        override fun sendMessage(chatId: Long, text: String) {
+            // call Telegram Bot API: POST https://api.telegram.org/bot<token>/sendMessage
+        }
+    }
 }
 ```
 
@@ -744,7 +769,7 @@ spring:
 
 Auth-starter поднимает **отдельный** `Flyway`-bean (`authFlyway`) на `classpath:db/migration/auth` — не нужно прописывать его в свой `locations`. Не клади свои миграции в `db/migration/auth` и наоборот.
 
-Tables created by starter: `users`, `user_providers`, `user_provider_ids`, `user_roles`, `refresh_tokens`, `sms_verifications`, `verification_codes`, `device_tokens`, `notification_history`, `notification_topics`, `notification_preferences`, `mail_history`.
+Tables created by starter: `users`, `user_providers`, `user_provider_ids`, `user_roles`, `refresh_tokens`, `sms_verifications`, `verification_codes`, `telegram_auth_sessions`, `device_tokens`, `notification_history`, `notification_topics`, `notification_preferences`, `mail_history`.
 
 ---
 
@@ -773,5 +798,6 @@ Tables created by starter: `users`, `user_providers`, `user_provider_ids`, `user
 - [ ] PostgreSQL поднят (`docker compose up -d postgres`)
 - [ ] (Prod) сгенерирован JWT keystore, `app.security.jwt.*` через env vars
 - [ ] (Prod) `APP_CORS_ALLOWED_ORIGINS` выставлен
-- [ ] (Optional) Реализованы `SmsService` / `EmailService` для реальной доставки
+- [ ] (Optional) Реализованы `SmsService` / `EmailService` / `TelegramBotService` для реальной доставки
+- [ ] (Optional) Telegram bot: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_SECRET` через env vars
 - [ ] (Optional) Firebase для push (`FIREBASE_CREDENTIALS_PATH`)

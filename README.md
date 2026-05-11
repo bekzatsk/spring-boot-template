@@ -17,7 +17,7 @@ cd auth-starter
 ./mvnw clean install -DskipTests
 ```
 
-This publishes `kz.innlab:auth-spring-boot-starter:0.0.1-SNAPSHOT` to your local `~/.m2/repository`.
+This publishes `kz.innlab:auth-spring-boot-starter:0.0.2-SNAPSHOT` to your local `~/.m2/repository`.
 
 ### 2. Add Dependency
 
@@ -25,7 +25,7 @@ This publishes `kz.innlab:auth-spring-boot-starter:0.0.1-SNAPSHOT` to your local
 <dependency>
     <groupId>kz.innlab</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.2-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -94,6 +94,10 @@ The starter auto-registers these endpoints:
 | `POST /api/v1/auth/apple` | Apple ID token auth |
 | `POST /api/v1/auth/phone/request` | Request SMS OTP |
 | `POST /api/v1/auth/phone/verify` | Verify SMS OTP |
+| `POST /api/v1/auth/telegram/init` | Init Telegram auth session → returns `sessionId`, `botUrl`, `botUsername`, `expiresAt` |
+| `POST /api/v1/auth/telegram/verify` | Verify Telegram code |
+| `POST /api/v1/auth/telegram/resend` | Resend Telegram code |
+| `GET /api/v1/auth/telegram/status/{sessionId}` | Poll Telegram session status |
 | `POST /api/v1/auth/refresh` | Refresh access token |
 | `POST /api/v1/auth/revoke` | Revoke refresh token (logout) |
 | `POST /api/v1/auth/forgot-password` | Request password reset code |
@@ -236,6 +240,10 @@ class MyService(
 | `app.auth.apple.enabled` | `true` | Apple Sign In |
 | `app.auth.apple.bundle-id` | `com.example.app` | Apple app bundle ID |
 | `app.auth.phone.enabled` | `true` | Phone + SMS OTP |
+| `app.auth.telegram.enabled` | `false` | Telegram bot authentication |
+| `app.auth.telegram.bot-token` | — | Telegram Bot API token |
+| `app.auth.telegram.bot-username` | `MathHubBot` | Bot username for deep link URL. Also exposed in `TelegramInitResponse.botUsername` (any leading `@` stripped). |
+| `app.auth.telegram.webhook-secret` | — | Secret token for webhook validation |
 | `app.auth.refresh-token.expiry-days` | `30` | Refresh token TTL |
 
 ### Database
@@ -402,7 +410,7 @@ Phone-only users have `email = ""` with a partial unique index.
         <dependency>
             <groupId>kz.innlab</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>0.0.2-SNAPSHOT</version>
         </dependency>
     </dependencies>
 
@@ -499,3 +507,12 @@ All errors follow a consistent format:
 | 403 | Insufficient permissions |
 | 404 | Not found |
 | 409 | Email/phone taken, rate limit, grace window |
+
+---
+
+## Changelog
+
+### 0.0.2-SNAPSHOT (unreleased)
+
+**Telegram auth**
+- `TelegramInitResponse` now includes a `botUsername` field (additive, non-breaking) alongside the existing `botUrl`. Value comes from `app.auth.telegram.bot-username` with any leading `@` stripped. Frontends can render `@MyBot` text without parsing the URL.
