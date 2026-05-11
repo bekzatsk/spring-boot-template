@@ -6,6 +6,7 @@
 > 3. JVM **24** (Kotlin 2.2.x не поддерживает JVM 25).
 > 4. Auth-starter тянет свой `application-dev.yaml` внутри jar. Твои `application-*.yml` в `src/main/resources/` его перекрывают — они **обязательны**, иначе подхватится starter-овский DB (`template/postgres`).
 > 5. У starter-а свой Flyway на `db/migration/auth`. Твои миграции — отдельно в `db/migration/`. Не перемешивай.
+> 6. `spring-boot-starter-actuator` идёт транзитивно (starter ≥ 0.0.3-SNAPSHOT) → `/actuator/health` доступен из коробки. Явно подключать в свой `pom.xml` не нужно.
 
 ---
 
@@ -57,7 +58,7 @@
         <dependency>
             <groupId>kz.innlab</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>0.0.3-SNAPSHOT</version>
         </dependency>
 
         <dependency>
@@ -532,6 +533,14 @@ app:
       enabled: false
   firebase:
     enabled: false
+
+# Actuator: только /actuator/health открыт по умолчанию (Spring Boot default).
+# Чтобы выставить ещё (metrics, info, env, ...) — раскомментируй и перечисли:
+# management:
+#   endpoints:
+#     web:
+#       exposure:
+#         include: health,info
   mail:
     enabled: false
   cors:
@@ -653,6 +662,20 @@ app:
 | `app.auth.telegram.max-sessions-per-ip-per-hour` | int | `5` | IP rate limit |
 | `app.auth.telegram.max-sessions-per-telegram-user-per-hour` | int | `3` | Per-user rate limit |
 | `app.auth.refresh-token.expiry-days` | int | `30` | Refresh token TTL in days |
+
+### Actuator (bundled)
+
+`spring-boot-starter-actuator` идёт транзитивно через auth-starter. По умолчанию открыт только `/actuator/health`.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `management.endpoints.web.exposure.include` | csv | `health` | Какие endpoint'ы доступны по HTTP. Spring Boot default. |
+| `management.endpoints.web.exposure.exclude` | csv | — | Что скрыть (применяется поверх include). |
+| `management.endpoint.health.show-details` | string | `never` | `never` / `when-authorized` / `always`. Детализация health-чеков. |
+| `management.endpoint.health.probes.enabled` | boolean | `false` | Включить `/actuator/health/liveness` + `/readiness` (k8s probes). |
+| `management.server.port` | int | (main port) | Отдельный порт для actuator (если нужно изолировать от публичного API). |
+
+⚠ Starter **не** делает `permitAll` на `/actuator/**` — это решение консьюмера. См. `AppSecurityConfig.actuatorFilterChain()` в §0.
 
 ### JWT (Production Only)
 

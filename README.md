@@ -51,7 +51,7 @@ Lock down permissions: `chmod 600 ~/.m2/settings.xml`.
   <dependency>
     <groupId>kz.innlab</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>0.0.2-SNAPSHOT</version>
+    <version>0.0.3-SNAPSHOT</version>
   </dependency>
 </dependencies>
 ```
@@ -66,7 +66,7 @@ cd auth-starter
 ./mvnw clean install -DskipTests
 ```
 
-This publishes `kz.innlab:auth-spring-boot-starter:0.0.2-SNAPSHOT` to `~/.m2/repository`.
+This publishes `kz.innlab:auth-spring-boot-starter:0.0.3-SNAPSHOT` to `~/.m2/repository`.
 
 ### 4. Configure `application.yaml`
 
@@ -449,7 +449,7 @@ Phone-only users have `email = ""` with a partial unique index.
         <dependency>
             <groupId>kz.innlab</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>0.0.2-SNAPSHOT</version>
+            <version>0.0.3-SNAPSHOT</version>
         </dependency>
     </dependencies>
 
@@ -565,7 +565,7 @@ The starter publishes to **GitHub Packages** via `scripts/publish.sh`.
 ### Publish commands
 
 ```bash
-# Republish current pom version (e.g. 0.0.2-SNAPSHOT)
+# Republish current pom version (e.g. 0.0.3-SNAPSHOT)
 ./scripts/publish.sh --skip-tests
 
 # Bump to next snapshot
@@ -581,7 +581,14 @@ After publish, package appears at: https://github.com/bekzatsk/spring-boot-templ
 
 ## Changelog
 
-### 0.0.2-SNAPSHOT (unreleased)
+### 0.0.3-SNAPSHOT (unreleased)
+
+**Added**
+- `spring-boot-starter-actuator` is now bundled transitively. `/actuator/health` is available out of the box. Consumers no longer need to add the dependency explicitly for docker healthchecks / k8s probes.
+  - Only `health` is exposed via web by default (Spring Boot default). Opt in to more endpoints via `management.endpoints.web.exposure.include`.
+  - The starter does **not** set `@Order(1)` permitAll on `/actuator/**` — consumers still register their own actuator security filter chain when needed.
+
+### 0.0.2-SNAPSHOT
 
 **Telegram auth**
 - `TelegramInitResponse` now includes a `botUsername` field (additive, non-breaking) alongside the existing `botUrl`. Value comes from `app.auth.telegram.bot-username` with any leading `@` stripped. Frontends can render `@MyBot` text without parsing the URL.
