@@ -8,28 +8,67 @@ Ready-to-use Spring Boot starter for JWT authentication with multi-provider soci
 
 ## Usage in Another Project
 
-### 1. Install to Local Maven Repository
+The starter is published to **GitHub Packages** at [`bekzatsk/spring-boot-template`](https://github.com/bekzatsk/spring-boot-template/packages).
+
+> GitHub Packages requires authentication even for read access on public packages. You need a Personal Access Token (classic) with the `read:packages` scope.
+
+### 1. Create a GitHub PAT (Classic)
+
+1. Open https://github.com/settings/tokens → **Generate new token (classic)**.
+2. Scopes: `read:packages` (and `write:packages` if you also publish).
+3. Copy the token (starts with `ghp_…`). GitHub shows it only once.
+
+### 2. Configure `~/.m2/settings.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+  <servers>
+    <server>
+      <id>github</id>
+      <username>YOUR_GITHUB_USERNAME</username>
+      <password>ghp_xxxxxxxxxxxxxxxxxxxxxxxx</password>
+    </server>
+  </servers>
+</settings>
+```
+
+Lock down permissions: `chmod 600 ~/.m2/settings.xml`.
+
+### 3. Add Repository + Dependency to your `pom.xml`
+
+```xml
+<repositories>
+  <repository>
+    <id>github</id>
+    <url>https://maven.pkg.github.com/bekzatsk/spring-boot-template</url>
+    <releases><enabled>true</enabled></releases>
+    <snapshots><enabled>true</enabled></snapshots>
+  </repository>
+</repositories>
+
+<dependencies>
+  <dependency>
+    <groupId>kz.innlab</groupId>
+    <artifactId>auth-spring-boot-starter</artifactId>
+    <version>0.0.2-SNAPSHOT</version>
+  </dependency>
+</dependencies>
+```
+
+### Alternative: Build from Source
+
+Skip GitHub Packages and install to local Maven repo:
 
 ```bash
-# Clone and install
-git clone <repo-url> auth-starter
+git clone https://github.com/bekzatsk/spring-boot-template.git auth-starter
 cd auth-starter
 ./mvnw clean install -DskipTests
 ```
 
-This publishes `kz.innlab:auth-spring-boot-starter:0.0.2-SNAPSHOT` to your local `~/.m2/repository`.
+This publishes `kz.innlab:auth-spring-boot-starter:0.0.2-SNAPSHOT` to `~/.m2/repository`.
 
-### 2. Add Dependency
-
-```xml
-<dependency>
-    <groupId>kz.innlab</groupId>
-    <artifactId>auth-spring-boot-starter</artifactId>
-    <version>0.0.2-SNAPSHOT</version>
-</dependency>
-```
-
-### 3. Configure `application.yaml`
+### 4. Configure `application.yaml`
 
 Minimal configuration for dev:
 
@@ -66,7 +105,7 @@ app:
 
 The starter auto-configures everything else. In dev profile, RSA keys are generated in-memory and SMS/email codes are logged to console.
 
-### 4. Run
+### 5. Run
 
 ```bash
 # Start PostgreSQL
@@ -507,6 +546,36 @@ All errors follow a consistent format:
 | 403 | Insufficient permissions |
 | 404 | Not found |
 | 409 | Email/phone taken, rate limit, grace window |
+
+---
+
+## Publishing (Maintainers)
+
+The starter publishes to **GitHub Packages** via `scripts/publish.sh`.
+
+### One-time setup
+
+1. Create a GitHub PAT (classic) with `write:packages` + `read:packages` scopes: https://github.com/settings/tokens
+2. Either export it per shell:
+   ```bash
+   export GITHUB_TOKEN=ghp_xxx
+   ```
+   …or store it in `~/.m2/settings.xml` under `<server><id>github</id>` (the script falls back to this if `GITHUB_TOKEN` is unset).
+
+### Publish commands
+
+```bash
+# Republish current pom version (e.g. 0.0.2-SNAPSHOT)
+./scripts/publish.sh --skip-tests
+
+# Bump to next snapshot
+./scripts/publish.sh --snapshot 0.0.3 --skip-tests
+
+# Cut an immutable release (bumps pom, deploys, tags v0.0.2, pushes)
+./scripts/publish.sh --release 0.0.2 --skip-tests
+```
+
+After publish, package appears at: https://github.com/bekzatsk/spring-boot-template/packages
 
 ---
 
