@@ -51,7 +51,7 @@ Lock down permissions: `chmod 600 ~/.m2/settings.xml`.
   <dependency>
     <groupId>kz.innlab</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>0.0.3-SNAPSHOT</version>
+    <version>0.0.5-SNAPSHOT</version>
   </dependency>
 </dependencies>
 ```
@@ -66,7 +66,7 @@ cd auth-starter
 ./mvnw clean install -DskipTests
 ```
 
-This publishes `kz.innlab:auth-spring-boot-starter:0.0.3-SNAPSHOT` to `~/.m2/repository`.
+This publishes `kz.innlab:auth-spring-boot-starter:0.0.5-SNAPSHOT` to `~/.m2/repository`.
 
 ### 4. Configure `application.yaml`
 
@@ -188,7 +188,20 @@ All auth endpoints return:
 }
 ```
 
-Swagger UI is available at `/swagger-ui.html`.
+Swagger UI is available at `/swagger-ui.html`. Title defaults to your `spring.application.name` (not the starter's name). Override via `app.openapi.title`, `app.openapi.version`, `app.openapi.description`:
+
+```yaml
+spring:
+  application:
+    name: MathHub
+app:
+  openapi:
+    title: MathHub API
+    version: 2.0.0
+    description: MathHub backend service
+```
+
+For full control, register your own `@Bean OpenAPI` — the starter uses `@ConditionalOnMissingBean(OpenAPI::class)`.
 
 ---
 
@@ -283,7 +296,8 @@ class MyService(
 | `app.auth.telegram.bot-token` | — | Telegram Bot API token |
 | `app.auth.telegram.bot-username` | `MathHubBot` | Bot username for deep link URL. Also exposed in `TelegramInitResponse.botUsername` (any leading `@` stripped). |
 | `app.auth.telegram.webhook-secret` | — | Secret token for webhook validation |
-| `app.auth.refresh-token.expiry-days` | `30` | Refresh token TTL |
+| `app.auth.access-token.expiry-minutes` | `15` | JWT access token TTL in minutes. `1440` = 1 day, `60` = 1 hour. Env: `ACCESS_TOKEN_EXPIRY_MINUTES`. |
+| `app.auth.refresh-token.expiry-days` | `30` | Refresh token TTL. Env: `REFRESH_TOKEN_EXPIRY_DAYS`. |
 
 ### Database
 
@@ -449,7 +463,7 @@ Phone-only users have `email = ""` with a partial unique index.
         <dependency>
             <groupId>kz.innlab</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>0.0.3-SNAPSHOT</version>
+            <version>0.0.5-SNAPSHOT</version>
         </dependency>
     </dependencies>
 
@@ -565,7 +579,7 @@ The starter publishes to **GitHub Packages** via `scripts/publish.sh`.
 ### Publish commands
 
 ```bash
-# Republish current pom version (e.g. 0.0.3-SNAPSHOT)
+# Republish current pom version (e.g. 0.0.5-SNAPSHOT)
 ./scripts/publish.sh --skip-tests
 
 # Bump to next snapshot
@@ -581,7 +595,18 @@ After publish, package appears at: https://github.com/bekzatsk/spring-boot-templ
 
 ## Changelog
 
-### 0.0.3-SNAPSHOT (unreleased)
+### 0.0.5-SNAPSHOT (unreleased)
+
+**Added**
+- `app.auth.access-token.expiry-minutes` (default `15`) — JWT access token TTL is now configurable. Env: `ACCESS_TOKEN_EXPIRY_MINUTES`. Set to `1440` for 1 day, `60` for 1 hour.
+- `app.openapi.title` / `app.openapi.version` / `app.openapi.description` — Swagger UI metadata is now configurable. Title default is `spring.application.name` (was hardcoded "Spring Boot Auth Template API"). The `OpenAPI` bean uses `@ConditionalOnMissingBean(OpenAPI::class)` so consumers can fully replace it.
+
+### 0.0.4-SNAPSHOT
+
+**Telegram bot**
+- Real Telegram Bot API integration (`RealTelegramBotService`) ships in the starter. Auto-selected when `app.auth.telegram.bot-token` is set; otherwise the console mock (`ConsoleTelegramBotService`) is used. Zero-config dev, production-ready when the token is present.
+
+### 0.0.3-SNAPSHOT
 
 **Added**
 - `spring-boot-starter-actuator` is now bundled transitively. `/actuator/health` is available out of the box. Consumers no longer need to add the dependency explicitly for docker healthchecks / k8s probes.

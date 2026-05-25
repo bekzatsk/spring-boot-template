@@ -58,7 +58,7 @@
         <dependency>
             <groupId>kz.innlab</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>0.0.3-SNAPSHOT</version>
+            <version>0.0.5-SNAPSHOT</version>
         </dependency>
 
         <dependency>
@@ -591,6 +591,8 @@ app:
       bot-token: ${TELEGRAM_BOT_TOKEN}
       bot-username: ${TELEGRAM_BOT_USERNAME}
       webhook-secret: ${TELEGRAM_WEBHOOK_SECRET}
+    access-token:
+      expiry-minutes: 15
     refresh-token:
       expiry-days: 30
 
@@ -661,7 +663,8 @@ app:
 | `app.auth.telegram.resend-cooldown-seconds` | int | `60` | Cooldown between code resends |
 | `app.auth.telegram.max-sessions-per-ip-per-hour` | int | `5` | IP rate limit |
 | `app.auth.telegram.max-sessions-per-telegram-user-per-hour` | int | `3` | Per-user rate limit |
-| `app.auth.refresh-token.expiry-days` | int | `30` | Refresh token TTL in days |
+| `app.auth.access-token.expiry-minutes` | long | `15` | JWT access token TTL in minutes. Set to `1440` for 1 day, `60` for 1 hour. Env: `ACCESS_TOKEN_EXPIRY_MINUTES`. |
+| `app.auth.refresh-token.expiry-days` | int | `30` | Refresh token TTL in days. Env: `REFRESH_TOKEN_EXPIRY_DAYS`. |
 
 ### Actuator (bundled)
 
@@ -676,6 +679,31 @@ app:
 | `management.server.port` | int | (main port) | Отдельный порт для actuator (если нужно изолировать от публичного API). |
 
 ⚠ Starter **не** делает `permitAll` на `/actuator/**` — это решение консьюмера. См. `AppSecurityConfig.actuatorFilterChain()` в §0.
+
+### OpenAPI / Swagger UI
+
+Swagger UI доступен на `/swagger-ui.html`. Title по умолчанию берётся из `spring.application.name` консьюмера — **не** хардкодится как "Spring Boot Auth Template API".
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `spring.application.name` | string | `API` | Используется как fallback title если `app.openapi.title` не задан. |
+| `app.openapi.title` | string | `${spring.application.name}` | Title в Swagger UI. |
+| `app.openapi.version` | string | `1.0.0` | Версия API в Swagger UI. |
+| `app.openapi.description` | string | (auth template description) | Описание API в Swagger UI. |
+
+Пример консьюмерского `application.yml`:
+```yaml
+spring:
+  application:
+    name: MathHub
+app:
+  openapi:
+    title: MathHub API
+    version: 2.0.0
+    description: MathHub backend service
+```
+
+Полный override: зарегистрируй свой `@Bean OpenAPI` — starter использует `@ConditionalOnMissingBean(OpenAPI::class)`, твой bean заменит дефолтный.
 
 ### JWT (Production Only)
 

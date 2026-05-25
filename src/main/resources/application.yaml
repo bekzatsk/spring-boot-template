@@ -42,6 +42,8 @@ app:
       resend-cooldown-seconds: ${AUTH_RESEND_COOLDOWN:60}
       max-sessions-per-ip-per-hour: 5
       max-sessions-per-telegram-user-per-hour: 3
+    access-token:
+      expiry-minutes: ${ACCESS_TOKEN_EXPIRY_MINUTES:15}
     refresh-token:
       expiry-days: ${REFRESH_TOKEN_EXPIRY_DAYS:30}
   notification:

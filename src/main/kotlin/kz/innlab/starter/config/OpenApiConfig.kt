@@ -5,6 +5,8 @@ import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.info.Info
 import io.swagger.v3.oas.models.security.SecurityRequirement
 import io.swagger.v3.oas.models.security.SecurityScheme
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
@@ -12,12 +14,20 @@ import org.springframework.context.annotation.Configuration
 class OpenApiConfig {
 
     @Bean
-    fun openApi(): OpenAPI = OpenAPI()
+    @ConditionalOnMissingBean(OpenAPI::class)
+    fun openApi(
+        @Value("\${app.openapi.title:\${spring.application.name:API}}")
+        title: String,
+        @Value("\${app.openapi.version:1.0.0}")
+        version: String,
+        @Value("\${app.openapi.description:JWT-authenticated REST API with Google, Apple, local (email+password), and phone (SMS OTP) authentication. Includes FCM push notifications, email service (SMTP/IMAP), and notification preferences.}")
+        description: String
+    ): OpenAPI = OpenAPI()
         .info(
             Info()
-                .title("Spring Boot Auth Template API")
-                .version("1.0.0")
-                .description("JWT-authenticated REST API with Google, Apple, local (email+password), and phone (SMS OTP) authentication. Includes FCM push notifications, email service (SMTP/IMAP), and notification preferences.")
+                .title(title)
+                .version(version)
+                .description(description)
         )
         .addSecurityItem(SecurityRequirement().addList("bearerAuth"))
         .components(
