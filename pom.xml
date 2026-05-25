@@ -246,17 +246,22 @@
 						</executions>
 					</plugin>
 
-					<!-- Javadoc jar via Dokka (Kotlin) -->
+					<!-- Empty javadoc jar (Maven Central requires *-javadoc.jar; Kotlin uses KDoc, not Javadoc) -->
 					<plugin>
-						<groupId>org.jetbrains.dokka</groupId>
-						<artifactId>dokka-maven-plugin</artifactId>
-						<version>2.0.0</version>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-jar-plugin</artifactId>
+						<version>3.4.1</version>
 						<executions>
 							<execution>
+								<id>empty-javadoc-jar</id>
 								<phase>package</phase>
 								<goals>
-									<goal>javadocJar</goal>
+									<goal>jar</goal>
 								</goals>
+								<configuration>
+									<classifier>javadoc</classifier>
+									<classesDirectory>${project.basedir}/.empty-javadoc</classesDirectory>
+								</configuration>
 							</execution>
 						</executions>
 					</plugin>
