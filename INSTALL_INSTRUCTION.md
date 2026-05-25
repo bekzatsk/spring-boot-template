@@ -55,10 +55,11 @@
         <!-- ВАЖНО: НЕ добавляй spring-boot-starter-security напрямую.
              Он прилетит транзитивно через auth-spring-boot-starter.
              Явное добавление ломает ServletWebSecurityAutoConfiguration в Boot 4. -->
+        <!-- Maven Central — no extra repository config required -->
         <dependency>
             <groupId>kz.innlab</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>0.0.5-SNAPSHOT</version>
+            <version>0.0.5</version>
         </dependency>
 
         <dependency>
@@ -317,7 +318,62 @@ cd /path/to/{projectName}/backend && ./mvnw spring-boot:run
 
 ## 1. Publish Starter
 
-### Option A: Local Maven Repository (quick start)
+> **Starter уже опубликован на Maven Central** под `kz.innlab:auth-spring-boot-starter:0.0.5`.
+> Если ты **используешь** starter — переходи к §2. Эта секция нужна только если ты **форкнул** его и публикуешь свой вариант.
+
+### Option A: Maven Central (canonical, no extra config for consumers)
+
+Текущий релиз уже на Maven Central. Для consumers — никакой `<repositories>`/`<repository>` не нужен (mavenCentral в Gradle/Maven по умолчанию). Просто добавь dependency из §2.
+
+Чтобы публиковать **свои** релизы под `kz.innlab`:
+
+1. **Sonatype Central account** + namespace `kz.innlab` уже verified (DNS TXT на `innlab.kz`). Generate user token на https://central.sonatype.com → "View Account" → "Generate User Token".
+
+2. **GPG key** опубликован на keyservers:
+   ```bash
+   gpg --keyserver keyserver.ubuntu.com --send-keys <KEY_ID>
+   ```
+
+3. **`~/.m2/settings.xml`**:
+   ```xml
+   <settings>
+     <servers>
+       <server>
+         <id>central</id>
+         <username>SONATYPE_TOKEN_USERNAME</username>
+         <password>SONATYPE_TOKEN_PASSWORD</password>
+       </server>
+     </servers>
+     <profiles>
+       <profile>
+         <id>gpg</id>
+         <properties>
+           <gpg.keyname>YOUR_KEY_ID</gpg.keyname>
+           <gpg.passphrase>YOUR_GPG_PASSPHRASE</gpg.passphrase>
+         </properties>
+         <activation><activeByDefault>true</activeByDefault></activation>
+       </profile>
+     </profiles>
+   </settings>
+   ```
+
+4. **Bump version** в `pom.xml` (no `-SNAPSHOT` — Maven Central rejects snapshots).
+
+5. **Deploy** (JDK 24 required; Kotlin 2.2.x daemon ломается на JDK 26):
+   ```bash
+   export JAVA_HOME="$(/usr/libexec/java_home -v 24)"
+   ./mvnw clean deploy -P release -DskipTests
+   ```
+
+6. **Manual publish** на https://central.sonatype.com/publishing/deployments → find deployment → click **Publish**.
+
+7. Verify:
+   ```bash
+   curl -sI https://repo.maven.apache.org/maven2/kz/innlab/auth-spring-boot-starter/<VERSION>/auth-spring-boot-starter-<VERSION>.pom | head -1
+   ```
+   `HTTP/2 200` = live. mvnrepository.com index ~few hours later.
+
+### Option B: Local Maven Repository (quick start)
 
 ```bash
 git clone <repo-url> auth-starter
@@ -327,7 +383,7 @@ cd auth-starter
 
 Artifact goes to `~/.m2/repository`. Works only on your machine.
 
-### Option B: GitHub Packages
+### Option C: GitHub Packages
 
 **1) Add `distributionManagement` to starter's `pom.xml`:**
 
@@ -360,7 +416,7 @@ Artifact goes to `~/.m2/repository`. Works only on your machine.
 ./mvnw clean deploy -DskipTests
 ```
 
-### Option C: Nexus / Artifactory
+### Option D: Nexus / Artifactory
 
 **1) Add `distributionManagement` to starter's `pom.xml`:**
 
@@ -412,16 +468,16 @@ Artifact goes to `~/.m2/repository`. Works only on your machine.
 
 ### Maven
 
-**pom.xml — dependency:**
+**pom.xml — dependency (Maven Central, no extra `<repositories>` needed):**
 ```xml
 <dependency>
     <groupId>kz.innlab</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.5</version>
 </dependency>
 ```
 
-**pom.xml — repository (skip if using local `~/.m2`):**
+**pom.xml — repository (только если ставишь из GitHub Packages / Nexus, а не Maven Central):**
 ```xml
 <repositories>
     <!-- GitHub Packages -->
@@ -443,24 +499,21 @@ Artifact goes to `~/.m2/repository`. Works only on your machine.
 **build.gradle.kts:**
 ```kotlin
 repositories {
-    mavenCentral()
-    mavenLocal() // если установлен локально
+    mavenCentral() // starter живёт здесь — ничего больше не нужно
 
-    // GitHub Packages
-    maven {
-        url = uri("https://maven.pkg.github.com/OWNER/REPO")
-        credentials {
-            username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_USERNAME")
-            password = project.findProperty("gpr.token") as String? ?: System.getenv("GITHUB_TOKEN")
-        }
-    }
-
-    // OR Nexus / Artifactory
-    // maven("https://nexus.example.com/repository/maven-snapshots/")
+    // Опционально: альтернативные источники, если форкнул и хостишь сам
+    // mavenLocal()
+    // maven {
+    //     url = uri("https://maven.pkg.github.com/OWNER/REPO")
+    //     credentials {
+    //         username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_USERNAME")
+    //         password = project.findProperty("gpr.token") as String? ?: System.getenv("GITHUB_TOKEN")
+    //     }
+    // }
 }
 
 dependencies {
-    implementation("kz.innlab:auth-spring-boot-starter:0.0.1-SNAPSHOT")
+    implementation("kz.innlab:auth-spring-boot-starter:0.0.5")
 }
 ```
 
@@ -469,24 +522,21 @@ dependencies {
 **build.gradle:**
 ```groovy
 repositories {
-    mavenCentral()
-    mavenLocal()
+    mavenCentral() // starter живёт здесь
 
-    // GitHub Packages
-    maven {
-        url = uri('https://maven.pkg.github.com/OWNER/REPO')
-        credentials {
-            username = project.findProperty('gpr.user') ?: System.getenv('GITHUB_USERNAME')
-            password = project.findProperty('gpr.token') ?: System.getenv('GITHUB_TOKEN')
-        }
-    }
-
-    // OR Nexus / Artifactory
-    // maven { url 'https://nexus.example.com/repository/maven-snapshots/' }
+    // Опционально:
+    // mavenLocal()
+    // maven {
+    //     url = uri('https://maven.pkg.github.com/OWNER/REPO')
+    //     credentials {
+    //         username = project.findProperty('gpr.user') ?: System.getenv('GITHUB_USERNAME')
+    //         password = project.findProperty('gpr.token') ?: System.getenv('GITHUB_TOKEN')
+    //     }
+    // }
 }
 
 dependencies {
-    implementation 'kz.innlab:auth-spring-boot-starter:0.0.1-SNAPSHOT'
+    implementation 'kz.innlab:auth-spring-boot-starter:0.0.5'
 }
 ```
 
