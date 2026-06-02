@@ -2,6 +2,7 @@ package kz.innlab.starter.config
 
 import kz.innlab.starter.authentication.filter.ApiAccessDeniedHandler
 import kz.innlab.starter.authentication.filter.ApiAuthenticationEntryPoint
+import kz.innlab.starter.authentication.filter.RequiredActionFilter
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -15,6 +16,7 @@ import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
@@ -28,7 +30,8 @@ class SecurityConfig(
     private val authSecurityProperties: AuthSecurityProperties,
     private val jwtDecoder: JwtDecoder,
     private val authenticationEntryPoint: ApiAuthenticationEntryPoint,
-    private val accessDeniedHandler: ApiAccessDeniedHandler
+    private val accessDeniedHandler: ApiAccessDeniedHandler,
+    private val requiredActionFilter: RequiredActionFilter
 ) {
 
     @Bean
@@ -75,6 +78,7 @@ class SecurityConfig(
                 authenticationEntryPoint = this@SecurityConfig.authenticationEntryPoint
                 accessDeniedHandler = this@SecurityConfig.accessDeniedHandler
             }
+            addFilterAfter<BearerTokenAuthenticationFilter>(requiredActionFilter)
         }
         return http.build()
     }

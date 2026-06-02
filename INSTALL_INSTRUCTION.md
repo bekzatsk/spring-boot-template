@@ -59,7 +59,7 @@
         <dependency>
             <groupId>kz.innlab</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>0.0.5</version>
+            <version>0.0.6</version>
         </dependency>
 
         <dependency>
@@ -318,7 +318,7 @@ cd /path/to/{projectName}/backend && ./mvnw spring-boot:run
 
 ## 1. Publish Starter
 
-> **Starter уже опубликован на Maven Central** под `kz.innlab:auth-spring-boot-starter:0.0.5`.
+> **Starter уже опубликован на Maven Central** под `kz.innlab:auth-spring-boot-starter:0.0.6`.
 > Если ты **используешь** starter — переходи к §2. Эта секция нужна только если ты **форкнул** его и публикуешь свой вариант.
 
 ### Option A: Maven Central (canonical, no extra config for consumers)
@@ -473,7 +473,7 @@ Artifact goes to `~/.m2/repository`. Works only on your machine.
 <dependency>
     <groupId>kz.innlab</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>0.0.5</version>
+    <version>0.0.6</version>
 </dependency>
 ```
 
@@ -513,7 +513,7 @@ repositories {
 }
 
 dependencies {
-    implementation("kz.innlab:auth-spring-boot-starter:0.0.5")
+    implementation("kz.innlab:auth-spring-boot-starter:0.0.6")
 }
 ```
 
@@ -536,7 +536,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'kz.innlab:auth-spring-boot-starter:0.0.5'
+    implementation 'kz.innlab:auth-spring-boot-starter:0.0.6'
 }
 ```
 
@@ -715,6 +715,10 @@ app:
 | `app.auth.telegram.max-sessions-per-telegram-user-per-hour` | int | `3` | Per-user rate limit |
 | `app.auth.access-token.expiry-minutes` | long | `15` | JWT access token TTL in minutes. Set to `1440` for 1 day, `60` for 1 hour. Env: `ACCESS_TOKEN_EXPIRY_MINUTES`. |
 | `app.auth.refresh-token.expiry-days` | int | `30` | Refresh token TTL in days. Env: `REFRESH_TOKEN_EXPIRY_DAYS`. |
+| `app.auth.registration.enabled` | boolean | `true` | Public self-registration. When `false`, social/phone/email signup paths reject new accounts — only ADMIN can create users via `/api/v1/admin/users`. |
+| `app.auth.security.required-action.enabled` | boolean | `true` | Hard-enforce JWT `required_actions` claim. When `true`, every authenticated request whose token carries a non-empty `required_actions` list is rejected with `403` unless the path matches an allowlist entry. |
+| `app.auth.security.required-action.allowed-paths` | list | see below | Ant-pattern paths bypassed by the required-action filter. Default: `/api/v1/users/me`, `/api/v1/users/me/change-password`, `/api/v1/auth/refresh`, `/api/v1/auth/revoke`. |
+| `app.auth.security.public-paths` | list | — | Additional consumer-defined public paths that skip JWT auth. |
 
 ### Actuator (bundled)
 
@@ -868,13 +872,73 @@ spring:
     locations: classpath:db/migration   # ТВОИ миграции
 ```
 
-Auth-starter поднимает **отдельный** `Flyway`-bean (`authFlyway`) на `classpath:db/migration/auth` — не нужно прописывать его в свой `locations`. Не клади свои миграции в `db/migration/auth` и наоборот.
+Auth-starter поднимает **отдельный** `Flyway`-bean (`authFlyway`) на `classpath:db/migration-auth` (schema `auth`) — не нужно прописывать его в свой `locations`. Не клади свои миграции в `db/migration-auth` и наоборот.
 
-Tables created by starter: `users`, `user_providers`, `user_provider_ids`, `user_roles`, `refresh_tokens`, `sms_verifications`, `verification_codes`, `telegram_auth_sessions`, `device_tokens`, `notification_history`, `notification_topics`, `notification_preferences`, `mail_history`.
+Tables created by starter (schema `auth`): `users`, `user_providers`, `user_provider_ids`, `user_roles`, `user_required_actions`, `refresh_tokens`, `sms_verifications`, `verification_codes`, `telegram_auth_sessions`, `device_tokens`, `notification_history`, `notification_topics`, `notification_preferences`, `mail_history`, `admin_audit_log`.
 
 ---
 
-## 7. Troubleshooting (что обычно ломает старт)
+## 7. Admin User Management
+
+When `app.auth.registration.enabled=false`, public signup paths reject new users. Only ADMIN-role principals can provision accounts through `/api/v1/admin/users/**`. All mutating endpoints write to the `admin_audit_log` table and emit `ADMIN_AUDIT` SLF4J log lines.
+
+### Endpoints (all require `ROLE_ADMIN`)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/v1/admin/users?q=&page=&size=` | Paginated user list, brief representation. `q` matches email/name/phone substring. |
+| `GET` | `/api/v1/admin/users/{id}` | Full user profile. |
+| `POST` | `/api/v1/admin/users` | Create user — bypasses `registration.enabled`. Body: `{email, password, name?, roles?, temporary?}`. |
+| `PATCH` | `/api/v1/admin/users/{id}/password` | Reset password. Revokes all refresh tokens. Body: `{newPassword, temporary?}`. |
+| `PATCH` | `/api/v1/admin/users/{id}/email` | Change email — skips OTP. Body: `{email}`. |
+| `PATCH` | `/api/v1/admin/users/{id}/phone` | Change phone — skips SMS. Normalizes to E.164. Body: `{phone}`. |
+| `PATCH` | `/api/v1/admin/users/{id}/profile` | Update name + picture. Body: `{name?, picture?}`. |
+| `PATCH` | `/api/v1/admin/users/{id}/roles` | Replace role set. Body: `{roles: [USER, ADMIN]}`. |
+| `DELETE` | `/api/v1/admin/users/{id}` | Delete user — revokes refresh tokens. |
+
+**Guardrails:**
+- Last-admin lockout blocked on role downgrade and delete (`countAdmins() <= 1` → 409).
+- Self-demotion of ADMIN role blocked (409).
+- Self-delete blocked (409).
+- Email/phone collisions → 409.
+
+### Temporary Password Flow (Keycloak-style)
+
+Set `"temporary": true` when creating a user or resetting password. Starter:
+
+1. Saves `users.password_temporary = true`.
+2. Adds `UPDATE_PASSWORD` to `user_required_actions`.
+3. Issues access tokens with claim `required_actions: ["UPDATE_PASSWORD"]`.
+4. `AuthResponse` now carries `requiredActions: ["UPDATE_PASSWORD"]` — frontend redirects to change-password screen.
+5. `RequiredActionFilter` returns `403 {"requiredActions":[…]}` on every endpoint outside the allowlist (see property `app.auth.security.required-action.allowed-paths`).
+6. User calls `POST /api/v1/users/me/change-password` — `AccountManagementService` clears the flag + action and revokes all refresh tokens.
+7. User re-logins → JWT clean → unlocked.
+
+### Bootstrap First Admin
+
+Starter ships **no** seed migration — consumer decides how to mint the initial admin:
+
+```sql
+-- consumer migration in classpath:db/migration/
+INSERT INTO auth.users (id, email, password_hash, password_temporary)
+VALUES ('019300a0-0000-7000-8000-000000000001', 'admin@example.com',
+        '$2a$10$…bcrypt hash…', true);
+
+INSERT INTO auth.user_providers (user_id, provider) VALUES
+  ('019300a0-0000-7000-8000-000000000001', 'LOCAL');
+
+INSERT INTO auth.user_roles (user_id, role) VALUES
+  ('019300a0-0000-7000-8000-000000000001', 'ADMIN');
+
+INSERT INTO auth.user_required_actions (user_id, action) VALUES
+  ('019300a0-0000-7000-8000-000000000001', 'UPDATE_PASSWORD');
+```
+
+Generate the bcrypt hash with `org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder` or `htpasswd -bnBC 10 "" "$PW" | tr -d ':\n'`.
+
+---
+
+## 8. Troubleshooting (что обычно ломает старт)
 
 | Симптом | Причина | Фикс |
 |---------|---------|------|
@@ -885,6 +949,9 @@ Tables created by starter: `users`, `user_providers`, `user_provider_ids`, `user
 | Flyway: «migration checksum mismatch» на auth-таблицах | Свои миграции положены в `db/migration/auth` | Перенеси свои в `db/migration/`, оставь `auth` за starter-ом |
 | `creator/editor` всегда `null` в `Auditable` | Не зарегистрирован `AuditorAware<UUID>` | Подожди, пока auth-starter положит principal в `SecurityContext`, и регистрируй `AuditorAware`, читающий из него |
 | 401 на `/api/**` без JWT в dev | Это норма — starter защищает `anyRequest` | Получи токен через `/auth/login` |
+| `403 {"requiredActions":["UPDATE_PASSWORD"]}` на любом endpoint | JWT carries non-empty `required_actions` claim — `RequiredActionFilter` блокирует всё кроме allowlist | Юзер должен вызвать `POST /api/v1/users/me/change-password`. После — re-login, claim очистится |
+| `Email already registered` (409) при `POST /admin/users` | Email занят в `auth.users` | Используй другой email, или PATCH существующего юзера |
+| `Cannot remove last ADMIN` (409) | Попытка снять ADMIN-роль / удалить единственного админа | Сначала promote другого юзера в ADMIN, затем повтори |
 
 ---
 

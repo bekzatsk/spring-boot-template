@@ -1,5 +1,6 @@
 package kz.innlab.starter.authentication.service
 
+import kz.innlab.starter.user.model.RequiredAction
 import kz.innlab.starter.user.model.Role
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.oauth2.jwt.JwtClaimsSet
@@ -17,7 +18,11 @@ class TokenService(
     private val expiryMinutes: Long
 ) {
 
-    fun generateAccessToken(userId: UUID, roles: Set<Role>): String {
+    fun generateAccessToken(
+        userId: UUID,
+        roles: Set<Role>,
+        requiredActions: Set<RequiredAction> = emptySet()
+    ): String {
         val now = Instant.now()
         val claims = JwtClaimsSet.builder()
             .issuer("template-app")
@@ -25,6 +30,7 @@ class TokenService(
             .expiresAt(now.plus(expiryMinutes, ChronoUnit.MINUTES))
             .subject(userId.toString())
             .claim("roles", roles.map { it.name })
+            .claim("required_actions", requiredActions.map { it.name })
             .build()
         return jwtEncoder.encode(JwtEncoderParameters.from(claims)).tokenValue
     }

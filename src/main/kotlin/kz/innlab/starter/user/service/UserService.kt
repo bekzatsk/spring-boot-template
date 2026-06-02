@@ -1,11 +1,14 @@
 package kz.innlab.starter.user.service
 
 import kz.innlab.starter.user.model.AuthProvider
+import kz.innlab.starter.user.model.RequiredAction
+import kz.innlab.starter.user.model.Role
 import kz.innlab.starter.user.model.User
 import kz.innlab.starter.user.repository.UserRepository
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.authentication.BadCredentialsException
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -13,8 +16,40 @@ import java.util.UUID
 @Service
 class UserService(
     private val userRepository: UserRepository,
+    private val passwordEncoder: PasswordEncoder,
     @Value("\${app.auth.registration.enabled:true}") private val registrationEnabled: Boolean = true
 ) {
+
+    /**
+     * Admin-only user creation. Bypasses the registration.enabled gate.
+     * Throws IllegalStateException (409) if email already exists.
+     */
+    @Transactional
+    fun createUserByAdmin(
+        email: String,
+        rawPassword: String,
+        name: String?,
+        roles: Set<Role>?,
+        temporary: Boolean = false
+    ): User {
+        if (userRepository.findByEmail(email) != null) {
+            throw IllegalStateException("Email already registered")
+        }
+        val user = User(email = email).apply {
+            this.name = name
+            this.passwordHash = passwordEncoder.encode(rawPassword)
+            this.passwordTemporary = temporary
+            providers.add(AuthProvider.LOCAL)
+            if (!roles.isNullOrEmpty()) {
+                this.roles.clear()
+                this.roles.addAll(roles)
+            }
+            if (temporary) {
+                this.requiredActions.add(RequiredAction.UPDATE_PASSWORD)
+            }
+        }
+        return userRepository.save(user)
+    }
 
     @Transactional
     fun findOrCreateGoogleUser(

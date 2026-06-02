@@ -25,8 +25,12 @@ class AuthController(
     @PostMapping("/refresh")
     fun refresh(@Valid @RequestBody request: RefreshRequest): ResponseEntity<AuthResponse> {
         val (user, newRawToken) = refreshTokenService.rotate(request.refreshToken)
-        val accessToken = tokenService.generateAccessToken(user.id, user.roles)
-        return ResponseEntity.ok(AuthResponse(accessToken = accessToken, refreshToken = newRawToken))
+        val accessToken = tokenService.generateAccessToken(user.id, user.roles, user.requiredActions)
+        return ResponseEntity.ok(AuthResponse(
+            accessToken = accessToken,
+            refreshToken = newRawToken,
+            requiredActions = user.requiredActions.map { it.name }
+        ))
     }
 
     @Operation(summary = "Revoke a refresh token", security = [])

@@ -31,6 +31,9 @@ class User(
     @Column(name = "password_hash")
     var passwordHash: String? = null  // Only set for LOCAL email provider
 
+    @Column(name = "password_temporary", nullable = false)
+    var passwordTemporary: Boolean = false  // Admin-set temp password; user must change on next login
+
     @Column(name = "phone", unique = true)
     var phone: String? = null  // E.164 format; set for LOCAL phone users
 
@@ -68,6 +71,17 @@ class User(
     @CollectionTable(name = "user_roles", schema = "auth", joinColumns = [JoinColumn(name = "user_id")])
     @Column(name = "role")
     var roles: MutableSet<Role> = mutableSetOf(Role.USER)
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @Enumerated(EnumType.STRING)
+    @CollectionTable(
+        name = "user_required_actions",
+        schema = "auth",
+        joinColumns = [JoinColumn(name = "user_id")],
+        uniqueConstraints = [UniqueConstraint(columnNames = ["user_id", "action"])]
+    )
+    @Column(name = "action")
+    var requiredActions: MutableSet<RequiredAction> = mutableSetOf()
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -3,6 +3,7 @@ package kz.innlab.starter.authentication.service
 import kz.innlab.starter.authentication.model.VerificationPurpose
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
 import kz.innlab.starter.user.model.AuthProvider
+import kz.innlab.starter.user.model.RequiredAction
 import kz.innlab.starter.user.repository.UserRepository
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.authentication.BadCredentialsException
@@ -50,6 +51,8 @@ class AccountManagementService(
             ?: throw BadCredentialsException("Invalid verification code")
 
         user.passwordHash = passwordEncoder.encode(newPassword)
+        user.passwordTemporary = false
+        user.requiredActions.remove(RequiredAction.UPDATE_PASSWORD)
         userRepository.save(user)
         refreshTokenRepository.deleteAllByUser(user)
     }
@@ -73,6 +76,8 @@ class AccountManagementService(
         }
 
         user.passwordHash = passwordEncoder.encode(newPassword)
+        user.passwordTemporary = false
+        user.requiredActions.remove(RequiredAction.UPDATE_PASSWORD)
         userRepository.save(user)
         refreshTokenRepository.deleteAllByUser(user)
     }
