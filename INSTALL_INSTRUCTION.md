@@ -59,7 +59,7 @@
         <dependency>
             <groupId>kz.innlab</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>0.0.6</version>
+            <version>0.0.7</version>
         </dependency>
 
         <dependency>
@@ -318,7 +318,7 @@ cd /path/to/{projectName}/backend && ./mvnw spring-boot:run
 
 ## 1. Publish Starter
 
-> **Starter уже опубликован на Maven Central** под `kz.innlab:auth-spring-boot-starter:0.0.6`.
+> **Starter уже опубликован на Maven Central** под `kz.innlab:auth-spring-boot-starter:0.0.7`.
 > Если ты **используешь** starter — переходи к §2. Эта секция нужна только если ты **форкнул** его и публикуешь свой вариант.
 
 ### Option A: Maven Central (canonical, no extra config for consumers)
@@ -473,7 +473,7 @@ Artifact goes to `~/.m2/repository`. Works only on your machine.
 <dependency>
     <groupId>kz.innlab</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>0.0.6</version>
+    <version>0.0.7</version>
 </dependency>
 ```
 
@@ -513,7 +513,7 @@ repositories {
 }
 
 dependencies {
-    implementation("kz.innlab:auth-spring-boot-starter:0.0.6")
+    implementation("kz.innlab:auth-spring-boot-starter:0.0.7")
 }
 ```
 
@@ -536,7 +536,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'kz.innlab:auth-spring-boot-starter:0.0.6'
+    implementation 'kz.innlab:auth-spring-boot-starter:0.0.7'
 }
 ```
 
@@ -686,6 +686,12 @@ app:
   notification:
     token:
       max-per-user: 5
+
+  # --- Twilio (WhatsApp-first OTP delivery with SMS fallback) ---
+  # Starter везёт bundled defaults — копировать ключи здесь НЕ обязательно.
+  # Достаточно выставить env vars: TWILIO_ENABLED, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN,
+  # TWILIO_WHATSAPP_ENABLED, TWILIO_WHATSAPP_FROM, TWILIO_WHATSAPP_TEMPLATE_SID,
+  # TWILIO_SMS_ENABLED, TWILIO_SMS_FROM. См. §4 «Twilio (WhatsApp + SMS OTP)».
 ```
 
 > **Перекрытие bundled-конфига starter-а.** Auth-starter везёт внутри jar свой `application-dev.yaml` с `DB_NAME:template/DB_USERNAME:postgres`. Твой `application-dev.yml` в `src/main/resources/` его перекрывает — поэтому он **обязателен**, даже если ты ничего не дополняешь сверху. Если файла нет — приложение полезет в `template` базу и упадёт.
@@ -800,6 +806,40 @@ Set `FIREBASE_CREDENTIALS_PATH` env variable pointing to the service account JSO
 | `app.mail.retry.max-attempts` | int | `3` | Max retry attempts for failed sends |
 | `app.mail.retry.delay-ms` | long | `5000` | Delay between retries (ms) |
 
+### Twilio (WhatsApp + SMS OTP)
+
+OTP delivery идёт через `OtpDeliveryService`: сначала WhatsApp, при ошибке (`RuntimeException` от Twilio) — fallback на SMS. Если `app.twilio.whatsapp.enabled=false` или bean не зарегистрирован — звонят сразу в `SmsService` (`TwilioSmsService` при `app.twilio.sms.enabled=true`, иначе `ConsoleSmsService`).
+
+**Bundled defaults.** Starter везёт внутри jar полный `app.twilio.*` блок с env-driven defaults (всё off). В consumer-овском `application*.yml` ничего копировать не надо — достаточно выставить env vars (см. ниже). Если нужен hard-coded override — просто переопредели нужный ключ в своём yaml.
+
+| Property | Env var (bundled default) | Type | Default | Description |
+|----------|---------------------------|------|---------|-------------|
+| `app.twilio.enabled` | `TWILIO_ENABLED` | boolean | `false` | Master toggle. Без него `TwilioConfig` не загружается и Twilio SDK не инициализируется. |
+| `app.twilio.account-sid` | `TWILIO_ACCOUNT_SID` | string | `""` | Twilio Account SID (AC…). Required when `enabled=true`. |
+| `app.twilio.auth-token` | `TWILIO_AUTH_TOKEN` | string | `""` | Twilio Auth Token. Required when `enabled=true`. |
+| `app.twilio.whatsapp.enabled` | `TWILIO_WHATSAPP_ENABLED` | boolean | `false` | Регистрирует `TwilioWhatsAppService` как `WhatsAppService` bean. `OtpDeliveryService` пытается его первым. |
+| `app.twilio.whatsapp.from` | `TWILIO_WHATSAPP_FROM` | string | `""` | E.164-номер, зарегистрированный в Twilio Console под WhatsApp. **Без** префикса `whatsapp:` — добавляется автоматически. |
+| `app.twilio.whatsapp.content-sid` | `TWILIO_WHATSAPP_TEMPLATE_SID` | string | `""` | Approved Content Template SID (`HX…`). Business-initiated WhatsApp требует pre-approved template — раздать произвольный текст нельзя. Шаблон должен иметь одну переменную `{{1}}` под OTP-код. |
+| `app.twilio.sms.enabled` | `TWILIO_SMS_ENABLED` | boolean | `false` | Регистрирует `TwilioSmsService` как `SmsService`. Console-default (`ConsoleSmsService`) при этом backoff'ится через `@ConditionalOnMissingBean`. |
+| `app.twilio.sms.from` | `TWILIO_SMS_FROM` | string | `""` | E.164 sender или alphanumeric sender ID (где разрешено). |
+
+**Prod-минимум — только env vars:**
+```bash
+export TWILIO_ENABLED=true
+export TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+export TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+export TWILIO_WHATSAPP_ENABLED=true
+export TWILIO_WHATSAPP_FROM=+14155238886
+export TWILIO_WHATSAPP_TEMPLATE_SID=HXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+export TWILIO_SMS_ENABLED=true
+export TWILIO_SMS_FROM=+14155551234
+```
+
+> **WhatsApp Content Template.** Создай в Twilio Console → Content Editor → Authentication template, одна переменная `{{1}}` — код OTP. После approval скопируй SID (`HX…`) в `TWILIO_WHATSAPP_TEMPLATE_SID`.
+> **Sandbox dev.** Для теста используй Twilio WhatsApp Sandbox — `from` = `+14155238886`, user должен «join <sandbox-code>» со своего номера. Sandbox не требует approved template.
+> **Fallback семантика.** Любой `RuntimeException` (включая `com.twilio.exception.ApiException`) от WhatsApp triggers SMS. `Error` (OOM и пр.) НЕ перехватывается — propagates наружу.
+> **IDE warnings.** IntelliJ может ругаться "Cannot resolve configuration property" на `app.twilio.*` ключи — это cosmetic, runtime binding работает. Чтобы убрать — нужен kapt + `spring-boot-configuration-processor` на стороне starter-а.
+
 ### CORS
 
 | Property | Type | Default | Description |
@@ -824,13 +864,29 @@ Set `FIREBASE_CREDENTIALS_PATH` env variable pointing to the service account JSO
 
 ## 5. Override Default Services
 
-The starter provides console-logging defaults for SMS, email, and push. Override them by declaring your own beans:
+The starter provides console-logging defaults for SMS, email, and push. Override them by declaring your own beans.
+
+OTP delivery теперь идёт через `OtpDeliveryService` — оркестратор с цепочкой **WhatsApp → SMS**:
+- если зарегистрирован bean `WhatsAppService` — пытаемся послать через WhatsApp;
+- если он бросает `RuntimeException` — fallback на `SmsService`;
+- если WhatsApp bean отсутствует — звонок сразу в SMS.
+
+Twilio implementations (`TwilioWhatsAppService`, `TwilioSmsService`) уже встроены в starter — включаются конфигом из §4. Если нужен другой провайдер (Vonage, MessageBird, in-house gateway) — зарегистрируй собственные beans:
 
 ```kotlin
 @Configuration
 class MyServiceOverrides {
 
-    // SMS provider (e.g., Twilio)
+    // WhatsApp provider — пробуется первым в OtpDeliveryService.
+    // ДОЛЖЕН throw на сбое доставки, иначе fallback на SMS не сработает.
+    @Bean
+    fun whatsAppService(): WhatsAppService = object : WhatsAppService {
+        override fun sendCode(phone: String, code: String) {
+            // your implementation. Throw RuntimeException on delivery failure.
+        }
+    }
+
+    // SMS provider (fallback channel)
     @Bean
     fun smsService(): SmsService = object : SmsService {
         override fun sendCode(phone: String, code: String) {
@@ -856,7 +912,7 @@ class MyServiceOverrides {
 }
 ```
 
-The default implementations use `@ConditionalOnMissingBean`, so your beans take priority automatically.
+The default implementations use `@ConditionalOnMissingBean`, so your beans take priority automatically. `WhatsAppService` имеет **no default bean** — `OtpDeliveryService` инжектит его как `Optional<WhatsAppService>` и тихо skip'ает WhatsApp-leg, если bean не найден.
 
 ---
 
@@ -966,6 +1022,7 @@ Generate the bcrypt hash with `org.springframework.security.crypto.bcrypt.BCrypt
 - [ ] PostgreSQL поднят (`docker compose up -d postgres`)
 - [ ] (Prod) сгенерирован JWT keystore, `app.security.jwt.*` через env vars
 - [ ] (Prod) `APP_CORS_ALLOWED_ORIGINS` выставлен
-- [ ] (Optional) Реализованы `SmsService` / `EmailService` / `TelegramBotService` для реальной доставки
+- [ ] (Optional) Реализованы `SmsService` / `WhatsAppService` / `EmailService` / `TelegramBotService` для реальной доставки
+- [ ] (Optional) Twilio WhatsApp+SMS: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`, `TWILIO_WHATSAPP_TEMPLATE_SID` (HX…), `TWILIO_SMS_FROM` через env vars
 - [ ] (Optional) Telegram bot: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_SECRET` через env vars
 - [ ] (Optional) Firebase для push (`FIREBASE_CREDENTIALS_PATH`)

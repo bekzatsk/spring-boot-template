@@ -51,6 +51,17 @@ app:
       max-per-user: ${NOTIFICATION_MAX_TOKENS_PER_USER:5}
   firebase:
     enabled: ${FIREBASE_ENABLED:false}
+  twilio:
+    enabled: ${TWILIO_ENABLED:false}
+    account-sid: ${TWILIO_ACCOUNT_SID:}
+    auth-token: ${TWILIO_AUTH_TOKEN:}
+    whatsapp:
+      enabled: ${TWILIO_WHATSAPP_ENABLED:false}
+      from: ${TWILIO_WHATSAPP_FROM:}
+      content-sid: ${TWILIO_WHATSAPP_TEMPLATE_SID:}
+    sms:
+      enabled: ${TWILIO_SMS_ENABLED:false}
+      from: ${TWILIO_SMS_FROM:}
   mail:
     enabled: ${MAIL_ENABLED:false}
     encryption-key: ${MAIL_ENCRYPTION_KEY:}

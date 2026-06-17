@@ -17,7 +17,7 @@ class AccountManagementService(
     private val userRepository: UserRepository,
     private val verificationCodeService: VerificationCodeService,
     private val emailService: EmailService,
-    private val smsService: SmsService,
+    private val otpDeliveryService: OtpDeliveryService,
     private val passwordEncoder: PasswordEncoder,
     private val refreshTokenRepository: RefreshTokenRepository
 ) {
@@ -147,7 +147,7 @@ class AccountManagementService(
         val (verificationId, code) = verificationCodeService.createCode(
             userId.toString(), VerificationPurpose.CHANGE_PHONE, newValue = phoneE164, userId = userId
         )
-        smsService.sendCode(phoneE164, code)
+        otpDeliveryService.sendCode(phoneE164, code)
         return verificationId
     }
 

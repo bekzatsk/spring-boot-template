@@ -13,7 +13,7 @@ import java.util.UUID
 @Service
 class SmsVerificationService(
     private val smsVerificationRepository: SmsVerificationRepository,
-    private val smsService: SmsService,
+    private val otpDeliveryService: OtpDeliveryService,
     private val passwordEncoder: PasswordEncoder,
     @Value("\${app.auth.sms.dev-code:}") private val devCode: String = ""
 ) {
@@ -43,7 +43,7 @@ class SmsVerificationService(
                 expiresAt = Instant.now().plusSeconds(EXPIRY_MINUTES * 60)
             )
         )
-        smsService.sendCode(phoneE164, code)
+        otpDeliveryService.sendCode(phoneE164, code)
         return saved.id
     }
 

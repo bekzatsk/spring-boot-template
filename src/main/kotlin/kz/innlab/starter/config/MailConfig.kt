@@ -2,7 +2,6 @@ package kz.innlab.starter.config
 
 import kz.innlab.starter.authentication.service.EmailService
 import kz.innlab.starter.notification.repository.MailHistoryRepository
-import kz.innlab.starter.notification.service.ConsoleEmailService
 import kz.innlab.starter.notification.service.ConsoleMailService
 import kz.innlab.starter.notification.service.ExternalMailService
 import kz.innlab.starter.notification.service.MailDispatcher
@@ -67,10 +66,6 @@ class MailConfig {
     // --- Fallback (console logging) ---
 
     @Bean
-    @ConditionalOnMissingBean(MailService::class)
-    fun consoleMailService(): MailService = ConsoleMailService()
-
-    @Bean
-    @ConditionalOnMissingBean(EmailService::class)
-    fun consoleEmailService(): EmailService = ConsoleEmailService()
+    @ConditionalOnMissingBean(value = [MailService::class, EmailService::class])
+    fun consoleMailService(): ConsoleMailService = ConsoleMailService()
 }
