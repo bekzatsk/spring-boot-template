@@ -805,6 +805,17 @@ Set `FIREBASE_CREDENTIALS_PATH` env variable pointing to the service account JSO
 | `app.mail.imap.ssl-enabled` | boolean | `true` | Enable SSL for IMAP |
 | `app.mail.retry.max-attempts` | int | `3` | Max retry attempts for failed sends |
 | `app.mail.retry.delay-ms` | long | `5000` | Delay between retries (ms) |
+| `app.mail.encryption-key` | string | — | AES-256 key for encrypting SMTP passwords at rest (если хранишь в БД) |
+| `app.mail.external.base-url` | string | — | URL внешнего mail-микросервиса (см. `MAIL_API_README.md`). Если задан — активируется `ExternalMailService` вместо SMTP |
+| `app.mail.external.master-key` | string | — | Master API key для external mail service, шлётся в header `X-Api-Key` |
+
+**Приоритет backend'ов** (от старшего к младшему):
+
+1. `app.mail.external.base-url` задан → `ExternalMailService` (HTTP → внешний сервис)
+2. `app.mail.enabled=true` + SMTP конфиг → `SmtpMailService` (прямой SMTP через JavaMailSender)
+3. Дефолт → `ConsoleMailService` (логирует в console, не шлёт реально)
+
+Все три bean реализуют `MailService` + `EmailService` — код потребителя не меняется при переключении.
 
 ### Twilio (WhatsApp + SMS OTP)
 
@@ -916,6 +927,158 @@ The default implementations use `@ConditionalOnMissingBean`, so your beans take 
 
 ---
 
+## 5.1 Использование `MailService` из downstream-кода
+
+Starter регистрирует bean `MailService` через auto-config. Любой `@Service` / `@Component` в твоём проекте может его инжектить — конкретная реализация выбирается из конфига (см. §4 → "Приоритет backend'ов").
+
+### Интерфейсы
+
+```kotlin
+// kz.innlab.starter.notification.service.MailService
+interface MailService {
+    fun send(to: String, subject: String, textBody: String? = null,
+             htmlBody: String? = null, attachments: List<EmailAttachment> = emptyList())
+
+    fun sendEmail(userId: UUID, to: String, subject: String, textBody: String? = null,
+                  htmlBody: String? = null, attachments: List<EmailAttachment> = emptyList()): UUID
+}
+
+// kz.innlab.starter.authentication.service.EmailService
+interface EmailService {
+    fun sendCode(to: String, code: String, purpose: String)
+}
+```
+
+| Метод | Запись в `auth.mail_history` | Требует `userId` из `auth.users` |
+|---|---|---|
+| `MailService.send()` | нет | нет |
+| `MailService.sendEmail()` | **да** (возвращает `UUID`) | **да** (FK constraint) |
+| `EmailService.sendCode()` | нет | нет |
+
+### Пример: отправка письма с tracking
+
+```kotlin
+package com.example.myapp
+
+import kz.innlab.starter.notification.service.MailService
+import org.springframework.stereotype.Service
+import java.util.UUID
+
+@Service
+class OrderNotifier(private val mailService: MailService) {
+
+    fun notifyOrderShipped(userId: UUID, userEmail: String, orderId: String) {
+        val mailId: UUID = mailService.sendEmail(
+            userId = userId,
+            to = userEmail,
+            subject = "Order $orderId shipped",
+            textBody = "Your order is on the way.",
+            htmlBody = "<h1>Order $orderId</h1><p>Shipped!</p>"
+        )
+        // mailId сохранён в auth.mail_history
+        // user может посмотреть историю через GET /api/v1/mail/history
+    }
+}
+```
+
+### Пример: системный алерт без tracking
+
+```kotlin
+@Service
+class SystemAlerts(private val mailService: MailService) {
+    fun alertAdmins(message: String) {
+        mailService.send(
+            to = "admin@example.com",
+            subject = "[ALERT]",
+            textBody = message
+        )
+    }
+}
+```
+
+### Пример: с attachments
+
+```kotlin
+import kz.innlab.starter.notification.service.EmailAttachment
+
+val pdf = EmailAttachment(
+    filename = "invoice.pdf",
+    contentType = "application/pdf",
+    bytes = pdfBytes
+)
+mailService.sendEmail(
+    userId = userId,
+    to = "user@example.com",
+    subject = "Invoice",
+    htmlBody = "<b>Your invoice attached</b>",
+    attachments = listOf(pdf)
+)
+```
+
+### Какой backend сработает
+
+| `application.yml` downstream | Активный bean | Поведение |
+|---|---|---|
+| `app.mail.external.base-url: http://...` + `master-key` | `ExternalMailService` | HTTP POST на external сервис (см. `MAIL_API_README.md`) |
+| `app.mail.enabled: true` + `app.mail.smtp.*` | `SmtpMailService` | прямой SMTP через JavaMailSender, retry по `app.mail.retry.*` |
+| Без конфига | `ConsoleMailService` | логирует `[MAIL] Sending email to ...` в stdout, реально не шлёт |
+
+**Важно:** при `ConsoleMailService` метод **не бросает исключение** — `sendEmail()` возвращает валидный `UUID`, но письмо никуда не уйдёт. Используется только для dev/test. На проде задай один из реальных backend'ов.
+
+### Конфиг external mail microservice
+
+```yaml
+app:
+  mail:
+    external:
+      base-url: ${MAIL_SERVICE_URL}            # напр. http://mail.internal:8080
+      master-key: ${MAIL_SERVICE_MASTER_KEY}   # ключ из .env mail-сервиса
+```
+
+### Конфиг прямого SMTP
+
+```yaml
+app:
+  mail:
+    enabled: true
+    smtp:
+      host: ${SMTP_HOST}
+      port: ${SMTP_PORT:587}
+      username: ${SMTP_USERNAME}
+      password: ${SMTP_PASSWORD}
+      from: ${SMTP_FROM:noreply@example.com}
+      ssl-enabled: ${SMTP_SSL_ENABLED:false}
+    retry:
+      max-attempts: 3
+      delay-ms: 5000
+```
+
+### Ограничения
+
+- `MailService.sendEmail(userId, ...)` падает с FK violation если `userId` не существует в `auth.users`. Для писем не привязанных к auth user — используй `send()`
+- `ExternalMailService` использует один master key — все письма идут под одним client'ом во внешнем сервисе
+- При SMTP retry — exception пробрасывается **только после исчерпания** `max-attempts`
+- HTML auto-detect: `MailService.send()` определяет HTML по наличию `<tags>` если `htmlBody` не задан явно
+
+### Минимальный smoke-test (downstream)
+
+```kotlin
+@RestController
+class DebugController(private val mailService: MailService) {
+    @GetMapping("/debug/mail-test")
+    fun testMail(): String {
+        mailService.send(
+            to = "test@example.com",
+            subject = "Test from starter",
+            textBody = "Works."
+        )
+        return "Check logs (console mode) or inbox (smtp/external mode)"
+    }
+}
+```
+
+---
+
 ## 6. Database
 
 The starter requires **PostgreSQL**. Flyway migrations are bundled and create all tables on first startup.
@@ -1008,6 +1171,32 @@ Generate the bcrypt hash with `org.springframework.security.crypto.bcrypt.BCrypt
 | `403 {"requiredActions":["UPDATE_PASSWORD"]}` на любом endpoint | JWT carries non-empty `required_actions` claim — `RequiredActionFilter` блокирует всё кроме allowlist | Юзер должен вызвать `POST /api/v1/users/me/change-password`. После — re-login, claim очистится |
 | `Email already registered` (409) при `POST /admin/users` | Email занят в `auth.users` | Используй другой email, или PATCH существующего юзера |
 | `Cannot remove last ADMIN` (409) | Попытка снять ADMIN-роль / удалить единственного админа | Сначала promote другого юзера в ADMIN, затем повтори |
+| `NoUniqueBeanDefinitionException: EmailService` на старте (версии **0.0.6 / 0.0.7**) | В `MailConfig` было два fallback bean (`consoleMailService` + `consoleEmailService`), а `ConsoleMailService` уже реализует `EmailService` → Spring Boot 4 видит 2 кандидата на `EmailService`. На проде каскад `EntityManagerFactory closed` во всех `@Scheduled`/async тредах | Обнови starter до **0.0.8+**. В 0.0.8 fallback объединён: один bean `ConsoleMailService` под `@ConditionalOnMissingBean(value = [MailService::class, EmailService::class])` покрывает оба интерфейса |
+
+---
+
+## Версии и breaking changes
+
+### 0.0.8 (2026-06-18) — FIX: дубликат `EmailService` bean
+
+**Проблема (0.0.6, 0.0.7):**
+- `MailConfig` регистрировал два fallback bean: `consoleMailService(): MailService` и `consoleEmailService(): EmailService`.
+- `ConsoleMailService` реализует **оба** интерфейса (`MailService, EmailService`). Spring регистрировал его под обоими супер-типами + отдельный `ConsoleEmailService` под `EmailService` → 2 кандидата на `EmailService` → `NoUniqueBeanDefinitionException`.
+- На Spring Boot 4 контекст не поднимается при `app.mail.enabled=false` (дефолт), любой consumer с `private val emailService: EmailService` в конструкторе валится.
+
+**Фикс в 0.0.8:**
+```kotlin
+// MailConfig.kt
+@Bean
+@ConditionalOnMissingBean(value = [MailService::class, EmailService::class])
+fun consoleMailService(): ConsoleMailService = ConsoleMailService()
+```
+- Возвращаемый тип — конкретный класс → Spring регистрирует под обоими интерфейсами.
+- `ConsoleEmailService` удалён.
+
+**Что делать downstream:**
+- Подняться на `0.0.8` в `pom.xml`.
+- Никаких изменений в коде потребителя не нужно — `EmailService` инжектится по-прежнему.
 
 ---
 

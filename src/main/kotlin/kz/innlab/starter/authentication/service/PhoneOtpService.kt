@@ -1,6 +1,7 @@
 package kz.innlab.starter.authentication.service
 
 import kz.innlab.starter.authentication.dto.AuthResponse
+import kz.innlab.starter.authentication.dto.OtpSendResult
 import kz.innlab.starter.user.service.UserService
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.security.authentication.BadCredentialsException
@@ -22,10 +23,11 @@ class PhoneOtpService(
      * Phone number is normalized to E.164 before sending.
      * Throws IllegalArgumentException (-> 400) on invalid phone format.
      * Throws IllegalStateException (-> 409) if rate limit exceeded (1 request per phone per 60s).
-     * Returns the UUID of the created SmsVerification record, to be passed back to the verify endpoint.
+     * Returns an OtpSendResult with the verification UUID (to pass back to the verify endpoint)
+     * and the resend cooldown info for the client.
      * TODO: return a dedicated 429 Too Many Requests response for rate limit violations.
      */
-    fun sendOtp(rawPhone: String): UUID {
+    fun sendOtp(rawPhone: String): OtpSendResult {
         val phoneE164 = normalizeToE164(rawPhone)
         return smsVerificationService.sendCode(phoneE164)
     }

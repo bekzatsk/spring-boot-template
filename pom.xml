@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>kz.innlab</groupId>
 	<artifactId>auth-spring-boot-starter</artifactId>
-	<version>0.0.8</version>
+	<version>0.0.9</version>
 	<name>auth-spring-boot-starter</name>
 	<description>Spring Boot Starter for JWT authentication with Google, Apple, local, and phone OTP login</description>
 	<url>https://github.com/bekzatsk/spring-boot-template</url>
@@ -118,12 +118,11 @@
 			<version>8.13.52</version>
 		</dependency>
 
-		<!-- Twilio SDK for WhatsApp + SMS OTP delivery (optional: only loaded when consumer enables) -->
+		<!-- Twilio SDK for WhatsApp + SMS OTP delivery (transitive: consumers don't need to declare separately) -->
 		<dependency>
 			<groupId>com.twilio.sdk</groupId>
 			<artifactId>twilio</artifactId>
 			<version>11.3.3</version>
-			<optional>true</optional>
 		</dependency>
 
 		<dependency>

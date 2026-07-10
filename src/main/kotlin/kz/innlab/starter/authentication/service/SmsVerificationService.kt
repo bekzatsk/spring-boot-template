@@ -1,5 +1,6 @@
 package kz.innlab.starter.authentication.service
 
+import kz.innlab.starter.authentication.dto.OtpSendResult
 import kz.innlab.starter.authentication.model.SmsVerification
 import kz.innlab.starter.authentication.repository.SmsVerificationRepository
 import org.springframework.beans.factory.annotation.Value
@@ -27,9 +28,10 @@ class SmsVerificationService(
     }
 
     @Transactional
-    fun sendCode(phoneE164: String): UUID {
+    fun sendCode(phoneE164: String): OtpSendResult {
+        val now = Instant.now()
         // Rate limit: max 1 OTP request per phone per 60 seconds
-        if (smsVerificationRepository.existsByPhoneAndCreatedAtAfter(phoneE164, Instant.now().minusSeconds(RATE_LIMIT_SECONDS))) {
+        if (smsVerificationRepository.existsByPhoneAndCreatedAtAfter(phoneE164, now.minusSeconds(RATE_LIMIT_SECONDS))) {
             throw IllegalStateException("Please wait before requesting a new code")
         }
         val code = if (devCode.isNotBlank()) devCode else String.format("%06d", random.nextInt(CODE_BOUND))
@@ -40,11 +42,15 @@ class SmsVerificationService(
             SmsVerification(
                 phone = phoneE164,
                 codeHash = hash,
-                expiresAt = Instant.now().plusSeconds(EXPIRY_MINUTES * 60)
+                expiresAt = now.plusSeconds(EXPIRY_MINUTES * 60)
             )
         )
         otpDeliveryService.sendCode(phoneE164, code)
-        return saved.id
+        return OtpSendResult(
+            verificationId = saved.id,
+            resendAvailableAt = now.plusSeconds(RATE_LIMIT_SECONDS),
+            retryAfterSeconds = RATE_LIMIT_SECONDS
+        )
     }
 
     @Transactional

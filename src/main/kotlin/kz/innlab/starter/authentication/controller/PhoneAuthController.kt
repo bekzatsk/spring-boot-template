@@ -25,8 +25,14 @@ class PhoneAuthController(
     @Operation(summary = "Request SMS OTP code for phone authentication", security = [])
     @PostMapping("/phone/request")
     fun requestPhoneOtp(@Valid @RequestBody request: PhoneOtpRequest): ResponseEntity<Map<String, Any>> {
-        val verificationId = phoneOtpService.sendOtp(request.phone)
-        return ResponseEntity.ok(mapOf("verificationId" to verificationId))
+        val result = phoneOtpService.sendOtp(request.phone)
+        return ResponseEntity.ok(
+            mapOf(
+                "verificationId" to result.verificationId,
+                "resendAvailableAt" to result.resendAvailableAt,
+                "retryAfterSeconds" to result.retryAfterSeconds
+            )
+        )
     }
 
     @Operation(summary = "Verify SMS OTP code and authenticate", security = [])
