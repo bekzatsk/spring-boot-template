@@ -137,8 +137,9 @@ The starter auto-registers these endpoints:
 | `POST /api/v1/auth/telegram/verify` | Verify Telegram code |
 | `POST /api/v1/auth/telegram/resend` | Resend Telegram code |
 | `GET /api/v1/auth/telegram/status/{sessionId}` | Poll Telegram session status |
-| `POST /api/v1/auth/refresh` | Refresh access token |
-| `POST /api/v1/auth/revoke` | Revoke refresh token (logout) |
+| `POST /api/v1/auth/refresh` | Refresh access token (body or refresh cookie) |
+| `POST /api/v1/auth/revoke` | Revoke refresh token (body or refresh cookie) |
+| `POST /api/v1/auth/logout` | Revoke refresh cookie + clear auth cookies (cookie mode) |
 | `POST /api/v1/auth/forgot-password` | Request password reset code |
 | `POST /api/v1/auth/reset-password` | Reset password with code |
 
@@ -298,6 +299,37 @@ class MyService(
 | `app.auth.telegram.webhook-secret` | — | Secret token for webhook validation |
 | `app.auth.access-token.expiry-minutes` | `15` | JWT access token TTL in minutes. `1440` = 1 day, `60` = 1 hour. Env: `ACCESS_TOKEN_EXPIRY_MINUTES`. |
 | `app.auth.refresh-token.expiry-days` | `30` | Refresh token TTL. Env: `REFRESH_TOKEN_EXPIRY_DAYS`. |
+
+### httpOnly Cookie Auth (`app.auth.cookie`)
+
+Optional mode — access + refresh tokens delivered as `httpOnly`+`Secure`+`SameSite` cookies so a SPA never touches `localStorage` (XSS-safe). **Disabled by default; fully backward compatible.** When on, every auth endpoint (`login`, `register`, `google`, `apple`, `phone/verify`, `telegram/verify`, `refresh`) also sets cookies; the backend reads the access token from the cookie automatically (the `Authorization` header always wins for bearer/API-key clients).
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `app.auth.cookie.enabled` | `false` | Master switch. `false` = classic body-token behavior, no `Set-Cookie`. |
+| `app.auth.cookie.secure` | `true` | `Secure` attribute (HTTPS-only). |
+| `app.auth.cookie.same-site` | `Strict` | `Strict` \| `Lax` \| `None`. `Strict`/`Lax` is the primary CSRF defense for same-origin SPAs. |
+| `app.auth.cookie.domain` | `""` | Cookie domain. Empty = host-only. |
+| `app.auth.cookie.path` | `/` | Cookie path. |
+| `app.auth.cookie.access-cookie-name` | `access_token` | Access-token cookie name. |
+| `app.auth.cookie.refresh-cookie-name` | `refresh_token` | Refresh-token cookie name. |
+| `app.auth.cookie.access-max-age-seconds` | (= access JWT TTL) | Access cookie `Max-Age`. Negative = derive from `access-token.expiry-minutes`. |
+| `app.auth.cookie.refresh-max-age-days` | `30` | Refresh cookie `Max-Age` in days. |
+| `app.auth.cookie.suppress-body-tokens` | `false` | When `true`, omit access/refresh from the JSON body (only `requiredActions` remains) — cookies become the sole transport. |
+
+**Refresh / revoke / logout:** `POST /refresh` and `/revoke` accept the refresh token from the body *or* the refresh cookie (body wins). `POST /logout` revokes the refresh cookie and clears both cookies (`Max-Age=0`); idempotent (no cookie → `204`).
+
+**CSRF:** with `SameSite=Strict` (or `Lax`) no extra CSRF token is needed for same-origin SPAs. Only if you must use `SameSite=None` (cross-site) should you add double-submit / `CookieCsrfTokenRepository` protection — not enabled by default.
+
+```yaml
+app:
+  auth:
+    cookie:
+      enabled: true
+      same-site: Strict     # Strict for same-origin SPA
+      secure: true          # HTTPS only
+      # suppress-body-tokens: true   # optional: cookies become the only transport
+```
 
 ### Database
 

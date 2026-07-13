@@ -1,11 +1,10 @@
 package kz.innlab.starter.notification.service
 
 import com.github.f4b6a3.uuid.UuidCreator
-import kz.innlab.starter.authentication.service.EmailService
 import org.slf4j.LoggerFactory
 import java.util.UUID
 
-class ConsoleMailService : MailService, EmailService {
+class ConsoleMailService : MailService {
 
     companion object {
         private val logger = LoggerFactory.getLogger(ConsoleMailService::class.java)
@@ -31,9 +30,5 @@ class ConsoleMailService : MailService, EmailService {
     ): UUID {
         logger.info("[MAIL] Sending tracked email to {}, subject: {}, hasAttachments: {}", to, subject, attachments.isNotEmpty())
         return UuidCreator.getTimeOrderedEpoch()
-    }
-
-    override fun sendCode(to: String, code: String, purpose: String) {
-        logger.info("[EMAIL] Sending {} code {} to {}", purpose, code, to)
     }
 }

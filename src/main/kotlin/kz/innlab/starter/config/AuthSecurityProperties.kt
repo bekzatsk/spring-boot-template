@@ -15,6 +15,7 @@ data class RequiredActionEnforcement(
         "/api/v1/users/me",
         "/api/v1/users/me/change-password",
         "/api/v1/auth/refresh",
-        "/api/v1/auth/revoke"
+        "/api/v1/auth/revoke",
+        "/api/v1/auth/logout"
     )
 )

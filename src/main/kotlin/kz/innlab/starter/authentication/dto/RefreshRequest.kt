@@ -1,8 +1,9 @@
 package kz.innlab.starter.authentication.dto
 
-import jakarta.validation.constraints.NotBlank
-
+/**
+ * Refresh/revoke request body. [refreshToken] is optional: when blank, the refresh token is read
+ * from the refresh cookie (cookie mode). Priority is always body → cookie.
+ */
 data class RefreshRequest(
-    @field:NotBlank(message = "Refresh token is required")
     val refreshToken: String = ""
 )

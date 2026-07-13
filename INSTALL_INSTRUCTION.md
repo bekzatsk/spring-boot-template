@@ -726,6 +726,33 @@ app:
 | `app.auth.security.required-action.allowed-paths` | list | see below | Ant-pattern paths bypassed by the required-action filter. Default: `/api/v1/users/me`, `/api/v1/users/me/change-password`, `/api/v1/auth/refresh`, `/api/v1/auth/revoke`. |
 | `app.auth.security.public-paths` | list | — | Additional consumer-defined public paths that skip JWT auth. |
 
+### httpOnly Cookie Auth (`app.auth.cookie`) — опционально, по умолчанию OFF
+
+Режим, при котором access + refresh токены кладутся в `httpOnly`+`Secure`+`SameSite` cookie, а backend сам читает access-токен из cookie (заголовок `Authorization` **всегда** в приоритете — bearer/API-key клиенты не трогаются). SPA больше не хранит токены в `localStorage` → защита от XSS. **Полная обратная совместимость: при `enabled=false` (дефолт) `Set-Cookie` не появляется, resolver не активен.**
+
+Когда `enabled=true`, cookie ставятся централизованно (`AuthResponseCookieAdvice`) на всех точках выдачи `AuthResponse` — `local/login`, `local/register`, `google`, `apple`, `phone/verify`, `telegram/verify`, `refresh`.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `app.auth.cookie.enabled` | boolean | `false` | Мастер-переключатель. |
+| `app.auth.cookie.secure` | boolean | `true` | `Secure` (только HTTPS). |
+| `app.auth.cookie.same-site` | string | `Strict` | `Strict` \| `Lax` \| `None`. Основная защита от CSRF для same-origin SPA. |
+| `app.auth.cookie.domain` | string | `""` | Домен cookie. Пусто = host-only. |
+| `app.auth.cookie.path` | string | `/` | Path cookie. |
+| `app.auth.cookie.access-cookie-name` | string | `access_token` | Имя access-cookie. |
+| `app.auth.cookie.refresh-cookie-name` | string | `refresh_token` | Имя refresh-cookie. |
+| `app.auth.cookie.access-max-age-seconds` | long | `-1` (= TTL access-JWT) | `Max-Age` access-cookie. Отрицательное = взять из `access-token.expiry-minutes`. |
+| `app.auth.cookie.refresh-max-age-days` | long | `30` | `Max-Age` refresh-cookie в днях. |
+| `app.auth.cookie.suppress-body-tokens` | boolean | `false` | `true` → НЕ включать токены в JSON body (только `requiredActions`). Cookie становятся единственным транспортом. |
+
+**Refresh/revoke/logout из cookie:**
+- `POST /api/v1/auth/refresh` и `/revoke` берут refresh-токен из body **или** из refresh-cookie (приоритет body → cookie).
+- `POST /api/v1/auth/logout` — читает refresh-cookie → `revoke()`, чистит обе cookie (`Max-Age=0`). Идемпотентно (нет cookie → `204`). Добавлен в дефолтный `required-action.allowed-paths`.
+
+**CSRF:** при `SameSite=Strict`/`Lax` доп. CSRF-токен не нужен для same-origin SPA. Только для `SameSite=None` (кросс-домен) добавь double-submit / `CookieCsrfTokenRepository` — по умолчанию НЕ включено.
+
+**Аутентификация по cookie** реализована кастомным `BearerTokenResolver` (`CookieBearerTokenResolver`), зарегистрированным в `oauth2ResourceServer` только при `enabled=true`. Downstream JWT-логика не меняется.
+
 ### Actuator (bundled)
 
 `spring-boot-starter-actuator` идёт транзитивно через auth-starter. По умолчанию открыт только `/actuator/health`.
@@ -1171,11 +1198,69 @@ Generate the bcrypt hash with `org.springframework.security.crypto.bcrypt.BCrypt
 | `403 {"requiredActions":["UPDATE_PASSWORD"]}` на любом endpoint | JWT carries non-empty `required_actions` claim — `RequiredActionFilter` блокирует всё кроме allowlist | Юзер должен вызвать `POST /api/v1/users/me/change-password`. После — re-login, claim очистится |
 | `Email already registered` (409) при `POST /admin/users` | Email занят в `auth.users` | Используй другой email, или PATCH существующего юзера |
 | `Cannot remove last ADMIN` (409) | Попытка снять ADMIN-роль / удалить единственного админа | Сначала promote другого юзера в ADMIN, затем повтори |
-| `NoUniqueBeanDefinitionException: EmailService` на старте (версии **0.0.6 / 0.0.7**) | В `MailConfig` было два fallback bean (`consoleMailService` + `consoleEmailService`), а `ConsoleMailService` уже реализует `EmailService` → Spring Boot 4 видит 2 кандидата на `EmailService`. На проде каскад `EntityManagerFactory closed` во всех `@Scheduled`/async тредах | Обнови starter до **0.0.8+**. В 0.0.8 fallback объединён: один bean `ConsoleMailService` под `@ConditionalOnMissingBean(value = [MailService::class, EmailService::class])` покрывает оба интерфейса |
+| `NoUniqueBeanDefinitionException: EmailService` на старте (версии **0.0.6 / 0.0.7**) | В `MailConfig` было два fallback bean (`consoleMailService` + `consoleEmailService`), а `ConsoleMailService` уже реализует `EmailService` → Spring Boot 4 видит 2 кандидата на `EmailService`. На проде каскад `EntityManagerFactory closed` во всех `@Scheduled`/async тредах | Обнови starter до **0.0.11+**. Fallback разделён на два single-interface bean (`ConsoleMailService`=`MailService`, `ConsoleEmailService`=`EmailService`) — по одному кандидату на интерфейс |
+| `BeanNotOfRequiredTypeException: consoleMailService ожидался MailService, но EmailService$MockitoMock` / `Failed to load ApplicationContext` в тестах с `@MockitoBean EmailService` (**0.0.8 – 0.0.10**) | Объединённый dual-interface bean 0.0.8: mock `EmailService` подменял единственный bean → `MailController` терял `MailService` | Обнови до **0.0.11+** (fallback снова разделён) |
 
 ---
 
 ## Версии и breaking changes
+
+### 0.0.11 (2026-07-13) — FEAT: httpOnly-cookie аутентификация (опционально)
+
+**Что добавлено:**
+- Новый блок конфига `app.auth.cookie.*` (см. §4 → «httpOnly Cookie Auth»). По умолчанию `enabled=false` — **никаких изменений** для существующих body-token потребителей.
+- При `enabled=true`: access + refresh кладутся в `httpOnly`+`Secure`+`SameSite` cookie на всех точках выдачи `AuthResponse` (login/register/google/apple/phone-verify/telegram-verify/refresh) через централизованный `AuthResponseCookieAdvice` — без дублирования в контроллерах.
+- Access-токен читается из cookie кастомным `CookieBearerTokenResolver` (заголовок `Authorization` всегда в приоритете).
+- `POST /api/v1/auth/refresh` и `/revoke` принимают refresh из body **или** cookie (приоритет body → cookie).
+- Новый `POST /api/v1/auth/logout`: revoke refresh-cookie + очистка обеих cookie. Идемпотентно (204).
+- `suppress-body-tokens=true` — убрать токены из JSON body (cookie как единственный транспорт).
+
+**Новые/изменённые классы:**
+- `config/AuthCookieProperties.kt` (new), `authentication/cookie/{AuthCookieWriter, AuthResponseCookieAdvice, CookieBearerTokenResolver}.kt` (new).
+- `AuthController` — refresh/revoke из cookie + `logout`. `SecurityConfig` — регистрация resolver. `RefreshRequest` — `refreshToken` теперь опционален (снят `@NotBlank`; пустой body → cookie). `AuthSecurityProperties` — `/api/v1/auth/logout` добавлен в `required-action.allowed-paths`.
+
+**Что делать downstream:** ничего обязательного. Чтобы включить — выставь `app.auth.cookie.enabled=true` (+ `same-site`, `secure`).
+
+**Также в 0.0.11 — FIX: разделены console-fallback bean для mail.**
+- В 0.0.8 `MailService` + `EmailService` покрывались одним bean `ConsoleMailService` (dual-interface). Это ломало тесты с `@MockitoBean EmailService`: mock подменял единственный bean → `MailController` (ждёт `MailService`) падал с `BeanNotOfRequiredTypeException` / `Failed to load ApplicationContext`.
+- Теперь два раздельных single-interface bean: `ConsoleMailService` реализует только `MailService`, новый `ConsoleEmailService` — только `EmailService`. Каждый под своим `@ConditionalOnMissingBean`:
+  ```kotlin
+  @Bean @ConditionalOnMissingBean(MailService::class)
+  fun consoleMailService(): ConsoleMailService = ConsoleMailService()
+
+  @Bean @ConditionalOnMissingBean(EmailService::class)
+  fun consoleEmailService(): ConsoleEmailService = ConsoleEmailService()
+  ```
+- `NoUniqueBeanDefinition` (баг 0.0.6/0.0.7) НЕ возвращается: на каждый интерфейс по-прежнему ровно один кандидат — `Smtp`/`External` (dual-interface) отступают console-bean через `@ConditionalOnMissingBean`.
+- Prod-пути (SMTP / External) не тронуты. Downstream действий не требуется.
+
+---
+
+### 0.0.10 (2026-07-10) — FEAT: resend-cooldown в ответе `/auth/phone/request`
+
+**Что изменилось:**
+- `POST /api/v1/auth/phone/request` теперь возвращает не только `verificationId`, но и когда можно переотправить код — фронт рисует countdown-таймер без хардкода 60с.
+
+**Новый response body:**
+```json
+{
+  "verificationId": "0198e2c0-0000-7000-8000-000000000001",
+  "resendAvailableAt": "2026-07-10T12:34:56Z",
+  "retryAfterSeconds": 60
+}
+```
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `verificationId` | UUID | Передаётся обратно в `/auth/phone/verify` (как раньше). |
+| `resendAvailableAt` | ISO-8601 instant (UTC) | Абсолютное время, когда разрешён следующий запрос кода. Переживает reload/сдвиг часов клиента — предпочтительнее для UI. |
+| `retryAfterSeconds` | long | Длина cooldown-окна в секундах (сейчас `60` = `RATE_LIMIT_SECONDS`). Для countdown-таймера. |
+
+**Rate limit семантика (без изменений):** повторный запрос до истечения cooldown → `409` c `IllegalStateException("Please wait before requesting a new code")`. `resendAvailableAt` даёт фронту точное время, чтобы не ловить 409.
+
+**Что делать downstream:** ничего обязательного. Старые клиенты продолжают читать `verificationId`, лишние поля игнорируют. Новые — используют `resendAvailableAt` / `retryAfterSeconds` для UX.
+
+---
 
 ### 0.0.8 (2026-06-18) — FIX: дубликат `EmailService` bean
 
@@ -1193,6 +1278,8 @@ fun consoleMailService(): ConsoleMailService = ConsoleMailService()
 ```
 - Возвращаемый тип — конкретный класс → Spring регистрирует под обоими интерфейсами.
 - `ConsoleEmailService` удалён.
+
+> ⚠ **Отменено в 0.0.11.** Объединённый dual-interface bean 0.0.8 ломал тесты с `@MockitoBean EmailService` (mock подменял единственный bean → `MailController` терял `MailService`). В 0.0.11 fallback снова разделён на два single-interface bean (`ConsoleMailService` = только `MailService`, `ConsoleEmailService` = только `EmailService`), но `NoUniqueBeanDefinition` не возвращается — на каждый интерфейс ровно один кандидат. См. changelog 0.0.11.
 
 **Что делать downstream:**
 - Подняться на `0.0.8` в `pom.xml`.

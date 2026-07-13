@@ -1,5 +1,6 @@
 package kz.innlab.starter.config
 
+import kz.innlab.starter.authentication.cookie.CookieBearerTokenResolver
 import kz.innlab.starter.authentication.filter.ApiAccessDeniedHandler
 import kz.innlab.starter.authentication.filter.ApiAuthenticationEntryPoint
 import kz.innlab.starter.authentication.filter.RequiredActionFilter
@@ -24,10 +25,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties(CorsProperties::class, AuthSecurityProperties::class)
+@EnableConfigurationProperties(CorsProperties::class, AuthSecurityProperties::class, AuthCookieProperties::class)
 class SecurityConfig(
     private val corsProperties: CorsProperties,
     private val authSecurityProperties: AuthSecurityProperties,
+    private val authCookieProperties: AuthCookieProperties,
     private val jwtDecoder: JwtDecoder,
     private val authenticationEntryPoint: ApiAuthenticationEntryPoint,
     private val accessDeniedHandler: ApiAccessDeniedHandler,
@@ -70,6 +72,10 @@ class SecurityConfig(
                 jwt {
                     jwtDecoder = this@SecurityConfig.jwtDecoder
                     jwtAuthenticationConverter = jwtAuthenticationConverter()
+                }
+                // Cookie mode: read access token from cookie when no Authorization header (header always wins)
+                if (authCookieProperties.enabled) {
+                    bearerTokenResolver = CookieBearerTokenResolver(authCookieProperties.accessCookieName)
                 }
                 authenticationEntryPoint = this@SecurityConfig.authenticationEntryPoint
                 accessDeniedHandler = this@SecurityConfig.accessDeniedHandler
