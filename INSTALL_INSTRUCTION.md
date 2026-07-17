@@ -722,6 +722,7 @@ app:
 | `app.auth.access-token.expiry-minutes` | long | `15` | JWT access token TTL in minutes. Set to `1440` for 1 day, `60` for 1 hour. Env: `ACCESS_TOKEN_EXPIRY_MINUTES`. |
 | `app.auth.refresh-token.expiry-days` | int | `30` | Refresh token TTL in days. Env: `REFRESH_TOKEN_EXPIRY_DAYS`. |
 | `app.auth.registration.enabled` | boolean | `true` | Public self-registration. When `false`, social/phone/email signup paths reject new accounts — only ADMIN can create users via `/api/v1/admin/users`. |
+| `app.auth.email-verification.enabled` | boolean | `false` | Требовать подтверждение email для **новых LOCAL-регистраций**. `true` → `register()` выдаёт токены, но добавляет required-action `VERIFY_EMAIL` + шлёт код; доступ к защищённым API блокируется `RequiredActionFilter` (403) до `POST /verify-email`. Соц/телефон/существующие юзеры не затронуты. |
 | `app.auth.security.required-action.enabled` | boolean | `true` | Hard-enforce JWT `required_actions` claim. When `true`, every authenticated request whose token carries a non-empty `required_actions` list is rejected with `403` unless the path matches an allowlist entry. |
 | `app.auth.security.required-action.allowed-paths` | list | see below | Ant-pattern paths bypassed by the required-action filter. Default: `/api/v1/users/me`, `/api/v1/users/me/change-password`, `/api/v1/auth/refresh`, `/api/v1/auth/revoke`. |
 | `app.auth.security.public-paths` | list | — | Additional consumer-defined public paths that skip JWT auth. |
@@ -1204,6 +1205,23 @@ Generate the bcrypt hash with `org.springframework.security.crypto.bcrypt.BCrypt
 ---
 
 ## Версии и breaking changes
+
+### 0.0.12 (2026-07-16) — FEAT: подтверждение email при регистрации (опционально)
+
+**Что добавлено:**
+- Новый флаг `app.auth.email-verification.enabled` (дефолт `false` — **регистрация не меняется**).
+- При `true`: `POST /api/v1/auth/local/register` для нового email+password юзера → `emailVerified=false` + required-action `VERIFY_EMAIL` + код на почту (`EmailService.sendCode(email, code, "VERIFY_EMAIL")`). Токены выдаются (soft gate), но JWT несёт `required_actions:["VERIFY_EMAIL"]` → `RequiredActionFilter` даёт `403` на защищённые эндпоинты вне allowlist.
+- `POST /api/v1/auth/verify-email {email, verificationId, code}` → `emailVerified=true`, снимает action. После re-login/refresh JWT чистый.
+- `POST /api/v1/auth/verify-email/resend {email}` → новый код (rate-limit 1/60с, анти-энумерация).
+- Линковка LOCAL к соц-аккаунту НЕ требует повторной верификации. `emailVerified` в `GET /api/v1/users/me`.
+
+**Новые/изменённые классы:**
+- `VerificationPurpose` +`VERIFY_EMAIL`. `User` +`emailVerified: Boolean = true` (дефолт true — старые/соц/телефон юзеры не блокируются). Миграция `db/migration-auth/V7__add_email_verified.sql` (`email_verified BOOLEAN NOT NULL DEFAULT TRUE`).
+- `LocalAuthService.register` — гейт нового юзера. `AccountManagementService` +`verifyEmail`/`resendEmailVerification`. `LocalAuthController` +2 эндпоинта. DTO: `VerifyEmailRequest`, `ResendEmailVerificationRequest`. `AuthSecurityProperties` — verify-email пути в `required-action.allowed-paths`. `UserProfileResponse` +`emailVerified`.
+
+**Что делать downstream:** ничего обязательного. `RequiredAction.VERIFY_EMAIL` уже был в enum. Включить — `app.auth.email-verification.enabled=true` + реальный `EmailService` (иначе код только в console-логах).
+
+---
 
 ### 0.0.11 (2026-07-13) — FEAT: httpOnly-cookie аутентификация (опционально)
 

@@ -58,6 +58,41 @@ class AccountManagementService(
     }
 
     /**
+     * Verify email ownership with a code (unauthenticated).
+     * Clears the VERIFY_EMAIL required action so the user gains full access on next token issuance.
+     * Idempotent: an already-verified email succeeds without error.
+     */
+    @Transactional
+    fun verifyEmail(email: String, verificationId: UUID, code: String) {
+        val user = userRepository.findByEmail(email)
+            ?: throw BadCredentialsException("Invalid verification code")
+
+        if (user.emailVerified && RequiredAction.VERIFY_EMAIL !in user.requiredActions) {
+            return
+        }
+
+        verificationCodeService.verifyCode(verificationId, email, VerificationPurpose.VERIFY_EMAIL, code)
+
+        user.emailVerified = true
+        user.requiredActions.remove(RequiredAction.VERIFY_EMAIL)
+        userRepository.save(user)
+    }
+
+    /**
+     * Resend the email-verification code (unauthenticated).
+     * Anti-enumeration: returns verificationId only when a matching unverified user exists.
+     * Rate limiting (1/60s per email+purpose) is enforced by VerificationCodeService.
+     */
+    fun resendEmailVerification(email: String): UUID? {
+        val user = userRepository.findByEmail(email) ?: return null
+        if (user.emailVerified) return null
+
+        val (verificationId, code) = verificationCodeService.createCode(email, VerificationPurpose.VERIFY_EMAIL)
+        emailService.sendCode(email, code, "VERIFY_EMAIL")
+        return verificationId
+    }
+
+    /**
      * Change password (authenticated).
      * Verifies current password, updates to new password, revokes all refresh tokens.
      */

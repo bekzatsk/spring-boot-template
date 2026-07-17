@@ -12,6 +12,7 @@ data class UserProfileResponse(
     val providers: List<String>,
     val roles: List<String>,
     val passwordTemporary: Boolean,
+    val emailVerified: Boolean,
     val requiredActions: List<String>,
     val createdAt: Instant?
 ) {
@@ -25,6 +26,7 @@ data class UserProfileResponse(
             providers = user.providers.map { it.name },
             roles = user.roles.map { it.name },
             passwordTemporary = user.passwordTemporary,
+            emailVerified = user.emailVerified,
             requiredActions = user.requiredActions.map { it.name },
             createdAt = user.createdAt
         )

@@ -7,7 +7,9 @@ import kz.innlab.starter.authentication.dto.AuthResponse
 import kz.innlab.starter.authentication.dto.ForgotPasswordRequest
 import kz.innlab.starter.authentication.dto.LocalLoginRequest
 import kz.innlab.starter.authentication.dto.LocalRegisterRequest
+import kz.innlab.starter.authentication.dto.ResendEmailVerificationRequest
 import kz.innlab.starter.authentication.dto.ResetPasswordRequest
+import kz.innlab.starter.authentication.dto.VerifyEmailRequest
 import kz.innlab.starter.authentication.service.AccountManagementService
 import kz.innlab.starter.authentication.service.LocalAuthService
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -53,5 +55,19 @@ class LocalAuthController(
     fun resetPassword(@Valid @RequestBody request: ResetPasswordRequest): ResponseEntity<Void> {
         accountManagementService.resetPassword(request.verificationId, request.email, request.code, request.newPassword)
         return ResponseEntity.ok().build()
+    }
+
+    @Operation(summary = "Verify email with the code sent at registration", security = [])
+    @PostMapping("/verify-email")
+    fun verifyEmail(@Valid @RequestBody request: VerifyEmailRequest): ResponseEntity<Void> {
+        accountManagementService.verifyEmail(request.email, request.verificationId, request.code)
+        return ResponseEntity.ok().build()
+    }
+
+    @Operation(summary = "Resend the email-verification code", security = [])
+    @PostMapping("/verify-email/resend")
+    fun resendEmailVerification(@Valid @RequestBody request: ResendEmailVerificationRequest): ResponseEntity<Map<String, Any?>> {
+        val verificationId = accountManagementService.resendEmailVerification(request.email)
+        return ResponseEntity.accepted().body(mapOf("verificationId" to verificationId))
     }
 }

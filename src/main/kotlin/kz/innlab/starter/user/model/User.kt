@@ -34,6 +34,9 @@ class User(
     @Column(name = "password_temporary", nullable = false)
     var passwordTemporary: Boolean = false  // Admin-set temp password; user must change on next login
 
+    @Column(name = "email_verified", nullable = false)
+    var emailVerified: Boolean = true  // Default true; only new LOCAL registrations set false when email-verification is enabled
+
     @Column(name = "phone", unique = true)
     var phone: String? = null  // E.164 format; set for LOCAL phone users
 

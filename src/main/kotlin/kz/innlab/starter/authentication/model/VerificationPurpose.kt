@@ -3,5 +3,6 @@ package kz.innlab.starter.authentication.model
 enum class VerificationPurpose {
     FORGOT_PASSWORD,
     CHANGE_EMAIL,
-    CHANGE_PHONE
+    CHANGE_PHONE,
+    VERIFY_EMAIL
 }

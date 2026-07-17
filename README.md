@@ -142,6 +142,8 @@ The starter auto-registers these endpoints:
 | `POST /api/v1/auth/logout` | Revoke refresh cookie + clear auth cookies (cookie mode) |
 | `POST /api/v1/auth/forgot-password` | Request password reset code |
 | `POST /api/v1/auth/reset-password` | Reset password with code |
+| `POST /api/v1/auth/verify-email` | Verify email with code (when email-verification enabled) |
+| `POST /api/v1/auth/verify-email/resend` | Resend email-verification code |
 
 ### Account Management — Authenticated (`/api/v1/users/me`)
 
@@ -299,6 +301,17 @@ class MyService(
 | `app.auth.telegram.webhook-secret` | — | Secret token for webhook validation |
 | `app.auth.access-token.expiry-minutes` | `15` | JWT access token TTL in minutes. `1440` = 1 day, `60` = 1 hour. Env: `ACCESS_TOKEN_EXPIRY_MINUTES`. |
 | `app.auth.refresh-token.expiry-days` | `30` | Refresh token TTL. Env: `REFRESH_TOKEN_EXPIRY_DAYS`. |
+| `app.auth.email-verification.enabled` | `false` | Require email confirmation for **new LOCAL registrations**. When `true`, register issues tokens but adds a `VERIFY_EMAIL` required action + sends a code; user is blocked from protected APIs (via `RequiredActionFilter`) until `POST /verify-email`. Social/phone/existing users unaffected. |
+
+### Email Verification (`app.auth.email-verification`)
+
+Optional. **Off by default — registration behavior is unchanged.** When `enabled=true`:
+
+1. `POST /local/register` for a **new** email+password user → creates user with `emailVerified=false`, adds required action `VERIFY_EMAIL`, sends a 6-digit code via `EmailService.sendCode(email, code, "VERIFY_EMAIL")`. Tokens are still issued (soft gate) but their JWT carries `required_actions: ["VERIFY_EMAIL"]`, so `RequiredActionFilter` returns `403` on any non-allowlisted protected endpoint.
+2. `POST /api/v1/auth/verify-email` `{email, verificationId, code}` → sets `emailVerified=true`, clears the action. After re-login (or refresh) the JWT is clean → full access.
+3. `POST /api/v1/auth/verify-email/resend` `{email}` → new code (rate-limited 1/60s, anti-enumeration: `verificationId` returned only for a real unverified user).
+
+Linking LOCAL to an existing social account does **not** re-verify (email already owned by the provider). `emailVerified` is exposed on `GET /api/v1/users/me`. The verify-email paths are in the default `required-action.allowed-paths`.
 
 ### httpOnly Cookie Auth (`app.auth.cookie`)
 

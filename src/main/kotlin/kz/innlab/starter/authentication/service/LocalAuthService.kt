@@ -1,7 +1,9 @@
 package kz.innlab.starter.authentication.service
 
 import kz.innlab.starter.authentication.dto.AuthResponse
+import kz.innlab.starter.authentication.model.VerificationPurpose
 import kz.innlab.starter.user.model.AuthProvider
+import kz.innlab.starter.user.model.RequiredAction
 import kz.innlab.starter.user.model.User
 import kz.innlab.starter.user.repository.UserRepository
 import org.springframework.beans.factory.annotation.Qualifier
@@ -23,7 +25,10 @@ class LocalAuthService(
     private val passwordEncoder: PasswordEncoder,
     private val tokenService: TokenService,
     private val refreshTokenService: RefreshTokenService,
-    @Value("\${app.auth.registration.enabled:true}") private val registrationEnabled: Boolean = true
+    private val verificationCodeService: VerificationCodeService,
+    private val emailService: EmailService,
+    @Value("\${app.auth.registration.enabled:true}") private val registrationEnabled: Boolean = true,
+    @Value("\${app.auth.email-verification.enabled:false}") private val emailVerificationEnabled: Boolean = false
 ) {
 
     /**
@@ -40,8 +45,11 @@ class LocalAuthService(
             throw IllegalStateException("Email already registered")
         }
 
+        val isNewUser = existing == null
+
         val user = if (existing != null) {
-            // Existing social account — link LOCAL provider and set password
+            // Existing social account — link LOCAL provider and set password.
+            // Email is already owned/verified via the social provider — no re-verification.
             existing.providers.add(AuthProvider.LOCAL)
             existing.passwordHash = passwordEncoder.encode(rawPassword)
             if (existing.name == null && name != null) existing.name = name
@@ -55,7 +63,19 @@ class LocalAuthService(
             newUser.providers.add(AuthProvider.LOCAL)
             newUser.name = name
             newUser.passwordHash = passwordEncoder.encode(rawPassword)
+            if (emailVerificationEnabled) {
+                // Soft gate: user is issued tokens but must verify email before accessing protected APIs.
+                // Enforcement is via the VERIFY_EMAIL required action (RequiredActionFilter).
+                newUser.emailVerified = false
+                newUser.requiredActions.add(RequiredAction.VERIFY_EMAIL)
+            }
             userRepository.save(newUser)
+        }
+
+        // Send the verification code only for genuinely new LOCAL registrations.
+        if (isNewUser && emailVerificationEnabled) {
+            val (_, code) = verificationCodeService.createCode(email, VerificationPurpose.VERIFY_EMAIL)
+            emailService.sendCode(email, code, "VERIFY_EMAIL")
         }
 
         val accessToken = tokenService.generateAccessToken(user.id, user.roles, user.requiredActions)
