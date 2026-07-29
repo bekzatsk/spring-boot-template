@@ -29,6 +29,8 @@ app:
       bundle-id: ${APPLE_BUNDLE_ID:com.example.app}
     local:
       enabled: ${AUTH_LOCAL_ENABLED:true}
+    email-verification:
+      enabled: ${AUTH_EMAIL_VERIFICATION_ENABLED:true}
     phone:
       enabled: ${AUTH_PHONE_ENABLED:true}
     telegram:

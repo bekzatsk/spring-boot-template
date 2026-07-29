@@ -73,8 +73,10 @@ class LocalAuthService(
         }
 
         // Send the verification code only for genuinely new LOCAL registrations.
+        var verificationId: java.util.UUID? = null
         if (isNewUser && emailVerificationEnabled) {
-            val (_, code) = verificationCodeService.createCode(email, VerificationPurpose.VERIFY_EMAIL)
+            val (id, code) = verificationCodeService.createCode(email, VerificationPurpose.VERIFY_EMAIL)
+            verificationId = id
             emailService.sendCode(email, code, "VERIFY_EMAIL")
         }
 
@@ -84,7 +86,8 @@ class LocalAuthService(
         return AuthResponse(
             accessToken = accessToken,
             refreshToken = refreshToken,
-            requiredActions = user.requiredActions.map { it.name }
+            requiredActions = user.requiredActions.map { it.name },
+            verificationId = verificationId
         )
     }
 
