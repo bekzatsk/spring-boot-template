@@ -17,6 +17,12 @@ class ConsoleEmailService : EmailService {
     }
 
     override fun sendCode(to: String, code: String, purpose: String) {
-        logger.info("[EMAIL] Sending {} code {} to {}", purpose, code, to)
+        // Never log the raw code: this fallback can end up active in a misconfigured deployment,
+        // and logs are not a secret store. For local dev use app.auth.verification.dev-code instead.
+        logger.info(
+            "[EMAIL] Sending {} code to {} (code hidden; set app.auth.verification.dev-code for local dev)",
+            purpose,
+            to
+        )
     }
 }

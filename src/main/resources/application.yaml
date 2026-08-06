@@ -1,8 +1,8 @@
 spring:
   application:
     name: template
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
+  # No default profile: Spring honors SPRING_PROFILES_ACTIVE natively. A ":dev" fallback here
+  # would silently activate dev-code OTP bypasses on any deployment that forgets to set the env var.
   threads:
     virtual:
       enabled: true
