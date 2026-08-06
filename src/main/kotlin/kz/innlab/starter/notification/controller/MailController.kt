@@ -7,11 +7,11 @@ import kz.innlab.starter.notification.dto.EmailMessageResponse
 import kz.innlab.starter.notification.dto.InboxMessageResponse
 import kz.innlab.starter.notification.dto.MailHistoryResponse
 import kz.innlab.starter.notification.dto.SendEmailRequest
-import kz.innlab.starter.notification.repository.MailHistoryRepository
 import kz.innlab.starter.notification.service.EmailAttachment
 import kz.innlab.starter.notification.service.ImapService
+import kz.innlab.starter.notification.service.MailHistoryService
+import kz.innlab.starter.notification.service.MailSendPolicy
 import kz.innlab.starter.notification.service.MailService
-import org.springframework.data.domain.PageRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
@@ -34,7 +34,8 @@ import java.util.UUID
 class MailController(
     private val mailService: MailService,
     private val imapService: ImapService,
-    private val mailHistoryRepository: MailHistoryRepository
+    private val mailHistoryService: MailHistoryService,
+    private val mailSendPolicy: MailSendPolicy
 ) {
 
     // --- Send email ---
@@ -45,6 +46,7 @@ class MailController(
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Map<String, UUID>> {
         val userId = UUID.fromString(jwt.subject)
+        mailSendPolicy.enforceSendAllowed(userId)
         val mailId = mailService.sendEmail(
             userId = userId,
             to = request.to,
@@ -62,6 +64,8 @@ class MailController(
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Map<String, UUID>> {
         val userId = UUID.fromString(jwt.subject)
+        mailSendPolicy.enforceSendAllowed(userId)
+        mailSendPolicy.validateAttachments(files)
         val attachments = files.map { file ->
             EmailAttachment(
                 filename = file.originalFilename ?: "attachment",
@@ -136,12 +140,7 @@ class MailController(
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<List<MailHistoryResponse>> {
         val userId = UUID.fromString(jwt.subject)
-        val pageable = PageRequest.of(0, size.coerceIn(1, 100))
-        val history = if (cursor == null) {
-            mailHistoryRepository.findByUserIdLatest(userId, pageable)
-        } else {
-            mailHistoryRepository.findByUserIdBeforeCursor(userId, cursor, pageable)
-        }
+        val history = mailHistoryService.getHistory(userId, cursor, size.coerceIn(1, 100))
         return ResponseEntity.ok(history.map { MailHistoryResponse.from(it) })
     }
 }

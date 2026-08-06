@@ -9,7 +9,8 @@ data class MailProperties(
     val smtp: SmtpProperties = SmtpProperties(),
     val imap: ImapProperties = ImapProperties(),
     val retry: RetryProperties = RetryProperties(),
-    val external: ExternalProperties = ExternalProperties()
+    val external: ExternalProperties = ExternalProperties(),
+    val limits: SendLimits = SendLimits()
 ) {
     data class SmtpProperties(
         val host: String = "",
@@ -36,5 +37,16 @@ data class MailProperties(
     data class ExternalProperties(
         val baseUrl: String = "",
         val masterKey: String = ""
+    )
+
+    /**
+     * Abuse controls for the authenticated send endpoints. Without them any user can relay
+     * unlimited mail with unbounded attachments through the application's sending domain.
+     */
+    data class SendLimits(
+        val perUserPerHour: Int = 20,
+        val maxAttachments: Int = 10,
+        val maxAttachmentBytes: Long = 5L * 1024 * 1024,
+        val maxTotalAttachmentBytes: Long = 20L * 1024 * 1024
     )
 }

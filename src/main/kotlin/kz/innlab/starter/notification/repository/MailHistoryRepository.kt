@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.time.Instant
 import java.util.UUID
 
 interface MailHistoryRepository : JpaRepository<MailHistory, UUID> {
@@ -21,4 +22,6 @@ interface MailHistoryRepository : JpaRepository<MailHistory, UUID> {
         @Param("userId") userId: UUID,
         pageable: Pageable
     ): List<MailHistory>
+
+    fun countByUserIdAndCreatedAtAfter(userId: UUID, after: Instant): Long
 }
