@@ -11,7 +11,7 @@ import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
-import org.springframework.beans.factory.annotation.Value
+import kz.innlab.starter.config.AuthTokenProperties
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -26,8 +26,7 @@ class LocalAuthService(
     private val authTokenIssuer: AuthTokenIssuer,
     private val verificationCodeService: VerificationCodeService,
     private val emailService: EmailService,
-    @Value("\${app.auth.registration.enabled:true}") private val registrationEnabled: Boolean = true,
-    @Value("\${app.auth.email-verification.enabled:false}") private val emailVerificationEnabled: Boolean = false
+    private val authTokenProperties: AuthTokenProperties
 ) {
 
     /**
@@ -54,7 +53,7 @@ class LocalAuthService(
             if (existing.name == null && name != null) existing.name = name
             userRepository.save(existing)
         } else {
-            if (!registrationEnabled) {
+            if (!authTokenProperties.registration.enabled) {
                 throw IllegalStateException("Registration is currently disabled")
             }
             // New user
@@ -62,7 +61,7 @@ class LocalAuthService(
             newUser.providers.add(AuthProvider.LOCAL)
             newUser.name = name
             newUser.passwordHash = passwordEncoder.encode(rawPassword)
-            if (emailVerificationEnabled) {
+            if (authTokenProperties.emailVerification.enabled) {
                 // Soft gate: user is issued tokens but must verify email before accessing protected APIs.
                 // Enforcement is via the VERIFY_EMAIL required action (RequiredActionFilter).
                 newUser.emailVerified = false
@@ -73,7 +72,7 @@ class LocalAuthService(
 
         // Send the verification code only for genuinely new LOCAL registrations.
         var verificationId: java.util.UUID? = null
-        if (isNewUser && emailVerificationEnabled) {
+        if (isNewUser && authTokenProperties.emailVerification.enabled) {
             val (id, code) = verificationCodeService.createCode(email, VerificationPurpose.VERIFY_EMAIL)
             verificationId = id
             emailService.sendCode(email, code, "VERIFY_EMAIL")

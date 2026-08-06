@@ -4,7 +4,7 @@ import kz.innlab.starter.authentication.dto.IssuedCode
 import kz.innlab.starter.authentication.model.VerificationCode
 import kz.innlab.starter.authentication.model.VerificationPurpose
 import kz.innlab.starter.authentication.repository.VerificationCodeRepository
-import org.springframework.beans.factory.annotation.Value
+import kz.innlab.starter.config.VerificationProperties
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -25,8 +25,7 @@ class VerificationCodeService(
     private val verificationCodeRepository: VerificationCodeRepository,
     private val attemptRecorder: VerificationAttemptRecorder,
     private val passwordEncoder: PasswordEncoder,
-    @Value("\${app.auth.verification.dev-code:}") private val devCode: String = "",
-    @Value("\${app.auth.sms.dev-code:}") private val smsDevCode: String = ""
+    private val verificationProperties: VerificationProperties
 ) {
 
     companion object {
@@ -131,5 +130,6 @@ class VerificationCodeService(
 
     // Phone OTP keeps its own dev override so app.auth.sms.dev-code stays meaningful.
     private fun devCodeFor(purpose: VerificationPurpose): String =
-        if (purpose == VerificationPurpose.PHONE_LOGIN) smsDevCode else devCode
+        if (purpose == VerificationPurpose.PHONE_LOGIN) verificationProperties.sms.devCode
+        else verificationProperties.verification.devCode
 }

@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.Hidden
 import kz.innlab.starter.authentication.dto.TelegramUpdate
 import kz.innlab.starter.authentication.service.TelegramAuthService
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
+import kz.innlab.starter.config.TelegramAuthProperties
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController
 @ConditionalOnProperty(name = ["app.auth.telegram.enabled"], havingValue = "true")
 class TelegramWebhookController(
     private val telegramAuthService: TelegramAuthService,
-    @Value("\${app.auth.telegram.webhook-secret:}") private val webhookSecret: String
+    private val telegramProperties: TelegramAuthProperties
 ) {
 
     companion object {
@@ -34,14 +34,14 @@ class TelegramWebhookController(
         // Fail closed: with no secret configured this public endpoint would accept forged updates
         // from anyone, letting an attacker poison pending login sessions. 200 is returned in all
         // reject paths so Telegram does not retry-storm, but the update is dropped.
-        if (webhookSecret.isBlank()) {
+        if (telegramProperties.webhookSecret.isBlank()) {
             logger.error(
                 "Telegram webhook rejected: app.auth.telegram.webhook-secret is not configured. " +
                     "Set TELEGRAM_WEBHOOK_SECRET to enable webhook processing."
             )
             return ResponseEntity.ok().build()
         }
-        if (secretToken != webhookSecret) {
+        if (secretToken != telegramProperties.webhookSecret) {
             logger.warn("Telegram webhook request with invalid secret token")
             return ResponseEntity.ok().build()
         }

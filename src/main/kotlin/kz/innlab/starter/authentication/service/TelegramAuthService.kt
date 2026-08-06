@@ -9,7 +9,7 @@ import kz.innlab.starter.authentication.model.TelegramSessionStatus
 import kz.innlab.starter.authentication.repository.TelegramAuthSessionRepository
 import kz.innlab.starter.shared.transaction.AfterCommitRunner
 import kz.innlab.starter.user.service.UserService
-import org.springframework.beans.factory.annotation.Value
+import kz.innlab.starter.config.TelegramAuthProperties
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -26,15 +26,7 @@ class TelegramAuthService(
     private val authTokenIssuer: AuthTokenIssuer,
     private val passwordEncoder: PasswordEncoder,
     private val afterCommitRunner: AfterCommitRunner,
-    @Value("\${app.auth.telegram.bot-username:MathHubBot}") private val botUsername: String = "MathHubBot",
-    @Value("\${app.auth.telegram.session-ttl-seconds:300}") private val sessionTtlSeconds: Long = 300,
-    @Value("\${app.auth.telegram.code-length:6}") private val codeLength: Int = 6,
-    @Value("\${app.auth.telegram.max-attempts:3}") private val maxAttempts: Int = 3,
-    @Value("\${app.auth.telegram.resend-cooldown-seconds:60}") private val resendCooldownSeconds: Long = 60,
-    @Value("\${app.auth.telegram.max-resends-per-session:3}") private val maxResendsPerSession: Int = 3,
-    @Value("\${app.auth.telegram.max-sessions-per-ip-per-hour:5}") private val maxSessionsPerIpPerHour: Int = 5,
-    @Value("\${app.auth.telegram.max-sessions-per-telegram-user-per-hour:3}") private val maxSessionsPerTelegramUserPerHour: Int = 3,
-    @Value("\${app.auth.telegram.dev-code:}") private val devCode: String = ""
+    private val telegramProperties: TelegramAuthProperties
 ) {
 
 
@@ -43,24 +35,24 @@ class TelegramAuthService(
         if (ipAddress != null) {
             val oneHourAgo = Instant.now().minusSeconds(3600)
             val count = sessionRepository.countByIpAddressAndCreatedAtAfter(ipAddress, oneHourAgo)
-            if (count >= maxSessionsPerIpPerHour) {
+            if (count >= telegramProperties.maxSessionsPerIpPerHour) {
                 throw IllegalStateException("Too many sessions. Please try again later.")
             }
         }
 
         val sessionId = UUID.randomUUID().toString()
-        val expiresAt = Instant.now().plusSeconds(sessionTtlSeconds)
+        val expiresAt = Instant.now().plusSeconds(telegramProperties.sessionTtlSeconds)
 
         val session = TelegramAuthSession(
             sessionId = sessionId,
             expiresAt = expiresAt
         ).apply {
             this.ipAddress = ipAddress
-            this.maxAttempts = this@TelegramAuthService.maxAttempts
+            this.maxAttempts = telegramProperties.maxAttempts
         }
         sessionRepository.save(session)
 
-        val normalizedBotUsername = botUsername.removePrefix("@")
+        val normalizedBotUsername = telegramProperties.botUsername.removePrefix("@")
         val botUrl = "https://t.me/$normalizedBotUsername?start=$sessionId"
         return TelegramInitResponse(
             sessionId = sessionId,
@@ -87,7 +79,7 @@ class TelegramAuthService(
 
         val oneHourAgo = Instant.now().minusSeconds(3600)
         val telegramSessionCount = sessionRepository.countByTelegramUserIdAndCreatedAtAfter(telegramUserId, oneHourAgo)
-        if (telegramSessionCount >= maxSessionsPerTelegramUserPerHour) {
+        if (telegramSessionCount >= telegramProperties.maxSessionsPerTelegramUserPerHour) {
             afterCommitRunner.run {
                 telegramBotService.sendMessage(chatId, "Тым көп сұраныс. Кейінірек қайтадан көріңіз.")
             }
@@ -236,10 +228,10 @@ class TelegramAuthService(
         // (attempts reset to 0) -> repeat, brute-forcing the code and spamming the victim's chat.
         val now = Instant.now()
         val lastSentAt = session.codeSentAt
-        if (lastSentAt != null && lastSentAt.plusSeconds(resendCooldownSeconds) > now) {
+        if (lastSentAt != null && lastSentAt.plusSeconds(telegramProperties.resendCooldownSeconds) > now) {
             throw IllegalStateException("Please wait before requesting a new code")
         }
-        if (session.resendCount >= maxResendsPerSession) {
+        if (session.resendCount >= telegramProperties.maxResendsPerSession) {
             throw IllegalStateException("Resend limit reached for this session. Start a new session.")
         }
 
@@ -263,7 +255,7 @@ class TelegramAuthService(
 
         return TelegramResendResponse(
             sent = true,
-            cooldown = resendCooldownSeconds,
+            cooldown = telegramProperties.resendCooldownSeconds,
             message = "Жаңа код Telegram-ға жіберілді"
         )
     }
@@ -285,5 +277,5 @@ class TelegramAuthService(
         )
     }
 
-    private fun generateCode(): String = OneTimeCodes.generate(devCode, codeLength)
+    private fun generateCode(): String = OneTimeCodes.generate(telegramProperties.devCode, telegramProperties.codeLength)
 }

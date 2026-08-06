@@ -4,7 +4,7 @@ import kz.innlab.starter.notification.model.DeviceToken
 import kz.innlab.starter.notification.model.Platform
 import kz.innlab.starter.notification.repository.DeviceTokenRepository
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
+import kz.innlab.starter.config.DeviceTokenProperties
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -13,8 +13,7 @@ import java.util.UUID
 @Service
 class DeviceTokenService(
     private val deviceTokenRepository: DeviceTokenRepository,
-    @Value("\${app.notification.token.max-per-user:5}")
-    private val maxTokensPerUser: Int
+    private val deviceTokenProperties: DeviceTokenProperties
 ) {
 
     companion object {
@@ -32,8 +31,8 @@ class DeviceTokenService(
         }
 
         val count = deviceTokenRepository.countByUserId(userId)
-        if (count >= maxTokensPerUser) {
-            throw IllegalStateException("Maximum device tokens ($maxTokensPerUser) reached for user")
+        if (count >= deviceTokenProperties.maxPerUser) {
+            throw IllegalStateException("Maximum device tokens ($deviceTokenProperties.maxPerUser) reached for user")
         }
 
         val token = DeviceToken(userId, platform, fcmToken, deviceId)

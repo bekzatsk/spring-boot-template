@@ -5,7 +5,7 @@ import kz.innlab.starter.authentication.model.RefreshToken
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
 import kz.innlab.starter.user.model.User
 import kz.innlab.starter.user.service.RefreshTokenRevoker
-import org.springframework.beans.factory.annotation.Value
+import kz.innlab.starter.config.AuthTokenProperties
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -18,8 +18,7 @@ import java.util.Base64
 @Service
 class RefreshTokenService(
     private val refreshTokenRepository: RefreshTokenRepository,
-    @Value("\${app.auth.refresh-token.expiry-days:30}")
-    private val expiryDays: Long
+    private val authTokenProperties: AuthTokenProperties
 ) : RefreshTokenRevoker {
 
     @Transactional
@@ -38,7 +37,7 @@ class RefreshTokenService(
             RefreshToken(
                 user = user,
                 tokenHash = tokenHash,
-                expiresAt = Instant.now().plus(expiryDays, ChronoUnit.DAYS)
+                expiresAt = Instant.now().plus(authTokenProperties.refreshToken.expiryDays, ChronoUnit.DAYS)
             )
         )
         return rawToken
@@ -82,7 +81,7 @@ class RefreshTokenService(
             RefreshToken(
                 user = stored.user,
                 tokenHash = newHash,
-                expiresAt = Instant.now().plus(expiryDays, ChronoUnit.DAYS)
+                expiresAt = Instant.now().plus(authTokenProperties.refreshToken.expiryDays, ChronoUnit.DAYS)
             )
         )
         stored.revoked = true

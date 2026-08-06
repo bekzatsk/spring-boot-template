@@ -6,7 +6,7 @@ import kz.innlab.starter.user.model.RequiredAction
 import kz.innlab.starter.user.model.Role
 import kz.innlab.starter.user.model.User
 import kz.innlab.starter.user.repository.UserRepository
-import org.springframework.beans.factory.annotation.Value
+import kz.innlab.starter.config.AuthTokenProperties
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -17,7 +17,7 @@ import java.util.UUID
 class UserService(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
-    @Value("\${app.auth.registration.enabled:true}") private val registrationEnabled: Boolean = true
+    private val authTokenProperties: AuthTokenProperties
 ) {
 
     /**
@@ -68,7 +68,7 @@ class UserService(
             if (existing.picture == null && picture != null) existing.picture = picture
             return userRepository.save(existing)
         }
-        if (!registrationEnabled) {
+        if (!authTokenProperties.registration.enabled) {
             throw IllegalStateException("Registration is currently disabled")
         }
         return userRepository.save(
@@ -109,7 +109,7 @@ class UserService(
         }
 
         // Step 4: Create new user
-        if (!registrationEnabled) {
+        if (!authTokenProperties.registration.enabled) {
             throw IllegalStateException("Registration is currently disabled")
         }
         return userRepository.save(
@@ -131,7 +131,7 @@ class UserService(
         val existing = userRepository.findByPhone(phoneE164)
         if (existing != null) return existing
 
-        if (!registrationEnabled) {
+        if (!authTokenProperties.registration.enabled) {
             throw IllegalStateException("Registration is currently disabled")
         }
         return userRepository.save(
@@ -153,7 +153,7 @@ class UserService(
             return existing
         }
 
-        if (!registrationEnabled) {
+        if (!authTokenProperties.registration.enabled) {
             throw IllegalStateException("Registration is currently disabled")
         }
         return userRepository.save(

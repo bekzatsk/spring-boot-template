@@ -51,6 +51,7 @@ Cross-cutting concerns:
 
 - **Email is the universal identity key** for account linking. One email = one user across all providers. Phone-only users have `email = ""` with a partial unique index.
 - **Refresh token rotation** with reuse detection: used tokens within 10s grace window return 409; reuse after grace revokes all user tokens.
+- **Settings are typed `@ConfigurationProperties`, not scattered `@Value`**: `AuthTokenProperties`, `VerificationProperties`, `TelegramAuthProperties`, `DeviceTokenProperties` join the existing `MailProperties`/`CorsProperties`/`AuthCookieProperties`/`AuthSecurityProperties`. All are `@Validated`, so a nonsensical value (negative lifetime, zero attempt limit) fails at startup rather than at first use. Nested property objects need `@field:Valid` or their constraints are skipped silently.
 - **One-time codes live in one place**: `VerificationCodeService` owns codes for every channel (email, phone OTP, Telegram) in the `verification_codes` table, keyed by identifier + purpose. Attempt counting runs in its own transaction (`VerificationAttemptRecorder`) so the brute-force limit survives the rollback that a failed verification triggers.
 - **Token issuance goes through `AuthTokenIssuer`** — every provider (local, Google, Apple, phone, Telegram) delegates there, so JWT contents change in one place.
 - **External I/O never runs inside a transaction.** SMTP, FCM, Telegram and SMS calls are deferred with `AfterCommitRunner`; token verification (Google certs, Apple JWKS) happens before the transactional work starts.
