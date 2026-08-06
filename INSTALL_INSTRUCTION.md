@@ -766,7 +766,7 @@ app:
 | `management.endpoint.health.probes.enabled` | boolean | `false` | Включить `/actuator/health/liveness` + `/readiness` (k8s probes). |
 | `management.server.port` | int | (main port) | Отдельный порт для actuator (если нужно изолировать от публичного API). |
 
-⚠ Starter **не** делает `permitAll` на `/actuator/**` — это решение консьюмера. См. `AppSecurityConfig.actuatorFilterChain()` в §0.
+⚠ Starter делает `permitAll` только на `/actuator/health` (и вложенные пути) — для healthcheck'ов контейнера. Остальные actuator-эндпоинты требуют аутентификации; более широкий доступ — решение консьюмера, см. `AppSecurityConfig.actuatorFilterChain()` в §0.
 
 ### OpenAPI / Swagger UI
 
@@ -1981,7 +1981,7 @@ app:
 | `management.endpoint.health.probes.enabled` | boolean | `false` | Включить `/actuator/health/liveness` + `/readiness` (k8s probes). |
 | `management.server.port` | int | (main port) | Отдельный порт для actuator (если нужно изолировать от публичного API). |
 
-⚠ Starter **не** делает `permitAll` на `/actuator/**` — это решение консьюмера. См. `AppSecurityConfig.actuatorFilterChain()` в §0.
+⚠ Starter делает `permitAll` только на `/actuator/health` (и вложенные пути) — для healthcheck'ов контейнера. Остальные actuator-эндпоинты требуют аутентификации; более широкий доступ — решение консьюмера, см. `AppSecurityConfig.actuatorFilterChain()` в §0.
 
 ### OpenAPI / Swagger UI
 

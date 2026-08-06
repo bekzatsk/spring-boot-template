@@ -12,8 +12,8 @@ Spring Boot 4.0.5 auth template in **Kotlin** (Java 24) with JWT authentication,
 # Start PostgreSQL (required for local dev)
 docker compose up -d
 
-# Run application (dev profile)
-./mvnw spring-boot:run
+# Run application (dev profile must be set explicitly — no default profile for safety)
+SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 
 # Run all tests (H2 in-memory, no Docker needed)
 ./mvnw test
@@ -32,7 +32,7 @@ Server runs on port **7070**. Swagger UI at `/swagger-ui.html`.
 
 ## Architecture
 
-The codebase is organized into three domain modules under `src/main/kotlin/kz/innlab/template/`:
+The codebase is organized into three domain modules under `src/main/kotlin/kz/innlab/starter/`:
 
 - **authentication/** - All auth flows (local, Google, Apple, phone OTP), token management (JWT + refresh token rotation), account management (password/email/phone change), verification codes
 - **notification/** - Firebase Cloud Messaging push notifications and email sending/receiving (SMTP/IMAP)
@@ -40,18 +40,34 @@ The codebase is organized into three domain modules under `src/main/kotlin/kz/in
 
 Each module follows the same internal structure: `controller/`, `dto/`, `model/`, `repository/`, `service/`.
 
+Module dependency direction is one-way: `authentication` → `user`. The `user` module must never import
+from `authentication` — it talks back through the `RefreshTokenRevoker` port instead.
+
 Cross-cutting concerns:
-- **config/** - Security config, RSA key config, CORS, provider configs (Google, Apple, Firebase, email). All config properties are under the `app.*` namespace in `application.yaml`.
-- **shared/** - `BaseEntity` (UUID v7 + `Persistable` for JPA new-entity detection), `ErrorResponse` DTO
+- **config/** - Security config, RSA key config, CORS, async executor, provider configs (Google, Apple, Firebase, email). All config properties are under the `app.*` namespace in `application.yaml`.
+- **shared/** - `BaseEntity` (UUID v7 + `Persistable` for JPA new-entity detection), error DTO/exceptions, `AfterCommitRunner`, phone normalization
 
 ### Key Design Decisions
 
 - **Email is the universal identity key** for account linking. One email = one user across all providers. Phone-only users have `email = ""` with a partial unique index.
 - **Refresh token rotation** with reuse detection: used tokens within 10s grace window return 409; reuse after grace revokes all user tokens.
-- **SMS/Email services are interfaces** with console-logging defaults. Real providers plug in via `@Bean` (the default uses `@ConditionalOnMissingBean`).
+- **Token issuance goes through `AuthTokenIssuer`** — every provider (local, Google, Apple, phone, Telegram) delegates there, so JWT contents change in one place.
+- **External I/O never runs inside a transaction.** SMTP, FCM, Telegram and SMS calls are deferred with `AfterCommitRunner`; token verification (Google certs, Apple JWKS) happens before the transactional work starts.
+- **`@Async` uses the bounded `authStarterTaskExecutor`** (`AsyncConfig`), not Spring's unbounded default.
+- **SMS/Email services are interfaces** with console-logging defaults. Real providers plug in via `@Bean` (the default uses `@ConditionalOnMissingBean`). The console fallbacks never log the code itself.
 - **Virtual threads** are enabled (`spring.threads.virtual.enabled: true`).
-- **Dev profile** uses in-memory RSA keys, hardcoded verification code `123456`, and console logging for SMS/email/push.
+- **Dev profile** uses in-memory RSA keys, `dev-code` OTP overrides, and console logging for SMS/email/push.
 - **Kotlin compiler plugins**: `spring` (open classes), `jpa` (no-arg constructors), `all-open` for JPA entities.
+
+### Security Posture
+
+- **No default Spring profile.** `SPRING_PROFILES_ACTIVE` must be set explicitly; a `:dev` fallback would silently enable the fixed `123456` OTP override in production.
+- **`ProductionSafetyConfig` refuses to start under `prod`** when a `dev-code` override is set, Telegram is enabled without a webhook secret, or console SMS/mail fallbacks are serving real traffic (override with `app.security.allow-console-fallbacks=true`).
+- **Authorization is fail-secure**: `anyRequest` is `authenticated`. Consumers open extra paths via `app.auth.security.public-paths`. Only `/actuator/health*` is public by default.
+- **Admin-only endpoints**: `/api/v1/admin/**`, `POST /api/v1/notifications/send/topic` (broadcast), `/api/v1/mail/inbox/**` (shared org mailbox).
+- **Ownership checks**: push send/multicast and topic subscribe only accept FCM tokens registered to the caller.
+- **Rate limits**: Telegram resend has a server-side cooldown plus a per-session cap; mail send has a per-user hourly quota and attachment caps (`app.mail.limits.*`).
+- **`X-Forwarded-For` is ignored** unless `app.auth.telegram.trust-forwarded-headers=true` (set only behind a trusted proxy).
 
 ## Test Setup
 
@@ -59,7 +75,7 @@ Tests use H2 in-memory DB with Flyway disabled and `create-drop` DDL. External d
 
 ## Database Migrations
 
-Flyway migrations in `src/main/resources/db/migration/` (V1 through V4). Dev profile has `clean-on-validation-error: true`; prod uses strict validation.
+Flyway migrations in `src/main/resources/db/migration-auth/` (V1 through V8). Dev profile has `clean-on-validation-error: true`; prod uses strict validation.
 
 ## Renaming the Project
 

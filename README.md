@@ -656,7 +656,7 @@ After publish, package appears at: https://github.com/bekzatsk/spring-boot-templ
 **Added**
 - `spring-boot-starter-actuator` is now bundled transitively. `/actuator/health` is available out of the box. Consumers no longer need to add the dependency explicitly for docker healthchecks / k8s probes.
   - Only `health` is exposed via web by default (Spring Boot default). Opt in to more endpoints via `management.endpoints.web.exposure.include`.
-  - The starter does **not** set `@Order(1)` permitAll on `/actuator/**` — consumers still register their own actuator security filter chain when needed.
+  - The starter permits `/actuator/health` (and its sub-paths) so container healthchecks work out of the box; every other actuator endpoint requires authentication. It does **not** set an `@Order(1)` chain on `/actuator/**` — consumers still register their own actuator security filter chain when they need broader access.
 
 ### 0.0.2-SNAPSHOT
 
