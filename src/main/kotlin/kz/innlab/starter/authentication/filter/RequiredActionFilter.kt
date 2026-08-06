@@ -69,10 +69,11 @@ class RequiredActionFilter(
         )
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun extractActions(jwt: Jwt): List<String> {
-        val raw = jwt.claims["required_actions"] ?: return emptyList()
-        return (raw as? List<String>) ?: emptyList()
+        // `as? List<String>` would always succeed for any List thanks to erasure, so a claim
+        // holding non-strings would blow up later instead of here. Filter by actual type.
+        val raw = jwt.claims["required_actions"] as? List<*> ?: return emptyList()
+        return raw.filterIsInstance<String>()
     }
 
     private fun isAllowed(path: String): Boolean =

@@ -1,6 +1,8 @@
 package kz.innlab.starter.notification.controller
 
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
+import kz.innlab.starter.notification.dto.CreateTopicRequest
 import kz.innlab.starter.notification.dto.TopicResponse
 import kz.innlab.starter.notification.service.TopicService
 import org.springframework.http.ResponseEntity
@@ -19,9 +21,8 @@ class TopicAdminController(
 ) {
 
     @PostMapping
-    fun createTopic(@RequestBody body: Map<String, String>): ResponseEntity<TopicResponse> {
-        val name = body["name"] ?: throw IllegalArgumentException("name is required")
-        val topic = topicService.createTopic(name)
+    fun createTopic(@Valid @RequestBody request: CreateTopicRequest): ResponseEntity<TopicResponse> {
+        val topic = topicService.createTopic(request.name)
         return ResponseEntity.status(201).body(TopicResponse.from(topic))
     }
 

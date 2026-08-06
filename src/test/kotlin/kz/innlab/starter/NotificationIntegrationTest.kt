@@ -339,6 +339,55 @@ class NotificationIntegrationTest {
             .andExpect(status().isForbidden)
     }
 
+    // --- Topic administration ---
+
+    @Test
+    fun `createTopic accepts a valid name`() {
+        mockMvc.perform(
+            post("/api/v1/admin/topics")
+                .header("Authorization", "Bearer $adminToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"name": "product-updates"}""")
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.name").value("product-updates"))
+    }
+
+    @Test
+    fun `createTopic rejects a blank name`() {
+        // The endpoint took a raw Map before, so @Valid never ran on it.
+        mockMvc.perform(
+            post("/api/v1/admin/topics")
+                .header("Authorization", "Bearer $adminToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"name": "  "}""")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.status").value(400))
+    }
+
+    @Test
+    fun `createTopic rejects characters FCM does not allow`() {
+        mockMvc.perform(
+            post("/api/v1/admin/topics")
+                .header("Authorization", "Bearer $adminToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"name": "bad name/with slashes"}""")
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `createTopic rejects a missing name field`() {
+        mockMvc.perform(
+            post("/api/v1/admin/topics")
+                .header("Authorization", "Bearer $adminToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+        )
+            .andExpect(status().isBadRequest)
+    }
+
     // --- History ---
 
     @Test

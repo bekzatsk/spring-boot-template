@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.authentication.BadCredentialsException
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -33,6 +34,19 @@ class AuthExceptionHandler {
         val message = ex.allErrors.joinToString("; ") { it.defaultMessage ?: "Invalid value" }
         return ResponseEntity.badRequest().body(
             ErrorResponse(error = "Bad Request", message = message, status = 400)
+        )
+    }
+
+    /**
+     * Unparseable body, wrong types, or a missing field that maps to a non-nullable Kotlin
+     * property. Jackson throws before validation runs, so without this the caller got a 500.
+     * The reason is deliberately generic: parser messages leak type and field internals.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleUnreadableBody(ex: HttpMessageNotReadableException): ResponseEntity<ErrorResponse> {
+        logger.debug("Rejected unreadable request body: {}", ex.message)
+        return ResponseEntity.badRequest().body(
+            ErrorResponse(error = "Bad Request", message = "Malformed or incomplete request body", status = 400)
         )
     }
 

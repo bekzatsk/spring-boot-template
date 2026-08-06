@@ -289,6 +289,27 @@ class TelegramAuthIntegrationTest {
     }
 
     @Test
+    fun `webhook tolerates payloads that do not match the expected shape`() {
+        // Parsing used to be nested Map casts, so an unexpected shape raised ClassCastException
+        // and was swallowed by a blanket catch. Typed binding ignores unknown/missing fields.
+        val payloads = listOf(
+            """{"update_id": 1}""",
+            """{"update_id": 1, "message": {}}""",
+            """{"update_id": 1, "message": {"text": "/start", "chat": {}}}""",
+            """{"update_id": 1, "message": {"text": "/start", "chat": {"id": 1}}}"""
+        )
+
+        payloads.forEach { payload ->
+            mockMvc.perform(
+                post("/telegram/webhook")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("X-Telegram-Bot-Api-Secret-Token", "test-secret")
+                    .content(payload)
+            ).andExpect(status().isOk)
+        }
+    }
+
+    @Test
     fun `resend within cooldown returns 409`() {
         captureCodeOnBotSend()
 

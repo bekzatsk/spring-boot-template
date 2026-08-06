@@ -1,6 +1,7 @@
 package kz.innlab.starter.authentication.controller
 
 import io.swagger.v3.oas.annotations.Hidden
+import kz.innlab.starter.authentication.dto.TelegramUpdate
 import kz.innlab.starter.authentication.service.TelegramAuthService
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -27,7 +28,7 @@ class TelegramWebhookController(
 
     @PostMapping("/webhook")
     fun handleWebhook(
-        @RequestBody body: Map<String, Any>,
+        @RequestBody body: TelegramUpdate,
         @RequestHeader("X-Telegram-Bot-Api-Secret-Token", required = false) secretToken: String?
     ): ResponseEntity<Void> {
         // Fail closed: with no secret configured this public endpoint would accept forged updates
@@ -54,16 +55,14 @@ class TelegramWebhookController(
         return ResponseEntity.ok().build()
     }
 
-    @Suppress("UNCHECKED_CAST")
-    private fun processUpdate(update: Map<String, Any>) {
-        val message = update["message"] as? Map<String, Any> ?: return
-        val text = message["text"] as? String ?: return
-        val chat = message["chat"] as? Map<String, Any> ?: return
-        val from = message["from"] as? Map<String, Any> ?: return
+    private fun processUpdate(update: TelegramUpdate) {
+        val message = update.message ?: return
+        val text = message.text ?: return
+        val chatId = message.chat?.id ?: return
+        val from = message.from ?: return
 
-        val chatId = (chat["id"] as Number).toLong()
-        val telegramUserId = (from["id"] as Number).toLong()
-        val telegramUsername = from["username"] as? String
+        val telegramUserId = from.id ?: return
+        val telegramUsername = from.username
 
         when {
             text.startsWith("/start ") -> {
