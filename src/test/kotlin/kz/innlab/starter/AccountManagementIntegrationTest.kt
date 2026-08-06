@@ -210,6 +210,52 @@ class AccountManagementIntegrationTest {
     }
 
     @Test
+    fun `change password rejects a password shorter than the registration policy`() {
+        val user = createLocalUser()
+        val accessToken = generateAccessToken(user)
+
+        mockMvc.perform(
+            post("/api/v1/users/me/change-password")
+                .header("Authorization", "Bearer $accessToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"currentPassword": "OldPassword123", "newPassword": "short"}""")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.status").value(400))
+
+        // The weak password must not have been applied
+        val unchanged = userRepository.findById(user.id).orElseThrow()
+        assert(passwordEncoder.matches("OldPassword123", unchanged.passwordHash)) {
+            "Password must stay unchanged when the new one is rejected"
+        }
+    }
+
+    @Test
+    fun `reset password rejects a password shorter than the registration policy`() {
+        createLocalUser()
+        val getCode = captureEmailCodeOnSend()
+
+        val requestResult = mockMvc.perform(
+            post("/api/v1/auth/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email": "test@example.com"}""")
+        )
+            .andExpect(status().isAccepted)
+            .andReturn()
+
+        val verificationId = extractVerificationId(requestResult)
+        val code = getCode()
+
+        mockMvc.perform(
+            post("/api/v1/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"verificationId": "$verificationId", "email": "test@example.com", "code": "$code", "newPassword": "short"}""")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.status").value(400))
+    }
+
+    @Test
     fun `change password with wrong current password returns 401`() {
         val user = createLocalUser()
         val accessToken = generateAccessToken(user)
