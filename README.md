@@ -642,6 +642,16 @@ After publish, package appears at: https://github.com/bekzatsk/spring-boot-templ
 
 ### 0.0.5-SNAPSHOT (unreleased)
 
+**Changed**
+- Auto-configuration no longer `@ComponentScan`s the starter package. Every bean is registered
+  explicitly with `@ConditionalOnMissingBean`, so a consumer application can now replace any
+  starter bean — not just the `SmsService`/`EmailService`/`PushService` interfaces — by declaring
+  a `@Bean` of the same type. Bean names are unchanged (they equal the decapitalized class name)
+  and are covered by a contract test, so `@Qualifier`/`@Async` references keep resolving.
+- Settings moved from scattered `@Value` injections to validated `@ConfigurationProperties`
+  (`AuthTokenProperties`, `VerificationProperties`, `TelegramAuthProperties`,
+  `DeviceTokenProperties`). Property names and defaults are unchanged.
+
 **Added**
 - `app.auth.access-token.expiry-minutes` (default `15`) — JWT access token TTL is now configurable. Env: `ACCESS_TOKEN_EXPIRY_MINUTES`. Set to `1440` for 1 day, `60` for 1 hour.
 - `app.openapi.title` / `app.openapi.version` / `app.openapi.description` — Swagger UI metadata is now configurable. Title default is `spring.application.name` (was hardcoded "Spring Boot Auth Template API"). The `OpenAPI` bean uses `@ConditionalOnMissingBean(OpenAPI::class)` so consumers can fully replace it.

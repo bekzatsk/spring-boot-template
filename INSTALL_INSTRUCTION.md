@@ -903,7 +903,26 @@ export TWILIO_SMS_FROM=+14155551234
 
 ## 5. Override Default Services
 
-The starter provides console-logging defaults for SMS, email, and push. Override them by declaring your own beans.
+**Любой bean стартера можно заменить своим.** Все bean'ы регистрируются явно с
+`@ConditionalOnMissingBean` (starter не сканирует свой пакет), поэтому достаточно объявить
+`@Bean` того же типа в своём приложении — победит твой:
+
+```kotlin
+@Configuration
+class MyOverrides {
+    // Заменяет kz.innlab.starter.authentication.service.AuthTokenIssuer целиком
+    @Bean
+    fun authTokenIssuer(tokenService: TokenService, refreshTokenService: RefreshTokenService) =
+        MyAuthTokenIssuer(tokenService, refreshTokenService)
+}
+```
+
+⚠ **Имена bean'ов — часть контракта.** Они совпадают с decapitalized именем класса
+(`authTokenIssuer`, `telegramAuthService`, …), и `@Qualifier` / `@Async` / 
+`@ConditionalOnMissingBean(name = …)` резолвятся по ним. Переименование = breaking change;
+контракт зафиксирован в `AutoConfigurationContractTest`.
+
+Ниже — частный случай: console-logging defaults для SMS, email и push.
 
 OTP delivery теперь идёт через `OtpDeliveryService` — оркестратор с цепочкой **WhatsApp → SMS**:
 - если зарегистрирован bean `WhatsAppService` — пытаемся послать через WhatsApp;
