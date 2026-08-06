@@ -39,7 +39,7 @@ class UserService(
             this.name = name
             this.passwordHash = passwordEncoder.encode(rawPassword)
             this.passwordTemporary = temporary
-            providers.add(AuthProvider.LOCAL)
+            linkProvider(AuthProvider.LOCAL)
             if (!roles.isNullOrEmpty()) {
                 this.roles.clear()
                 this.roles.addAll(roles)
@@ -61,8 +61,7 @@ class UserService(
         val existing = userRepository.findByEmail(email)
         if (existing != null) {
             // Link GOOGLE provider to existing account (idempotent)
-            existing.providers.add(AuthProvider.GOOGLE)
-            existing.providerIds[AuthProvider.GOOGLE] = providerId
+            existing.linkProvider(AuthProvider.GOOGLE, providerId)
             // Only update name/picture if currently null on existing user
             if (existing.name == null && name != null) existing.name = name
             if (existing.picture == null && picture != null) existing.picture = picture
@@ -73,8 +72,7 @@ class UserService(
         }
         return userRepository.save(
             User(email = email).also {
-                it.providers.add(AuthProvider.GOOGLE)
-                it.providerIds[AuthProvider.GOOGLE] = providerId
+                it.linkProvider(AuthProvider.GOOGLE, providerId)
                 it.name = name
                 it.picture = picture
             }
@@ -102,8 +100,7 @@ class UserService(
         // Step 3: Check if email already exists — link APPLE to existing account
         val byEmail = userRepository.findByEmail(resolvedEmail)
         if (byEmail != null) {
-            byEmail.providers.add(AuthProvider.APPLE)
-            byEmail.providerIds[AuthProvider.APPLE] = providerId
+            byEmail.linkProvider(AuthProvider.APPLE, providerId)
             if (byEmail.name == null && name != null) byEmail.name = name
             return userRepository.save(byEmail)
         }
@@ -114,8 +111,7 @@ class UserService(
         }
         return userRepository.save(
             User(email = resolvedEmail).also {
-                it.providers.add(AuthProvider.APPLE)
-                it.providerIds[AuthProvider.APPLE] = providerId
+                it.linkProvider(AuthProvider.APPLE, providerId)
                 it.name = name
             }
         )
@@ -136,7 +132,7 @@ class UserService(
         }
         return userRepository.save(
             User(email = "").also {
-                it.providers.add(AuthProvider.LOCAL)
+                it.linkProvider(AuthProvider.LOCAL)
                 it.phone = phoneE164
             }
         )
@@ -158,8 +154,7 @@ class UserService(
         }
         return userRepository.save(
             User(email = "").also {
-                it.providers.add(AuthProvider.TELEGRAM)
-                it.providerIds[AuthProvider.TELEGRAM] = telegramUserId.toString()
+                it.linkProvider(AuthProvider.TELEGRAM, telegramUserId.toString())
                 it.telegramUserId = telegramUserId
                 it.telegramUsername = telegramUsername
             }

@@ -209,7 +209,7 @@ class AccountManagementService(
             ResourceNotFoundException("User not found")
         }
         user.phone = phoneE164
-        user.providers.add(AuthProvider.LOCAL) // Idempotent — ensures LOCAL provider is present
+        user.linkProvider(AuthProvider.LOCAL) // Idempotent — ensures LOCAL provider is present
         userRepository.save(user)
     }
 }

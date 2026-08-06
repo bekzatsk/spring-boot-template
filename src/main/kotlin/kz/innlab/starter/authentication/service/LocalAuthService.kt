@@ -48,7 +48,7 @@ class LocalAuthService(
         val user = if (existing != null) {
             // Existing social account — link LOCAL provider and set password.
             // Email is already owned/verified via the social provider — no re-verification.
-            existing.providers.add(AuthProvider.LOCAL)
+            existing.linkProvider(AuthProvider.LOCAL)
             existing.passwordHash = passwordEncoder.encode(rawPassword)
             if (existing.name == null && name != null) existing.name = name
             userRepository.save(existing)
@@ -58,7 +58,7 @@ class LocalAuthService(
             }
             // New user
             val newUser = User(email = email)
-            newUser.providers.add(AuthProvider.LOCAL)
+            newUser.linkProvider(AuthProvider.LOCAL)
             newUser.name = name
             newUser.passwordHash = passwordEncoder.encode(rawPassword)
             if (authTokenProperties.emailVerification.enabled) {

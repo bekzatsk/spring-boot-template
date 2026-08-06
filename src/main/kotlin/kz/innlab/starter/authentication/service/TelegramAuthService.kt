@@ -26,6 +26,7 @@ class TelegramAuthService(
     private val authTokenIssuer: AuthTokenIssuer,
     private val passwordEncoder: PasswordEncoder,
     private val afterCommitRunner: AfterCommitRunner,
+    private val messages: TelegramBotMessages,
     private val telegramProperties: TelegramAuthProperties
 ) {
 
@@ -72,7 +73,7 @@ class TelegramAuthService(
             // Telegram API calls are deferred to after commit so the HTTP round-trip never holds
             // the DB transaction open (and never fires for rolled-back state).
             afterCommitRunner.run {
-                telegramBotService.sendMessage(chatId, "Сессия мерзімі өтіп кетті. Сайтта қайтадан бастаңыз.")
+                telegramBotService.sendMessage(chatId, messages.sessionExpired())
             }
             return
         }
@@ -81,7 +82,7 @@ class TelegramAuthService(
         val telegramSessionCount = sessionRepository.countByTelegramUserIdAndCreatedAtAfter(telegramUserId, oneHourAgo)
         if (telegramSessionCount >= telegramProperties.maxSessionsPerTelegramUserPerHour) {
             afterCommitRunner.run {
-                telegramBotService.sendMessage(chatId, "Тым көп сұраныс. Кейінірек қайтадан көріңіз.")
+                telegramBotService.sendMessage(chatId, messages.tooManyRequests())
             }
             return
         }
@@ -100,7 +101,7 @@ class TelegramAuthService(
         afterCommitRunner.run {
             telegramBotService.sendMessage(
                 chatId,
-                "\uD83D\uDD10 Сіздің растау кодыңыз: $code\n\nОсы кодты MathHub сайтына енгізіңіз.\n⏰ Код 5 минут жарамды."
+                messages.verificationCode(code, telegramProperties.sessionTtlSeconds / 60)
             )
         }
     }
@@ -108,14 +109,14 @@ class TelegramAuthService(
     fun handleWebhookDefault(chatId: Long) {
         telegramBotService.sendMessage(
             chatId,
-            "MathHub ботына қош келдіңіз! Тіркелу үшін сайтқа өтіңіз."
+            messages.welcome()
         )
     }
 
     fun handleWebhookHelp(chatId: Long) {
         telegramBotService.sendMessage(
             chatId,
-            "MathHub — математика платформасы. Тіркелу үшін mathhub.kz сайтына кіріңіз және \"Telegram арқылы тіркелу\" батырмасын басыңыз."
+            messages.help()
         )
     }
 
@@ -249,7 +250,7 @@ class TelegramAuthService(
         afterCommitRunner.run {
             telegramBotService.sendMessage(
                 chatId,
-                "\uD83D\uDD10 Сіздің жаңа растау кодыңыз: $code\n\nОсы кодты MathHub сайтына енгізіңіз.\n⏰ Код 5 минут жарамды."
+                messages.resentVerificationCode(code, telegramProperties.sessionTtlSeconds / 60)
             )
         }
 

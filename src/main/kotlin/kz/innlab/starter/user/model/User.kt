@@ -99,6 +99,20 @@ class User(
     @Column(name = "action")
     var requiredActions: MutableSet<RequiredAction> = mutableSetOf()
 
+    /**
+     * Links a login provider to this account, optionally recording the provider's own user id.
+     * Idempotent — re-linking an already linked provider is a no-op.
+     *
+     * The rule lived inline at seventeen call sites across four services, several of which
+     * remembered to add the provider but not its id.
+     */
+    fun linkProvider(provider: AuthProvider, providerId: String? = null) {
+        providers.add(provider)
+        if (providerId != null) {
+            providerIds[provider] = providerId
+        }
+    }
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant? = null

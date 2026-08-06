@@ -18,6 +18,8 @@ import kz.innlab.starter.authentication.service.LocalUserDetailsService
 import kz.innlab.starter.authentication.service.OtpDeliveryService
 import kz.innlab.starter.authentication.service.PhoneOtpService
 import kz.innlab.starter.authentication.service.TelegramAuthService
+import kz.innlab.starter.authentication.service.DefaultTelegramBotMessages
+import kz.innlab.starter.authentication.service.TelegramBotMessages
 import kz.innlab.starter.authentication.service.TelegramBotService
 import kz.innlab.starter.authentication.service.VerificationCodeService
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
@@ -138,6 +140,10 @@ class AuthProvidersAutoConfiguration {
 
         @Bean
         @ConditionalOnMissingBean
+        fun telegramBotMessages(): TelegramBotMessages = DefaultTelegramBotMessages()
+
+        @Bean
+        @ConditionalOnMissingBean
         fun telegramAuthService(
             sessionRepository: TelegramAuthSessionRepository,
             telegramBotService: TelegramBotService,
@@ -145,10 +151,11 @@ class AuthProvidersAutoConfiguration {
             authTokenIssuer: AuthTokenIssuer,
             passwordEncoder: PasswordEncoder,
             afterCommitRunner: AfterCommitRunner,
+            messages: TelegramBotMessages,
             telegramProperties: TelegramAuthProperties
         ): TelegramAuthService = TelegramAuthService(
-            sessionRepository, telegramBotService, userService,
-            authTokenIssuer, passwordEncoder, afterCommitRunner, telegramProperties
+            sessionRepository, telegramBotService, userService, authTokenIssuer,
+            passwordEncoder, afterCommitRunner, messages, telegramProperties
         )
 
         @Bean

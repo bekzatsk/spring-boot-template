@@ -51,7 +51,7 @@ class AdminUserService(
     fun updatePassword(adminId: UUID, targetId: UUID, newPassword: String, temporary: Boolean): User {
         val user = findById(targetId)
         user.passwordHash = passwordEncoder.encode(newPassword)
-        user.providers.add(AuthProvider.LOCAL)
+        user.linkProvider(AuthProvider.LOCAL)
         user.passwordTemporary = temporary
         if (temporary) {
             user.requiredActions.add(RequiredAction.UPDATE_PASSWORD)
@@ -94,7 +94,7 @@ class AdminUserService(
 
         val before = user.phone
         user.phone = phoneE164
-        user.providers.add(AuthProvider.LOCAL)
+        user.linkProvider(AuthProvider.LOCAL)
         val saved = userRepository.save(user)
         audit(adminId, "UPDATE_PHONE", targetId, before = before, after = phoneE164)
         return saved

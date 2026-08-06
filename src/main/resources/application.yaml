@@ -36,7 +36,7 @@ app:
     telegram:
       enabled: ${AUTH_TELEGRAM_ENABLED:false}
       bot-token: ${TELEGRAM_BOT_TOKEN:}
-      bot-username: ${TELEGRAM_BOT_USERNAME:MathHubBot}
+      bot-username: ${TELEGRAM_BOT_USERNAME:}
       webhook-secret: ${TELEGRAM_WEBHOOK_SECRET:}
       session-ttl-seconds: ${AUTH_SESSION_TTL:300}
       code-length: ${AUTH_CODE_LENGTH:6}
