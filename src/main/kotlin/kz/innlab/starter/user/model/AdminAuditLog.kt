@@ -12,19 +12,19 @@ import java.util.UUID
 @Table(name = "admin_audit_log", schema = "auth")
 class AdminAuditLog(
     @Column(name = "admin_id", nullable = false)
-    var adminId: UUID,
+    val adminId: UUID,
 
     @Column(name = "action", nullable = false, length = 100)
-    var action: String,
+    val action: String,
 
     @Column(name = "target_id")
-    var targetId: UUID? = null,
+    val targetId: UUID? = null,
 
     @Column(name = "before_value", columnDefinition = "TEXT")
-    var before: String? = null,
+    val before: String? = null,
 
     @Column(name = "after_value", columnDefinition = "TEXT")
-    var after: String? = null
+    val after: String? = null
 ) : BaseEntity() {
 
     @CreationTimestamp

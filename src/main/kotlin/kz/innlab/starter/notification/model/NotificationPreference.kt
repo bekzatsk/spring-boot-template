@@ -13,11 +13,11 @@ import java.util.UUID
 @Table(name = "notification_preferences", schema = "auth")
 class NotificationPreference(
     @Column(name = "user_id", nullable = false)
-    var userId: UUID,
+    val userId: UUID,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    var channel: NotificationChannel,
+    val channel: NotificationChannel,
 
     @Column(nullable = false)
     var enabled: Boolean = true

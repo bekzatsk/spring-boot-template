@@ -10,7 +10,7 @@ import java.time.Instant
 @Table(name = "notification_topics", schema = "auth")
 class NotificationTopic(
     @Column(unique = true, nullable = false)
-    var name: String
+    val name: String
 ) : BaseEntity() {
 
     @Column(name = "created_at", nullable = false, updatable = false)

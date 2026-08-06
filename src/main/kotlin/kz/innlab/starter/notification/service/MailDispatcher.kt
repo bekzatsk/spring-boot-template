@@ -34,7 +34,14 @@ open class MailDispatcher(
         htmlBody: String?,
         attachments: List<EmailAttachment>
     ) {
-        val history = mailHistoryRepository.findById(historyId).orElseThrow()
+        // Runs on another thread long after the caller returned: the history row may be gone
+        // (purged, or the owning request rolled back). Nothing to report status against, and an
+        // exception here would only surface in the async handler's log.
+        val history = mailHistoryRepository.findById(historyId).orElse(null)
+        if (history == null) {
+            logger.warn("Mail history {} disappeared before dispatch; skipping", historyId)
+            return
+        }
 
         for (attempt in 1..mailProperties.retry.maxAttempts) {
             try {
@@ -57,12 +64,12 @@ open class MailDispatcher(
                 javaMailSender.send(message)
                 history.status = MailStatus.SENT
                 history.attempts = attempt
-                mailHistoryRepository.save(history)
+                saveQuietly(history)
                 return
             } catch (e: Exception) {
                 logger.warn("Email dispatch attempt {}/{} failed for {}: {}", attempt, mailProperties.retry.maxAttempts, historyId, e.message)
                 history.attempts = attempt
-                mailHistoryRepository.save(history)
+                saveQuietly(history)
                 if (attempt < mailProperties.retry.maxAttempts) {
                     try {
                         Thread.sleep(mailProperties.retry.delayMs)
@@ -76,7 +83,15 @@ open class MailDispatcher(
 
         logger.error("Email dispatch failed after {} attempts for {}", mailProperties.retry.maxAttempts, historyId)
         history.status = MailStatus.FAILED
-        mailHistoryRepository.save(history)
+        saveQuietly(history)
+    }
+
+    private fun saveQuietly(history: kz.innlab.starter.notification.model.MailHistory) {
+        try {
+            mailHistoryRepository.save(history)
+        } catch (e: Exception) {
+            logger.warn("Could not record mail status for {}: {}", history.id, e.message)
+        }
     }
 
     open fun sendDirect(to: String, subject: String, textBody: String) {

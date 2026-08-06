@@ -51,6 +51,7 @@ Cross-cutting concerns:
 
 - **Email is the universal identity key** for account linking. One email = one user across all providers. Phone-only users have `email = ""` with a partial unique index.
 - **Refresh token rotation** with reuse detection: used tokens within 10s grace window return 409; reuse after grace revokes all user tokens.
+- **Entities carry `@Version` and inherit identity semantics from `BaseEntity`**: optimistic locking guards the read-modify-write flows that update a user from several places, and `equals`/`hashCode` are id-based in one place rather than copy-pasted into some entities and missing from others.
 - **Auto-configuration registers beans explicitly, never by package scan**: `AuthAutoConfiguration` `@Import`s the feature configurations under `autoconfigure/` plus the infrastructure ones under `config/`. Every bean uses `@ConditionalOnMissingBean`, so a consumer application can replace any of them. Bean names equal the decapitalized class name and are load-bearing (`@Qualifier`, `@Async`, `@ConditionalOnMissingBean(name = …)`) — `AutoConfigurationContractTest` pins them.
 - **`@Service`/`@Component` annotations stay on the classes even though nothing scans for them**: the Kotlin `spring` compiler plugin uses them to make classes open. Removing one from a class whose `@Transactional` sits on its methods would make it final, and proxying would fail at runtime.
 - **Settings are typed `@ConfigurationProperties`, not scattered `@Value`**: `AuthTokenProperties`, `VerificationProperties`, `TelegramAuthProperties`, `DeviceTokenProperties` join the existing `MailProperties`/`CorsProperties`/`AuthCookieProperties`/`AuthSecurityProperties`. All are `@Validated`, so a nonsensical value (negative lifetime, zero attempt limit) fails at startup rather than at first use. Nested property objects need `@field:Valid` or their constraints are skipped silently.
@@ -79,7 +80,7 @@ Tests use H2 in-memory DB with Flyway disabled and `create-drop` DDL. External d
 
 ## Database Migrations
 
-Flyway migrations in `src/main/resources/db/migration-auth/` (V1 through V9). Dev profile has `clean-on-validation-error: true`; prod uses strict validation.
+Flyway migrations in `src/main/resources/db/migration-auth/` (V1 through V10). Dev profile has `clean-on-validation-error: true`; prod uses strict validation.
 
 ## Renaming the Project
 

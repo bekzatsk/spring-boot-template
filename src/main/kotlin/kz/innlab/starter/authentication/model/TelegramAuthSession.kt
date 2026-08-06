@@ -56,12 +56,4 @@ class TelegramAuthSession(
 
     @Column(name = "verified_at")
     var verifiedAt: Instant? = null
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is TelegramAuthSession) return false
-        return id == other.id
-    }
-
-    override fun hashCode(): Int = id.hashCode()
 }

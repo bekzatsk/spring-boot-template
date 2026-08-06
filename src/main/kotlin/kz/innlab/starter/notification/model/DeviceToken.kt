@@ -13,7 +13,7 @@ import java.util.UUID
 @Table(name = "device_tokens", schema = "auth")
 class DeviceToken(
     @Column(name = "user_id", nullable = false)
-    var userId: UUID,
+    val userId: UUID,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -23,7 +23,7 @@ class DeviceToken(
     var fcmToken: String,
 
     @Column(name = "device_id", nullable = false)
-    var deviceId: String
+    val deviceId: String
 ) : BaseEntity() {
 
     @Column(name = "created_at", nullable = false, updatable = false)

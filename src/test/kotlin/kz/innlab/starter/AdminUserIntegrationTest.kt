@@ -89,6 +89,18 @@ class AdminUserIntegrationTest {
     }
 
     @Test
+    fun `search treats LIKE wildcards as literal characters`() {
+        // "%" used to match every row and force a full scan.
+        mockMvc.perform(
+            get("/api/v1/admin/users")
+                .param("q", "%")
+                .header("Authorization", "Bearer $adminToken")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.totalElements").value(0))
+    }
+
+    @Test
     fun `list is forbidden for non-admin`() {
         mockMvc.perform(
             get("/api/v1/admin/users").header("Authorization", "Bearer $userToken")

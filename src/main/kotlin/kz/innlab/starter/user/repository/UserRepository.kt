@@ -23,9 +23,9 @@ interface UserRepository : JpaRepository<User, UUID> {
         """
         SELECT u FROM User u
         WHERE :q IS NULL OR :q = ''
-           OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%'))
-           OR LOWER(COALESCE(u.name, '')) LIKE LOWER(CONCAT('%', :q, '%'))
-           OR COALESCE(u.phone, '') LIKE CONCAT('%', :q, '%')
+           OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%')) ESCAPE '\'
+           OR LOWER(COALESCE(u.name, '')) LIKE LOWER(CONCAT('%', :q, '%')) ESCAPE '\'
+           OR COALESCE(u.phone, '') LIKE CONCAT('%', :q, '%') ESCAPE '\'
         """
     )
     fun search(@Param("q") query: String?, pageable: Pageable): Page<User>
@@ -41,9 +41,9 @@ interface UserRepository : JpaRepository<User, UUID> {
         )
         FROM User u
         WHERE :q IS NULL OR :q = ''
-           OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%'))
-           OR LOWER(COALESCE(u.name, '')) LIKE LOWER(CONCAT('%', :q, '%'))
-           OR COALESCE(u.phone, '') LIKE CONCAT('%', :q, '%')
+           OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%')) ESCAPE '\'
+           OR LOWER(COALESCE(u.name, '')) LIKE LOWER(CONCAT('%', :q, '%')) ESCAPE '\'
+           OR COALESCE(u.phone, '') LIKE CONCAT('%', :q, '%') ESCAPE '\'
         """
     )
     fun searchSummaries(@Param("q") query: String?, pageable: Pageable): Page<UserSummaryResponse>

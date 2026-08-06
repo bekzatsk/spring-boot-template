@@ -37,12 +37,4 @@ class RefreshToken(
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant? = null
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is RefreshToken) return false
-        return id == other.id
-    }
-
-    override fun hashCode(): Int = id.hashCode()
 }

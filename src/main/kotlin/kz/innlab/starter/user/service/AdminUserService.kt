@@ -32,7 +32,16 @@ class AdminUserService(
 
     @Transactional(readOnly = true)
     fun list(query: String?, pageable: Pageable): Page<UserSummaryResponse> =
-        userRepository.searchSummaries(query, pageable)
+        userRepository.searchSummaries(escapeLikeWildcards(query), pageable)
+
+    /**
+     * `%` and `_` are LIKE metacharacters. Unescaped, a search for "%" matches every row and
+     * forces a full scan; the queries declare ESCAPE '\' so the escaped input is taken literally.
+     */
+    private fun escapeLikeWildcards(query: String?): String? = query
+        ?.replace("\\", "\\\\")
+        ?.replace("%", "\\%")
+        ?.replace("_", "\\_")
 
     @Transactional(readOnly = true)
     fun findById(id: UUID): User =
