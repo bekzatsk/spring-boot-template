@@ -183,6 +183,46 @@ class AccountManagementIntegrationTest {
             .andExpect(status().isUnauthorized)
     }
 
+    @Test
+    fun `reset password stops accepting the correct code after the attempt limit`() {
+        // The attempt counter used to be rolled back together with the caller's transaction,
+        // so the limit never applied. It is now committed independently.
+        val user = createLocalUser()
+        val getCode = captureEmailCodeOnSend()
+
+        val requestResult = mockMvc.perform(
+            post("/api/v1/auth/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email": "test@example.com"}""")
+        )
+            .andExpect(status().isAccepted)
+            .andReturn()
+
+        val verificationId = extractVerificationId(requestResult)
+        val correctCode = getCode()
+
+        repeat(3) {
+            mockMvc.perform(
+                post("/api/v1/auth/reset-password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"verificationId": "$verificationId", "email": "test@example.com", "code": "000000", "newPassword": "NewPassword456"}""")
+            )
+                .andExpect(status().isUnauthorized)
+        }
+
+        mockMvc.perform(
+            post("/api/v1/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"verificationId": "$verificationId", "email": "test@example.com", "code": "$correctCode", "newPassword": "NewPassword456"}""")
+        )
+            .andExpect(status().isUnauthorized)
+
+        val unchanged = userRepository.findById(user.id).orElseThrow()
+        assert(passwordEncoder.matches("OldPassword123", unchanged.passwordHash)) {
+            "Password must stay unchanged once the attempt limit is exhausted"
+        }
+    }
+
     // --- Change Password Tests ---
 
     @Test

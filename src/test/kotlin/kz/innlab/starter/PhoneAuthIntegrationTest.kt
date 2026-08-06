@@ -196,6 +196,47 @@ class PhoneAuthIntegrationTest {
     }
 
     @Test
+    fun `verify OTP stops accepting the correct code after the attempt limit`() {
+        // Phone OTP now shares the one-time-code service with email and Telegram; this asserts
+        // the shared attempt limit actually applies to the phone channel, which had its own copy
+        // of the check before the merge.
+        val getCode = captureCodeOnSend()
+
+        val requestResult = mockMvc.perform(
+            post("/api/v1/auth/phone/request")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"phone": "$testPhone"}""")
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+
+        val verificationId = extractVerificationId(requestResult)
+        val correctCode = getCode()
+
+        // Burn the three allowed attempts with a wrong code
+        repeat(3) {
+            mockMvc.perform(
+                post("/api/v1/auth/phone/verify")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"verificationId": "$verificationId", "phone": "$testPhone", "code": "000000"}""")
+            )
+                .andExpect(status().isUnauthorized)
+        }
+
+        // The correct code must no longer be accepted
+        mockMvc.perform(
+            post("/api/v1/auth/phone/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"verificationId": "$verificationId", "phone": "$testPhone", "code": "$correctCode"}""")
+        )
+            .andExpect(status().isUnauthorized)
+
+        assert(userRepository.findByPhone(testPhone) == null) {
+            "No user may be created once the attempt limit is exhausted"
+        }
+    }
+
+    @Test
     fun `verify OTP rejects a code issued for a different phone`() {
         val getCode = captureCodeOnSend()
 

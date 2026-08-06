@@ -18,6 +18,19 @@ interface VerificationCodeRepository : JpaRepository<VerificationCode, UUID> {
         since: Instant
     ): Boolean
 
+    /**
+     * Atomic increment, deliberately not a read-modify-write on the entity: the counter must
+     * survive the rollback of the caller's transaction (a failed verification throws) and must
+     * not lose concurrent increments.
+     */
+    @Modifying
+    @Query("UPDATE VerificationCode vc SET vc.attempts = vc.attempts + 1 WHERE vc.id = :id")
+    fun incrementAttempts(@Param("id") id: UUID): Int
+
+    @Modifying
+    @Query("UPDATE VerificationCode vc SET vc.used = true WHERE vc.id = :id")
+    fun markUsed(@Param("id") id: UUID): Int
+
     @Modifying
     @Transactional
     @Query("DELETE FROM VerificationCode vc WHERE vc.expiresAt < :cutoff OR vc.used = true")

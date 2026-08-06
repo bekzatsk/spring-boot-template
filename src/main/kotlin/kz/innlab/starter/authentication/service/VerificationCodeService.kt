@@ -23,6 +23,7 @@ import java.util.UUID
 @Service
 class VerificationCodeService(
     private val verificationCodeRepository: VerificationCodeRepository,
+    private val attemptRecorder: VerificationAttemptRecorder,
     private val passwordEncoder: PasswordEncoder,
     @Value("\${app.auth.verification.dev-code:}") private val devCode: String = "",
     @Value("\${app.auth.sms.dev-code:}") private val smsDevCode: String = ""
@@ -109,16 +110,18 @@ class VerificationCodeService(
             throw BadCredentialsException("Invalid verification code")
         }
 
-        // Increment attempts before checking the code — prevents brute force
-        record.attempts++
-        verificationCodeRepository.save(record)
+        // Count the attempt before checking the code, in its own transaction: throwing below
+        // rolls the caller's transaction back, and an increment made here would go with it —
+        // which is exactly why the limit never bit before.
+        attemptRecorder.recordAttempt(record.id)
 
         if (!passwordEncoder.matches(code, record.codeHash)) {
             throw BadCredentialsException("Invalid verification code")
         }
 
-        record.used = true
-        verificationCodeRepository.save(record)
+        // Burn the code independently too: if the caller's transaction later rolls back, a
+        // one-time code must not become reusable.
+        attemptRecorder.markUsed(record.id)
 
         return record
     }
