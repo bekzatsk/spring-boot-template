@@ -3,11 +3,11 @@ package kz.innlab.starter.authentication.service
 import kz.innlab.starter.authentication.dto.OtpSendResult
 import kz.innlab.starter.authentication.model.SmsVerification
 import kz.innlab.starter.authentication.repository.SmsVerificationRepository
+import kz.innlab.starter.shared.transaction.AfterCommitRunner
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.security.SecureRandom
 import java.time.Instant
 import java.util.UUID
 
@@ -16,15 +16,14 @@ class SmsVerificationService(
     private val smsVerificationRepository: SmsVerificationRepository,
     private val otpDeliveryService: OtpDeliveryService,
     private val passwordEncoder: PasswordEncoder,
+    private val afterCommitRunner: AfterCommitRunner,
     @Value("\${app.auth.sms.dev-code:}") private val devCode: String = ""
 ) {
 
     companion object {
-        private const val CODE_BOUND = 1_000_000
         private const val EXPIRY_MINUTES = 5L
         private const val RATE_LIMIT_SECONDS = 60L
         private const val MAX_ATTEMPTS = 3
-        private val random = SecureRandom()
     }
 
     @Transactional
@@ -34,8 +33,8 @@ class SmsVerificationService(
         if (smsVerificationRepository.existsByPhoneAndCreatedAtAfter(phoneE164, now.minusSeconds(RATE_LIMIT_SECONDS))) {
             throw IllegalStateException("Please wait before requesting a new code")
         }
-        val code = if (devCode.isNotBlank()) devCode else String.format("%06d", random.nextInt(CODE_BOUND))
-        val hash = passwordEncoder.encode(code)!!
+        val code = OneTimeCodes.generate(devCode)
+        val hash = requireNotNull(passwordEncoder.encode(code)) { "PasswordEncoder returned null hash" }
         // Delete existing codes for this phone before issuing new one
         smsVerificationRepository.deleteAllByPhone(phoneE164)
         val saved = smsVerificationRepository.save(
@@ -45,7 +44,8 @@ class SmsVerificationService(
                 expiresAt = now.plusSeconds(EXPIRY_MINUTES * 60)
             )
         )
-        otpDeliveryService.sendCode(phoneE164, code)
+        // Deferred to after commit: the SMS provider HTTP call must not hold the DB transaction open.
+        afterCommitRunner.run { otpDeliveryService.sendCode(phoneE164, code) }
         return OtpSendResult(
             verificationId = saved.id,
             resendAvailableAt = now.plusSeconds(RATE_LIMIT_SECONDS),

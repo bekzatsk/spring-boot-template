@@ -1,12 +1,12 @@
 package kz.innlab.starter.user.service
 
+import kz.innlab.starter.shared.error.ResourceNotFoundException
 import kz.innlab.starter.user.model.AuthProvider
 import kz.innlab.starter.user.model.RequiredAction
 import kz.innlab.starter.user.model.Role
 import kz.innlab.starter.user.model.User
 import kz.innlab.starter.user.repository.UserRepository
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -168,5 +168,5 @@ class UserService(
 
     @Transactional(readOnly = true)
     fun findById(id: UUID): User =
-        userRepository.findById(id).orElseThrow { AccessDeniedException("User not found") }
+        userRepository.findById(id).orElseThrow { ResourceNotFoundException("User not found") }
 }

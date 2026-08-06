@@ -1,7 +1,7 @@
 package kz.innlab.starter.user.service
 
-import kz.innlab.starter.authentication.repository.RefreshTokenRepository
-import kz.innlab.starter.authentication.service.normalizeToE164
+import kz.innlab.starter.shared.error.ResourceNotFoundException
+import kz.innlab.starter.shared.util.normalizeToE164
 import kz.innlab.starter.user.model.AdminAuditLog
 import kz.innlab.starter.user.model.AuthProvider
 import kz.innlab.starter.user.model.RequiredAction
@@ -12,7 +12,6 @@ import kz.innlab.starter.user.repository.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
-import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,7 +21,7 @@ import java.util.UUID
 class AdminUserService(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
-    private val refreshTokenRepository: RefreshTokenRepository,
+    private val refreshTokenRevoker: RefreshTokenRevoker,
     private val auditLogRepository: AdminAuditLogRepository
 ) {
 
@@ -36,7 +35,7 @@ class AdminUserService(
 
     @Transactional(readOnly = true)
     fun findById(id: UUID): User =
-        userRepository.findById(id).orElseThrow { AccessDeniedException("User not found") }
+        userRepository.findById(id).orElseThrow { ResourceNotFoundException("User not found") }
 
     @Transactional
     fun updatePassword(adminId: UUID, targetId: UUID, newPassword: String, temporary: Boolean): User {
@@ -50,7 +49,7 @@ class AdminUserService(
             user.requiredActions.remove(RequiredAction.UPDATE_PASSWORD)
         }
         val saved = userRepository.save(user)
-        refreshTokenRepository.deleteAllByUser(saved)
+        refreshTokenRevoker.revokeAllFor(saved)
         audit(adminId, "UPDATE_PASSWORD", targetId, after = "temporary=$temporary")
         return saved
     }
@@ -134,7 +133,7 @@ class AdminUserService(
         if (Role.ADMIN in user.roles) {
             ensureNotLastAdmin(targetId)
         }
-        refreshTokenRepository.deleteAllByUser(user)
+        refreshTokenRevoker.revokeAllFor(user)
         userRepository.delete(user)
         audit(adminId, "DELETE_USER", targetId, before = "email=${user.email}")
     }

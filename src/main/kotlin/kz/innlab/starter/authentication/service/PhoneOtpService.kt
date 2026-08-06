@@ -2,6 +2,7 @@ package kz.innlab.starter.authentication.service
 
 import kz.innlab.starter.authentication.dto.AuthResponse
 import kz.innlab.starter.authentication.dto.OtpSendResult
+import kz.innlab.starter.shared.util.normalizeToE164
 import kz.innlab.starter.user.service.UserService
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.security.authentication.BadCredentialsException
@@ -14,8 +15,7 @@ import java.util.UUID
 class PhoneOtpService(
     private val smsVerificationService: SmsVerificationService,
     private val userService: UserService,
-    private val tokenService: TokenService,
-    private val refreshTokenService: RefreshTokenService
+    private val authTokenIssuer: AuthTokenIssuer
 ) {
 
     /**
@@ -46,8 +46,6 @@ class PhoneOtpService(
             throw BadCredentialsException("Invalid or expired OTP")
         }
         val user = userService.findOrCreatePhoneUser(phoneE164)
-        val accessToken = tokenService.generateAccessToken(user.id, user.roles)
-        val refreshToken = refreshTokenService.createToken(user)
-        return AuthResponse(accessToken = accessToken, refreshToken = refreshToken)
+        return authTokenIssuer.issue(user)
     }
 }

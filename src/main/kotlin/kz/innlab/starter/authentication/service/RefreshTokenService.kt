@@ -4,6 +4,7 @@ import kz.innlab.starter.authentication.exception.TokenGracePeriodException
 import kz.innlab.starter.authentication.model.RefreshToken
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
 import kz.innlab.starter.user.model.User
+import kz.innlab.starter.user.service.RefreshTokenRevoker
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.stereotype.Service
@@ -19,7 +20,12 @@ class RefreshTokenService(
     private val refreshTokenRepository: RefreshTokenRepository,
     @Value("\${app.auth.refresh-token.expiry-days:30}")
     private val expiryDays: Long
-) {
+) : RefreshTokenRevoker {
+
+    @Transactional
+    override fun revokeAllFor(user: User) {
+        refreshTokenRepository.deleteAllByUser(user)
+    }
     private val secureRandom = SecureRandom()
     private val graceWindowSeconds = 10L
 

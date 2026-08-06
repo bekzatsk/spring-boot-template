@@ -6,18 +6,18 @@ import kz.innlab.starter.user.service.UserService
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
 @ConditionalOnProperty(name = ["app.auth.google.enabled"], havingValue = "true")
 class GoogleOAuth2Service(
     private val googleIdTokenVerifier: GoogleIdTokenVerifier,
     private val userService: UserService,
-    private val tokenService: TokenService,
-    private val refreshTokenService: RefreshTokenService
+    private val authTokenIssuer: AuthTokenIssuer
 ) {
 
-    @Transactional
+    // Deliberately NOT @Transactional: token verification is a remote HTTP call (Google certs)
+    // and must not hold a DB connection. DB work happens in the transactional
+    // userService.findOrCreateGoogleUser / refreshTokenService.createToken calls.
     fun authenticate(idTokenString: String, clientName: String? = null, clientPicture: String? = null): AuthResponse {
         val idToken = googleIdTokenVerifier.verify(idTokenString)
             ?: throw BadCredentialsException("Invalid Google ID token")
@@ -32,9 +32,6 @@ class GoogleOAuth2Service(
 
         val user = userService.findOrCreateGoogleUser(providerId, email, name, picture)
 
-        val accessToken = tokenService.generateAccessToken(user.id, user.roles)
-        val refreshToken = refreshTokenService.createToken(user)
-
-        return AuthResponse(accessToken = accessToken, refreshToken = refreshToken)
+        return authTokenIssuer.issue(user)
     }
 }

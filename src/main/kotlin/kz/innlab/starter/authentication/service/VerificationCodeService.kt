@@ -8,7 +8,6 @@ import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.security.SecureRandom
 import java.time.Instant
 import java.util.UUID
 
@@ -20,11 +19,9 @@ class VerificationCodeService(
 ) {
 
     companion object {
-        private const val CODE_BOUND = 1_000_000
         private const val EXPIRY_MINUTES = 15L
         private const val RATE_LIMIT_SECONDS = 60L
         private const val MAX_ATTEMPTS = 3
-        private val random = SecureRandom()
     }
 
     @Transactional
@@ -42,8 +39,8 @@ class VerificationCodeService(
             throw IllegalStateException("Please wait before requesting a new code")
         }
 
-        val code = if (devCode.isNotBlank()) devCode else String.format("%06d", random.nextInt(CODE_BOUND))
-        val hash = passwordEncoder.encode(code)!!
+        val code = OneTimeCodes.generate(devCode)
+        val hash = requireNotNull(passwordEncoder.encode(code)) { "PasswordEncoder returned null hash" }
 
         // Delete existing codes for same identifier+purpose before issuing new one
         verificationCodeRepository.deleteAllByIdentifierAndPurpose(identifier, purpose)

@@ -2,6 +2,7 @@ package kz.innlab.starter.authentication.exception
 
 import kz.innlab.starter.shared.error.ErrorResponse
 import kz.innlab.starter.shared.error.ForbiddenOperationException
+import kz.innlab.starter.shared.error.ResourceNotFoundException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -69,6 +70,12 @@ class AuthExceptionHandler {
     fun handleNotFound(ex: NoResourceFoundException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
             ErrorResponse(error = "Not Found", message = "Endpoint not found", status = 404)
+        )
+
+    @ExceptionHandler(ResourceNotFoundException::class)
+    fun handleResourceNotFound(ex: ResourceNotFoundException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+            ErrorResponse(error = "Not Found", message = ex.message ?: "Resource not found", status = 404)
         )
 
     @ExceptionHandler(Exception::class)

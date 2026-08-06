@@ -23,8 +23,7 @@ class LocalAuthService(
     private val authenticationManager: AuthenticationManager,
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
-    private val tokenService: TokenService,
-    private val refreshTokenService: RefreshTokenService,
+    private val authTokenIssuer: AuthTokenIssuer,
     private val verificationCodeService: VerificationCodeService,
     private val emailService: EmailService,
     @Value("\${app.auth.registration.enabled:true}") private val registrationEnabled: Boolean = true,
@@ -80,15 +79,7 @@ class LocalAuthService(
             emailService.sendCode(email, code, "VERIFY_EMAIL")
         }
 
-        val accessToken = tokenService.generateAccessToken(user.id, user.roles, user.requiredActions)
-        val refreshToken = refreshTokenService.createToken(user)
-
-        return AuthResponse(
-            accessToken = accessToken,
-            refreshToken = refreshToken,
-            requiredActions = user.requiredActions.map { it.name },
-            verificationId = verificationId
-        )
+        return authTokenIssuer.issue(user).copy(verificationId = verificationId)
     }
 
     /**
@@ -103,13 +94,6 @@ class LocalAuthService(
         val user = userRepository.findByEmail(email)
             ?: throw BadCredentialsException("User not found")
 
-        val accessToken = tokenService.generateAccessToken(user.id, user.roles, user.requiredActions)
-        val refreshToken = refreshTokenService.createToken(user)
-
-        return AuthResponse(
-            accessToken = accessToken,
-            refreshToken = refreshToken,
-            requiredActions = user.requiredActions.map { it.name }
-        )
+        return authTokenIssuer.issue(user)
     }
 }

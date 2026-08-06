@@ -2,10 +2,11 @@ package kz.innlab.starter.authentication.service
 
 import kz.innlab.starter.authentication.model.VerificationPurpose
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
+import kz.innlab.starter.shared.error.ResourceNotFoundException
+import kz.innlab.starter.shared.util.normalizeToE164
 import kz.innlab.starter.user.model.AuthProvider
 import kz.innlab.starter.user.model.RequiredAction
 import kz.innlab.starter.user.repository.UserRepository
-import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -99,7 +100,7 @@ class AccountManagementService(
     @Transactional
     fun changePassword(userId: UUID, currentPassword: String, newPassword: String) {
         val user = userRepository.findById(userId).orElseThrow {
-            AccessDeniedException("User not found")
+            ResourceNotFoundException("User not found")
         }
 
         if (AuthProvider.LOCAL !in user.providers || user.passwordHash == null) {
@@ -124,7 +125,7 @@ class AccountManagementService(
      */
     fun requestEmailChange(userId: UUID, newEmail: String): UUID {
         val user = userRepository.findById(userId).orElseThrow {
-            AccessDeniedException("User not found")
+            ResourceNotFoundException("User not found")
         }
 
         if (userRepository.findByEmail(newEmail) != null) {
@@ -157,7 +158,7 @@ class AccountManagementService(
         }
 
         val user = userRepository.findById(userId).orElseThrow {
-            AccessDeniedException("User not found")
+            ResourceNotFoundException("User not found")
         }
         user.email = newEmail
         userRepository.save(user)
@@ -172,7 +173,7 @@ class AccountManagementService(
         val phoneE164 = normalizeToE164(phone)
 
         val user = userRepository.findById(userId).orElseThrow {
-            AccessDeniedException("User not found")
+            ResourceNotFoundException("User not found")
         }
 
         if (userRepository.findByPhone(phoneE164) != null) {
@@ -205,7 +206,7 @@ class AccountManagementService(
         }
 
         val user = userRepository.findById(userId).orElseThrow {
-            AccessDeniedException("User not found")
+            ResourceNotFoundException("User not found")
         }
         user.phone = phoneE164
         user.providers.add(AuthProvider.LOCAL) // Idempotent — ensures LOCAL provider is present
