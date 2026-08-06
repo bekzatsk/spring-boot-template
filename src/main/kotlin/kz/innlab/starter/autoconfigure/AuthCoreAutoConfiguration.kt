@@ -129,9 +129,7 @@ class AuthCoreAutoConfiguration {
     @ConditionalOnMissingBean
     fun requiredActionFilter(
         properties: AuthSecurityProperties,
-        // RequiredActionFilter still writes with Jackson 2 while the rest of the starter is on
-        // Jackson 3; both ObjectMapper beans exist, so the parameter type picks the right one.
-        objectMapper: com.fasterxml.jackson.databind.ObjectMapper
+        objectMapper: ObjectMapper
     ): RequiredActionFilter = RequiredActionFilter(properties, objectMapper)
 
     @Bean
