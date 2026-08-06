@@ -30,7 +30,17 @@ class TelegramWebhookController(
         @RequestBody body: Map<String, Any>,
         @RequestHeader("X-Telegram-Bot-Api-Secret-Token", required = false) secretToken: String?
     ): ResponseEntity<Void> {
-        if (webhookSecret.isNotBlank() && secretToken != webhookSecret) {
+        // Fail closed: with no secret configured this public endpoint would accept forged updates
+        // from anyone, letting an attacker poison pending login sessions. 200 is returned in all
+        // reject paths so Telegram does not retry-storm, but the update is dropped.
+        if (webhookSecret.isBlank()) {
+            logger.error(
+                "Telegram webhook rejected: app.auth.telegram.webhook-secret is not configured. " +
+                    "Set TELEGRAM_WEBHOOK_SECRET to enable webhook processing."
+            )
+            return ResponseEntity.ok().build()
+        }
+        if (secretToken != webhookSecret) {
             logger.warn("Telegram webhook request with invalid secret token")
             return ResponseEntity.ok().build()
         }

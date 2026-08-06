@@ -32,6 +32,12 @@ class TelegramAuthSession(
     @Column(name = "max_attempts", nullable = false)
     var maxAttempts: Int = 3
 
+    @Column(name = "code_sent_at")
+    var codeSentAt: Instant? = null
+
+    @Column(name = "resend_count", nullable = false)
+    var resendCount: Int = 0
+
     @Column(name = "telegram_user_id")
     var telegramUserId: Long? = null
 
