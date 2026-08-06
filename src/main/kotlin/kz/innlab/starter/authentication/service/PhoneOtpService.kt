@@ -2,10 +2,11 @@ package kz.innlab.starter.authentication.service
 
 import kz.innlab.starter.authentication.dto.AuthResponse
 import kz.innlab.starter.authentication.dto.OtpSendResult
+import kz.innlab.starter.authentication.model.VerificationPurpose
+import kz.innlab.starter.shared.transaction.AfterCommitRunner
 import kz.innlab.starter.shared.util.normalizeToE164
 import kz.innlab.starter.user.service.UserService
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -13,9 +14,11 @@ import java.util.UUID
 @Service
 @ConditionalOnProperty(name = ["app.auth.phone.enabled"], havingValue = "true", matchIfMissing = true)
 class PhoneOtpService(
-    private val smsVerificationService: SmsVerificationService,
+    private val verificationCodeService: VerificationCodeService,
+    private val otpDeliveryService: OtpDeliveryService,
     private val userService: UserService,
-    private val authTokenIssuer: AuthTokenIssuer
+    private val authTokenIssuer: AuthTokenIssuer,
+    private val afterCommitRunner: AfterCommitRunner
 ) {
 
     /**
@@ -27,9 +30,19 @@ class PhoneOtpService(
      * and the resend cooldown info for the client.
      * TODO: return a dedicated 429 Too Many Requests response for rate limit violations.
      */
+    @Transactional
     fun sendOtp(rawPhone: String): OtpSendResult {
         val phoneE164 = normalizeToE164(rawPhone)
-        return smsVerificationService.sendCode(phoneE164)
+        val issued = verificationCodeService.createCode(phoneE164, VerificationPurpose.PHONE_LOGIN)
+
+        // Deferred to after commit: the SMS provider HTTP call must not hold the DB transaction open.
+        afterCommitRunner.run { otpDeliveryService.sendCode(phoneE164, issued.code) }
+
+        return OtpSendResult(
+            verificationId = issued.verificationId,
+            resendAvailableAt = issued.resendAvailableAt,
+            retryAfterSeconds = issued.retryAfterSeconds
+        )
     }
 
     /**
@@ -41,10 +54,7 @@ class PhoneOtpService(
     @Transactional
     fun verifyOtp(verificationId: UUID, rawPhone: String, code: String): AuthResponse {
         val phoneE164 = normalizeToE164(rawPhone)
-        val verified = smsVerificationService.verifyCode(verificationId, phoneE164, code)
-        if (!verified) {
-            throw BadCredentialsException("Invalid or expired OTP")
-        }
+        verificationCodeService.verifyCode(verificationId, phoneE164, VerificationPurpose.PHONE_LOGIN, code)
         val user = userService.findOrCreatePhoneUser(phoneE164)
         return authTokenIssuer.issue(user)
     }

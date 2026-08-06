@@ -1,6 +1,5 @@
 package kz.innlab.starter.config
 
-import kz.innlab.starter.authentication.repository.SmsVerificationRepository
 import kz.innlab.starter.authentication.repository.VerificationCodeRepository
 import kz.innlab.starter.authentication.service.ConsoleSmsService
 import kz.innlab.starter.authentication.service.SmsService
@@ -26,21 +25,11 @@ class SmsSchedulerConfig {
     @ConditionalOnMissingBean(SmsService::class)
     fun smsService(): SmsService = ConsoleSmsService()
 
+    /**
+     * One job for every channel: phone OTPs live in verification_codes alongside the
+     * email/Telegram codes, so the separate SMS cleanup job is gone.
+     */
     @Configuration
-    @ConditionalOnProperty(name = ["app.auth.phone.enabled"], havingValue = "true", matchIfMissing = true)
-    class SmsCleanupScheduler(
-        private val smsVerificationRepository: SmsVerificationRepository
-    ) {
-        @Scheduled(fixedRate = 600_000)
-        @Transactional
-        fun cleanupExpiredSmsCodes() {
-            logger.debug("Running SMS verification cleanup job")
-            smsVerificationRepository.deleteExpiredOrUsed(Instant.now())
-        }
-    }
-
-    @Configuration
-    @ConditionalOnProperty(name = ["app.auth.local.enabled"], havingValue = "true", matchIfMissing = true)
     class VerificationCodeCleanupScheduler(
         private val verificationCodeRepository: VerificationCodeRepository
     ) {

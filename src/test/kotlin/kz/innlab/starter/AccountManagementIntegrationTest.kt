@@ -1,7 +1,6 @@
 package kz.innlab.starter
 
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
-import kz.innlab.starter.authentication.repository.SmsVerificationRepository
 import kz.innlab.starter.authentication.repository.VerificationCodeRepository
 import kz.innlab.starter.authentication.service.EmailService
 import kz.innlab.starter.authentication.service.RefreshTokenService
@@ -53,9 +52,6 @@ class AccountManagementIntegrationTest {
     private lateinit var verificationCodeRepository: VerificationCodeRepository
 
     @Autowired
-    private lateinit var smsVerificationRepository: SmsVerificationRepository
-
-    @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
 
     @Autowired
@@ -68,7 +64,6 @@ class AccountManagementIntegrationTest {
     fun cleanUp() {
         refreshTokenRepository.deleteAll()
         verificationCodeRepository.deleteAll()
-        smsVerificationRepository.deleteAll()
         userRepository.deleteAll()
     }
 
