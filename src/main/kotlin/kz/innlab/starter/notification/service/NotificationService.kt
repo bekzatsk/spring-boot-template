@@ -51,7 +51,7 @@ class NotificationService(
         history.data = data.toString()
         notificationHistoryRepository.save(history)
 
-        notificationDispatcher.dispatchMulticast(history.id, tokens, title, body, data)
+        afterCommitRunner.run { notificationDispatcher.dispatchMulticast(history.id, tokens, title, body, data) }
         return history.id
     }
 

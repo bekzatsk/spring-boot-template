@@ -61,8 +61,9 @@ class MailConfig {
     fun smtpMailService(
         mailProperties: MailProperties,
         mailHistoryRepository: MailHistoryRepository,
-        mailDispatcher: MailDispatcher
-    ): SmtpMailService = SmtpMailService(mailProperties, mailHistoryRepository, mailDispatcher)
+        mailDispatcher: MailDispatcher,
+        afterCommitRunner: kz.innlab.starter.shared.transaction.AfterCommitRunner
+    ): SmtpMailService = SmtpMailService(mailProperties, mailHistoryRepository, mailDispatcher, afterCommitRunner)
 
     // --- Fallback (console logging) ---
     // Two single-interface beans: mocking EmailService in tests replaces only consoleEmailService

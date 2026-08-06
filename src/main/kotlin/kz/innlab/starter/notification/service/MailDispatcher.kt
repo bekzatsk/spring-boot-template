@@ -1,5 +1,6 @@
 package kz.innlab.starter.notification.service
 
+import kz.innlab.starter.config.AsyncConfig
 import kz.innlab.starter.config.MailProperties
 import kz.innlab.starter.notification.model.MailStatus
 import kz.innlab.starter.notification.repository.MailHistoryRepository
@@ -9,7 +10,6 @@ import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.mail.javamail.MimeMessageHelper
 import org.springframework.scheduling.annotation.Async
-import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 open class MailDispatcher(
@@ -22,8 +22,10 @@ open class MailDispatcher(
         private val logger = LoggerFactory.getLogger(MailDispatcher::class.java)
     }
 
-    @Async
-    @Transactional
+    // Deliberately NOT @Transactional: SMTP attempts and retry sleeps must never pin a DB
+    // connection to an open transaction. Each repository save below runs in its own short
+    // transaction; a failing mail server then degrades mail delivery, not the DB pool.
+    @Async(AsyncConfig.STARTER_EXECUTOR)
     open fun dispatchEmail(
         historyId: UUID,
         to: String,
@@ -60,6 +62,7 @@ open class MailDispatcher(
             } catch (e: Exception) {
                 logger.warn("Email dispatch attempt {}/{} failed for {}: {}", attempt, mailProperties.retry.maxAttempts, historyId, e.message)
                 history.attempts = attempt
+                mailHistoryRepository.save(history)
                 if (attempt < mailProperties.retry.maxAttempts) {
                     try {
                         Thread.sleep(mailProperties.retry.delayMs)
