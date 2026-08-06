@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import kz.innlab.starter.authentication.dto.TelegramInitResponse
 import kz.innlab.starter.authentication.dto.TelegramResendRequest
+import kz.innlab.starter.authentication.dto.TelegramResendResponse
 import kz.innlab.starter.authentication.dto.TelegramStatusResponse
 import kz.innlab.starter.authentication.dto.TelegramVerifyRequest
 import kz.innlab.starter.authentication.dto.TelegramVerifyResponse
@@ -59,10 +60,8 @@ class TelegramAuthController(
 
     @Operation(summary = "Resend verification code to Telegram", security = [])
     @PostMapping("/resend")
-    fun resendCode(@Valid @RequestBody request: TelegramResendRequest): ResponseEntity<Map<String, Any>> {
-        val response = telegramAuthService.resendCode(request.sessionId)
-        return ResponseEntity.ok(response)
-    }
+    fun resendCode(@Valid @RequestBody request: TelegramResendRequest): ResponseEntity<TelegramResendResponse> =
+        ResponseEntity.ok(telegramAuthService.resendCode(request.sessionId))
 
     @Operation(summary = "Check Telegram auth session status", security = [])
     @GetMapping("/status/{sessionId}")

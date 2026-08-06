@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import kz.innlab.starter.notification.dto.DeviceTokenResponse
 import kz.innlab.starter.notification.dto.NotificationHistoryResponse
+import kz.innlab.starter.notification.dto.NotificationSendResponse
 import kz.innlab.starter.notification.dto.NotificationPreferenceRequest
 import kz.innlab.starter.notification.dto.NotificationPreferenceResponse
 import kz.innlab.starter.notification.dto.RegisterTokenRequest
@@ -85,34 +86,34 @@ class NotificationController(
     fun sendToToken(
         @Valid @RequestBody request: SendToTokenRequest,
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
-    ): ResponseEntity<Map<String, Any>> {
+    ): ResponseEntity<NotificationSendResponse> {
         val userId = UUID.fromString(jwt.subject)
         val historyId = notificationService.sendToToken(userId, request.token, request.title, request.body, request.data)
-            ?: return ResponseEntity.ok(mapOf("skipped" to true, "reason" to "PUSH notifications disabled"))
-        return ResponseEntity.accepted().body(mapOf("notificationId" to historyId))
+            ?: return ResponseEntity.ok(NotificationSendResponse.skipped("PUSH notifications disabled"))
+        return ResponseEntity.accepted().body(NotificationSendResponse.queued(historyId))
     }
 
     @PostMapping("/send/multicast")
     fun sendMulticast(
         @Valid @RequestBody request: SendMulticastRequest,
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
-    ): ResponseEntity<Map<String, Any>> {
+    ): ResponseEntity<NotificationSendResponse> {
         val userId = UUID.fromString(jwt.subject)
         val historyId = notificationService.sendMulticast(userId, request.tokens, request.title, request.body, request.data)
-            ?: return ResponseEntity.ok(mapOf("skipped" to true, "reason" to "PUSH notifications disabled"))
-        return ResponseEntity.accepted().body(mapOf("notificationId" to historyId))
+            ?: return ResponseEntity.ok(NotificationSendResponse.skipped("PUSH notifications disabled"))
+        return ResponseEntity.accepted().body(NotificationSendResponse.queued(historyId))
     }
 
     @PostMapping("/send/topic")
     fun sendToTopic(
         @Valid @RequestBody request: SendToTopicRequest,
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
-    ): ResponseEntity<Map<String, Any>> {
+    ): ResponseEntity<NotificationSendResponse> {
         val userId = UUID.fromString(jwt.subject)
         topicService.validateTopicExists(request.topic)
         val historyId = notificationService.sendToTopic(userId, request.topic, request.title, request.body, request.data)
-            ?: return ResponseEntity.ok(mapOf("skipped" to true, "reason" to "PUSH notifications disabled"))
-        return ResponseEntity.accepted().body(mapOf("notificationId" to historyId))
+            ?: return ResponseEntity.ok(NotificationSendResponse.skipped("PUSH notifications disabled"))
+        return ResponseEntity.accepted().body(NotificationSendResponse.queued(historyId))
     }
 
     // --- Topic subscriptions ---

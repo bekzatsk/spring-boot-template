@@ -4,7 +4,8 @@ import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import kz.innlab.starter.notification.dto.EmailMessageResponse
-import kz.innlab.starter.notification.dto.InboxMessageResponse
+import kz.innlab.starter.notification.dto.InboxPageResponse
+import kz.innlab.starter.notification.dto.MailSendResponse
 import kz.innlab.starter.notification.dto.MailHistoryResponse
 import kz.innlab.starter.notification.dto.SendEmailRequest
 import kz.innlab.starter.notification.service.EmailAttachment
@@ -44,7 +45,7 @@ class MailController(
     fun sendEmail(
         @Valid @RequestBody request: SendEmailRequest,
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
-    ): ResponseEntity<Map<String, UUID>> {
+    ): ResponseEntity<MailSendResponse> {
         val userId = UUID.fromString(jwt.subject)
         mailSendPolicy.enforceSendAllowed(userId)
         val mailId = mailService.sendEmail(
@@ -54,7 +55,7 @@ class MailController(
             textBody = request.textBody,
             htmlBody = request.htmlBody
         )
-        return ResponseEntity.accepted().body(mapOf("mailId" to mailId))
+        return ResponseEntity.accepted().body(MailSendResponse(mailId))
     }
 
     @PostMapping("/send/with-attachments")
@@ -62,7 +63,7 @@ class MailController(
         @Valid @RequestPart("email") request: SendEmailRequest,
         @RequestPart("files") files: List<MultipartFile>,
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
-    ): ResponseEntity<Map<String, UUID>> {
+    ): ResponseEntity<MailSendResponse> {
         val userId = UUID.fromString(jwt.subject)
         mailSendPolicy.enforceSendAllowed(userId)
         mailSendPolicy.validateAttachments(files)
@@ -81,7 +82,7 @@ class MailController(
             htmlBody = request.htmlBody,
             attachments = attachments
         )
-        return ResponseEntity.accepted().body(mapOf("mailId" to mailId))
+        return ResponseEntity.accepted().body(MailSendResponse(mailId))
     }
 
     // --- IMAP inbox ---
@@ -92,16 +93,9 @@ class MailController(
         @RequestParam(defaultValue = "20") size: Int,
         @RequestParam(defaultValue = "false") unreadOnly: Boolean,
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
-    ): ResponseEntity<Map<String, Any>> {
+    ): ResponseEntity<InboxPageResponse> {
         val page = imapService.listInbox(offset, size.coerceIn(1, 100), unreadOnly)
-        return ResponseEntity.ok(
-            mapOf(
-                "messages" to page.messages.map { InboxMessageResponse.from(it) },
-                "total" to page.total,
-                "offset" to page.offset,
-                "size" to page.size
-            )
-        )
+        return ResponseEntity.ok(InboxPageResponse.from(page))
     }
 
     @GetMapping("/inbox/{messageNumber}")

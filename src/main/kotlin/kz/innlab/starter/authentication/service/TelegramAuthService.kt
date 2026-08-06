@@ -1,6 +1,7 @@
 package kz.innlab.starter.authentication.service
 
 import kz.innlab.starter.authentication.dto.TelegramInitResponse
+import kz.innlab.starter.authentication.dto.TelegramResendResponse
 import kz.innlab.starter.authentication.dto.TelegramStatusResponse
 import kz.innlab.starter.authentication.dto.TelegramVerifyResponse
 import kz.innlab.starter.authentication.model.TelegramAuthSession
@@ -213,7 +214,7 @@ class TelegramAuthService(
     }
 
     @Transactional
-    fun resendCode(sessionId: String): Map<String, Any> {
+    fun resendCode(sessionId: String): TelegramResendResponse {
         val session = sessionRepository.findBySessionId(sessionId)
             ?: throw IllegalArgumentException("Session not found")
 
@@ -260,10 +261,10 @@ class TelegramAuthService(
             )
         }
 
-        return mapOf(
-            "sent" to true,
-            "cooldown" to resendCooldownSeconds,
-            "message" to "Жаңа код Telegram-ға жіберілді"
+        return TelegramResendResponse(
+            sent = true,
+            cooldown = resendCooldownSeconds,
+            message = "Жаңа код Telegram-ға жіберілді"
         )
     }
 
