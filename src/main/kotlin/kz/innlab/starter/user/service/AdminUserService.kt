@@ -2,6 +2,7 @@ package kz.innlab.starter.user.service
 
 import kz.innlab.starter.shared.error.ResourceNotFoundException
 import kz.innlab.starter.shared.util.normalizeToE164
+import kz.innlab.starter.user.dto.UserSummaryResponse
 import kz.innlab.starter.user.model.AdminAuditLog
 import kz.innlab.starter.user.model.AuthProvider
 import kz.innlab.starter.user.model.RequiredAction
@@ -30,8 +31,8 @@ class AdminUserService(
     }
 
     @Transactional(readOnly = true)
-    fun list(query: String?, pageable: Pageable): Page<User> =
-        userRepository.search(query, pageable)
+    fun list(query: String?, pageable: Pageable): Page<UserSummaryResponse> =
+        userRepository.searchSummaries(query, pageable)
 
     @Transactional(readOnly = true)
     fun findById(id: UUID): User =
