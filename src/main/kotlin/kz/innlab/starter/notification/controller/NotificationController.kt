@@ -123,7 +123,7 @@ class NotificationController(
         @Valid @RequestBody request: TopicSubscribeRequest,
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Void> {
-        topicService.subscribe(request.token, name)
+        topicService.subscribe(UUID.fromString(jwt.subject), request.token, name)
         return ResponseEntity.ok().build()
     }
 
@@ -133,7 +133,7 @@ class NotificationController(
         @Valid @RequestBody request: TopicSubscribeRequest,
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
     ): ResponseEntity<Void> {
-        topicService.unsubscribe(request.token, name)
+        topicService.unsubscribe(UUID.fromString(jwt.subject), request.token, name)
         return ResponseEntity.ok().build()
     }
 

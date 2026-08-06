@@ -1,6 +1,7 @@
 package kz.innlab.starter.authentication.exception
 
 import kz.innlab.starter.shared.error.ErrorResponse
+import kz.innlab.starter.shared.error.ForbiddenOperationException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -56,6 +57,12 @@ class AuthExceptionHandler {
     fun handleBadRequest(ex: IllegalArgumentException): ResponseEntity<ErrorResponse> =
         ResponseEntity.badRequest().body(
             ErrorResponse(error = "Bad Request", message = ex.message ?: "Invalid request", status = 400)
+        )
+
+    @ExceptionHandler(ForbiddenOperationException::class)
+    fun handleForbidden(ex: ForbiddenOperationException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+            ErrorResponse(error = "Forbidden", message = ex.message ?: "Operation not allowed", status = 403)
         )
 
     @ExceptionHandler(NoResourceFoundException::class)
