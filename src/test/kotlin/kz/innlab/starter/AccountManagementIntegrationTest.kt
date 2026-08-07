@@ -1,7 +1,6 @@
 package kz.innlab.starter
 
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
-import kz.innlab.starter.authentication.repository.SmsVerificationRepository
 import kz.innlab.starter.authentication.repository.VerificationCodeRepository
 import kz.innlab.starter.authentication.service.EmailService
 import kz.innlab.starter.authentication.service.RefreshTokenService
@@ -53,9 +52,6 @@ class AccountManagementIntegrationTest {
     private lateinit var verificationCodeRepository: VerificationCodeRepository
 
     @Autowired
-    private lateinit var smsVerificationRepository: SmsVerificationRepository
-
-    @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
 
     @Autowired
@@ -68,7 +64,6 @@ class AccountManagementIntegrationTest {
     fun cleanUp() {
         refreshTokenRepository.deleteAll()
         verificationCodeRepository.deleteAll()
-        smsVerificationRepository.deleteAll()
         userRepository.deleteAll()
     }
 
@@ -188,6 +183,46 @@ class AccountManagementIntegrationTest {
             .andExpect(status().isUnauthorized)
     }
 
+    @Test
+    fun `reset password stops accepting the correct code after the attempt limit`() {
+        // The attempt counter used to be rolled back together with the caller's transaction,
+        // so the limit never applied. It is now committed independently.
+        val user = createLocalUser()
+        val getCode = captureEmailCodeOnSend()
+
+        val requestResult = mockMvc.perform(
+            post("/api/v1/auth/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email": "test@example.com"}""")
+        )
+            .andExpect(status().isAccepted)
+            .andReturn()
+
+        val verificationId = extractVerificationId(requestResult)
+        val correctCode = getCode()
+
+        repeat(3) {
+            mockMvc.perform(
+                post("/api/v1/auth/reset-password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"verificationId": "$verificationId", "email": "test@example.com", "code": "000000", "newPassword": "NewPassword456"}""")
+            )
+                .andExpect(status().isUnauthorized)
+        }
+
+        mockMvc.perform(
+            post("/api/v1/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"verificationId": "$verificationId", "email": "test@example.com", "code": "$correctCode", "newPassword": "NewPassword456"}""")
+        )
+            .andExpect(status().isUnauthorized)
+
+        val unchanged = userRepository.findById(user.id).orElseThrow()
+        assert(passwordEncoder.matches("OldPassword123", unchanged.passwordHash)) {
+            "Password must stay unchanged once the attempt limit is exhausted"
+        }
+    }
+
     // --- Change Password Tests ---
 
     @Test
@@ -207,6 +242,52 @@ class AccountManagementIntegrationTest {
         val updatedUser = userRepository.findById(user.id).orElseThrow()
         assert(passwordEncoder.matches("NewPassword456", updatedUser.passwordHash)) { "Password should be updated" }
         assert(refreshTokenRepository.findAll().isEmpty()) { "All refresh tokens should be deleted" }
+    }
+
+    @Test
+    fun `change password rejects a password shorter than the registration policy`() {
+        val user = createLocalUser()
+        val accessToken = generateAccessToken(user)
+
+        mockMvc.perform(
+            post("/api/v1/users/me/change-password")
+                .header("Authorization", "Bearer $accessToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"currentPassword": "OldPassword123", "newPassword": "short"}""")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.status").value(400))
+
+        // The weak password must not have been applied
+        val unchanged = userRepository.findById(user.id).orElseThrow()
+        assert(passwordEncoder.matches("OldPassword123", unchanged.passwordHash)) {
+            "Password must stay unchanged when the new one is rejected"
+        }
+    }
+
+    @Test
+    fun `reset password rejects a password shorter than the registration policy`() {
+        createLocalUser()
+        val getCode = captureEmailCodeOnSend()
+
+        val requestResult = mockMvc.perform(
+            post("/api/v1/auth/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email": "test@example.com"}""")
+        )
+            .andExpect(status().isAccepted)
+            .andReturn()
+
+        val verificationId = extractVerificationId(requestResult)
+        val code = getCode()
+
+        mockMvc.perform(
+            post("/api/v1/auth/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"verificationId": "$verificationId", "email": "test@example.com", "code": "$code", "newPassword": "short"}""")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.status").value(400))
     }
 
     @Test

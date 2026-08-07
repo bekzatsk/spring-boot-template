@@ -6,10 +6,12 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import kz.innlab.starter.authentication.dto.TelegramInitResponse
 import kz.innlab.starter.authentication.dto.TelegramResendRequest
+import kz.innlab.starter.authentication.dto.TelegramResendResponse
 import kz.innlab.starter.authentication.dto.TelegramStatusResponse
 import kz.innlab.starter.authentication.dto.TelegramVerifyRequest
 import kz.innlab.starter.authentication.dto.TelegramVerifyResponse
 import kz.innlab.starter.authentication.service.TelegramAuthService
+import kz.innlab.starter.config.TelegramAuthProperties
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -25,14 +27,21 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/v1/auth/telegram")
 @ConditionalOnProperty(name = ["app.auth.telegram.enabled"], havingValue = "true")
 class TelegramAuthController(
-    private val telegramAuthService: TelegramAuthService
+    private val telegramAuthService: TelegramAuthService,
+    private val telegramProperties: TelegramAuthProperties
 ) {
 
     @Operation(summary = "Initialize Telegram auth session", security = [])
     @PostMapping("/init")
     fun initSession(request: HttpServletRequest): ResponseEntity<TelegramInitResponse> {
-        val ipAddress = request.getHeader("X-Forwarded-For")?.split(",")?.firstOrNull()?.trim()
-            ?: request.remoteAddr
+        // X-Forwarded-For is client-controlled: honoring it without a trusted reverse proxy lets
+        // any caller bypass the per-IP session rate limit with a spoofed header. Opt in only when
+        // deployed behind a proxy that overwrites the header.
+        val ipAddress = if (telegramProperties.trustForwardedHeaders) {
+            request.getHeader("X-Forwarded-For")?.split(",")?.firstOrNull()?.trim() ?: request.remoteAddr
+        } else {
+            request.remoteAddr
+        }
         val response = telegramAuthService.initSession(ipAddress)
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
@@ -51,10 +60,8 @@ class TelegramAuthController(
 
     @Operation(summary = "Resend verification code to Telegram", security = [])
     @PostMapping("/resend")
-    fun resendCode(@Valid @RequestBody request: TelegramResendRequest): ResponseEntity<Map<String, Any>> {
-        val response = telegramAuthService.resendCode(request.sessionId)
-        return ResponseEntity.ok(response)
-    }
+    fun resendCode(@Valid @RequestBody request: TelegramResendRequest): ResponseEntity<TelegramResendResponse> =
+        ResponseEntity.ok(telegramAuthService.resendCode(request.sessionId))
 
     @Operation(summary = "Check Telegram auth session status", security = [])
     @GetMapping("/status/{sessionId}")

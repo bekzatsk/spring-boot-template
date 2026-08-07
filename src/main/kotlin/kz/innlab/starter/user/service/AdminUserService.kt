@@ -1,7 +1,8 @@
 package kz.innlab.starter.user.service
 
-import kz.innlab.starter.authentication.repository.RefreshTokenRepository
-import kz.innlab.starter.authentication.service.normalizeToE164
+import kz.innlab.starter.shared.error.ResourceNotFoundException
+import kz.innlab.starter.shared.util.normalizeToE164
+import kz.innlab.starter.user.dto.UserSummaryResponse
 import kz.innlab.starter.user.model.AdminAuditLog
 import kz.innlab.starter.user.model.AuthProvider
 import kz.innlab.starter.user.model.RequiredAction
@@ -12,7 +13,6 @@ import kz.innlab.starter.user.repository.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
-import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,7 +22,7 @@ import java.util.UUID
 class AdminUserService(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
-    private val refreshTokenRepository: RefreshTokenRepository,
+    private val refreshTokenRevoker: RefreshTokenRevoker,
     private val auditLogRepository: AdminAuditLogRepository
 ) {
 
@@ -31,18 +31,27 @@ class AdminUserService(
     }
 
     @Transactional(readOnly = true)
-    fun list(query: String?, pageable: Pageable): Page<User> =
-        userRepository.search(query, pageable)
+    fun list(query: String?, pageable: Pageable): Page<UserSummaryResponse> =
+        userRepository.searchSummaries(escapeLikeWildcards(query), pageable)
+
+    /**
+     * `%` and `_` are LIKE metacharacters. Unescaped, a search for "%" matches every row and
+     * forces a full scan; the queries declare ESCAPE '\' so the escaped input is taken literally.
+     */
+    private fun escapeLikeWildcards(query: String?): String? = query
+        ?.replace("\\", "\\\\")
+        ?.replace("%", "\\%")
+        ?.replace("_", "\\_")
 
     @Transactional(readOnly = true)
     fun findById(id: UUID): User =
-        userRepository.findById(id).orElseThrow { AccessDeniedException("User not found") }
+        userRepository.findById(id).orElseThrow { ResourceNotFoundException("User not found") }
 
     @Transactional
     fun updatePassword(adminId: UUID, targetId: UUID, newPassword: String, temporary: Boolean): User {
         val user = findById(targetId)
         user.passwordHash = passwordEncoder.encode(newPassword)
-        user.providers.add(AuthProvider.LOCAL)
+        user.linkProvider(AuthProvider.LOCAL)
         user.passwordTemporary = temporary
         if (temporary) {
             user.requiredActions.add(RequiredAction.UPDATE_PASSWORD)
@@ -50,7 +59,7 @@ class AdminUserService(
             user.requiredActions.remove(RequiredAction.UPDATE_PASSWORD)
         }
         val saved = userRepository.save(user)
-        refreshTokenRepository.deleteAllByUser(saved)
+        refreshTokenRevoker.revokeAllFor(saved)
         audit(adminId, "UPDATE_PASSWORD", targetId, after = "temporary=$temporary")
         return saved
     }
@@ -85,7 +94,7 @@ class AdminUserService(
 
         val before = user.phone
         user.phone = phoneE164
-        user.providers.add(AuthProvider.LOCAL)
+        user.linkProvider(AuthProvider.LOCAL)
         val saved = userRepository.save(user)
         audit(adminId, "UPDATE_PHONE", targetId, before = before, after = phoneE164)
         return saved
@@ -134,7 +143,7 @@ class AdminUserService(
         if (Role.ADMIN in user.roles) {
             ensureNotLastAdmin(targetId)
         }
-        refreshTokenRepository.deleteAllByUser(user)
+        refreshTokenRevoker.revokeAllFor(user)
         userRepository.delete(user)
         audit(adminId, "DELETE_USER", targetId, before = "email=${user.email}")
     }

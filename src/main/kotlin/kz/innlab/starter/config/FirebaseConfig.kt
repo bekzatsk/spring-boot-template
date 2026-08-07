@@ -6,12 +6,10 @@ import com.google.firebase.FirebaseOptions
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.scheduling.annotation.EnableAsync
 import java.io.ByteArrayInputStream
 import java.util.Base64
 
 @Configuration
-@EnableAsync
 class FirebaseConfig {
 
     @Bean

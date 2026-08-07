@@ -1,5 +1,6 @@
 package kz.innlab.starter.notification.service
 
+import kz.innlab.starter.config.AsyncConfig
 import kz.innlab.starter.config.MailProperties
 import kz.innlab.starter.notification.model.MailStatus
 import kz.innlab.starter.notification.repository.MailHistoryRepository
@@ -9,7 +10,6 @@ import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.mail.javamail.MimeMessageHelper
 import org.springframework.scheduling.annotation.Async
-import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 open class MailDispatcher(
@@ -22,8 +22,10 @@ open class MailDispatcher(
         private val logger = LoggerFactory.getLogger(MailDispatcher::class.java)
     }
 
-    @Async
-    @Transactional
+    // Deliberately NOT @Transactional: SMTP attempts and retry sleeps must never pin a DB
+    // connection to an open transaction. Each repository save below runs in its own short
+    // transaction; a failing mail server then degrades mail delivery, not the DB pool.
+    @Async(AsyncConfig.STARTER_EXECUTOR)
     open fun dispatchEmail(
         historyId: UUID,
         to: String,
@@ -32,7 +34,14 @@ open class MailDispatcher(
         htmlBody: String?,
         attachments: List<EmailAttachment>
     ) {
-        val history = mailHistoryRepository.findById(historyId).orElseThrow()
+        // Runs on another thread long after the caller returned: the history row may be gone
+        // (purged, or the owning request rolled back). Nothing to report status against, and an
+        // exception here would only surface in the async handler's log.
+        val history = mailHistoryRepository.findById(historyId).orElse(null)
+        if (history == null) {
+            logger.warn("Mail history {} disappeared before dispatch; skipping", historyId)
+            return
+        }
 
         for (attempt in 1..mailProperties.retry.maxAttempts) {
             try {
@@ -55,11 +64,12 @@ open class MailDispatcher(
                 javaMailSender.send(message)
                 history.status = MailStatus.SENT
                 history.attempts = attempt
-                mailHistoryRepository.save(history)
+                saveQuietly(history)
                 return
             } catch (e: Exception) {
                 logger.warn("Email dispatch attempt {}/{} failed for {}: {}", attempt, mailProperties.retry.maxAttempts, historyId, e.message)
                 history.attempts = attempt
+                saveQuietly(history)
                 if (attempt < mailProperties.retry.maxAttempts) {
                     try {
                         Thread.sleep(mailProperties.retry.delayMs)
@@ -73,7 +83,15 @@ open class MailDispatcher(
 
         logger.error("Email dispatch failed after {} attempts for {}", mailProperties.retry.maxAttempts, historyId)
         history.status = MailStatus.FAILED
-        mailHistoryRepository.save(history)
+        saveQuietly(history)
+    }
+
+    private fun saveQuietly(history: kz.innlab.starter.notification.model.MailHistory) {
+        try {
+            mailHistoryRepository.save(history)
+        } catch (e: Exception) {
+            logger.warn("Could not record mail status for {}: {}", history.id, e.message)
+        }
     }
 
     open fun sendDirect(to: String, subject: String, textBody: String) {

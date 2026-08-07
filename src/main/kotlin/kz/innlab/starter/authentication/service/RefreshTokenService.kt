@@ -4,7 +4,8 @@ import kz.innlab.starter.authentication.exception.TokenGracePeriodException
 import kz.innlab.starter.authentication.model.RefreshToken
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
 import kz.innlab.starter.user.model.User
-import org.springframework.beans.factory.annotation.Value
+import kz.innlab.starter.user.service.RefreshTokenRevoker
+import kz.innlab.starter.config.AuthTokenProperties
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -17,9 +18,14 @@ import java.util.Base64
 @Service
 class RefreshTokenService(
     private val refreshTokenRepository: RefreshTokenRepository,
-    @Value("\${app.auth.refresh-token.expiry-days:30}")
-    private val expiryDays: Long
-) {
+    private val familyRevoker: RefreshTokenFamilyRevoker,
+    private val authTokenProperties: AuthTokenProperties
+) : RefreshTokenRevoker {
+
+    @Transactional
+    override fun revokeAllFor(user: User) {
+        refreshTokenRepository.deleteAllByUser(user)
+    }
     private val secureRandom = SecureRandom()
     private val graceWindowSeconds = 10L
 
@@ -32,7 +38,7 @@ class RefreshTokenService(
             RefreshToken(
                 user = user,
                 tokenHash = tokenHash,
-                expiresAt = Instant.now().plus(expiryDays, ChronoUnit.DAYS)
+                expiresAt = Instant.now().plus(authTokenProperties.refreshToken.expiryDays, ChronoUnit.DAYS)
             )
         )
         return rawToken
@@ -64,8 +70,10 @@ class RefreshTokenService(
                 // Return 409 Conflict so the mobile client retries with the token it already received.
                 throw TokenGracePeriodException("Token already rotated, retry with new token")
             }
-            // Outside grace window (or no usedAt): reuse detected — revoke entire token family
-            refreshTokenRepository.deleteAllByUser(stored.user)
+            // Outside grace window (or no usedAt): reuse detected — revoke entire token family.
+            // Committed independently: the throw below rolls this transaction back, which used
+            // to undo the revocation and leave the leaked family usable.
+            familyRevoker.revokeAllFor(stored.user)
             throw BadCredentialsException("Refresh token reuse detected")
         }
 
@@ -76,7 +84,7 @@ class RefreshTokenService(
             RefreshToken(
                 user = stored.user,
                 tokenHash = newHash,
-                expiresAt = Instant.now().plus(expiryDays, ChronoUnit.DAYS)
+                expiresAt = Instant.now().plus(authTokenProperties.refreshToken.expiryDays, ChronoUnit.DAYS)
             )
         )
         stored.revoked = true

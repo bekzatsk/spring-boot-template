@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -30,7 +31,10 @@ import java.util.UUID
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(SecurityIntegrationTest.ValidationTestController::class)
+@Import(
+    SecurityIntegrationTest.ValidationTestController::class,
+    SecurityIntegrationTest.ConsumerPathTestController::class
+)
 class SecurityIntegrationTest {
 
     @Autowired
@@ -49,6 +53,15 @@ class SecurityIntegrationTest {
         @PostMapping
         fun validate(@Valid @RequestBody request: AuthRequest): ResponseEntity<String> =
             ResponseEntity.ok("ok")
+    }
+
+    // Stands in for an endpoint a consumer application adds outside the starter's /api/** namespace.
+    @TestConfiguration
+    @RestController
+    @RequestMapping("/consumer-endpoint")
+    class ConsumerPathTestController {
+        @GetMapping
+        fun ping(): ResponseEntity<String> = ResponseEntity.ok("pong")
     }
 
     @Test
@@ -75,6 +88,39 @@ class SecurityIntegrationTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.id").exists())
             .andExpect(jsonPath("$.roles[0]").value("USER"))
+    }
+
+    // --- Fail-secure default authorization ---
+
+    @Test
+    fun `consumer path outside api namespace requires authentication`() {
+        // Previously `anyRequest permitAll` made every such path public by default.
+        mockMvc.perform(get("/consumer-endpoint"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.status").value(401))
+    }
+
+    @Test
+    fun `consumer path outside api namespace is reachable with a token`() {
+        val user = userRepository.save(
+            User(email = "consumer-path@example.com").also { it.providers.add(AuthProvider.LOCAL) }
+        )
+        val token = tokenService.generateAccessToken(user.id, setOf(Role.USER))
+
+        mockMvc.perform(get("/consumer-endpoint").header("Authorization", "Bearer $token"))
+            .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `unmapped path is not public by default`() {
+        mockMvc.perform(get("/definitely-not-mapped"))
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `actuator health stays public for container healthchecks`() {
+        mockMvc.perform(get("/actuator/health"))
+            .andExpect(status().isOk)
     }
 
     @Test

@@ -1,6 +1,6 @@
 package kz.innlab.starter.config
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import com.twilio.Twilio
 import jakarta.annotation.PostConstruct
 import kz.innlab.starter.authentication.service.SmsService

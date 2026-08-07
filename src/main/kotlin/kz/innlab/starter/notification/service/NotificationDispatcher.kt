@@ -2,6 +2,7 @@ package kz.innlab.starter.notification.service
 
 import com.google.firebase.messaging.FirebaseMessagingException
 import com.google.firebase.messaging.MessagingErrorCode
+import kz.innlab.starter.config.AsyncConfig
 import kz.innlab.starter.notification.model.NotificationStatus
 import kz.innlab.starter.notification.repository.NotificationHistoryRepository
 import org.slf4j.LoggerFactory
@@ -21,7 +22,7 @@ class NotificationDispatcher(
         private val logger = LoggerFactory.getLogger(NotificationDispatcher::class.java)
     }
 
-    @Async
+    @Async(AsyncConfig.STARTER_EXECUTOR)
     @Transactional
     fun dispatchToToken(historyId: UUID, token: String, title: String, body: String, data: Map<String, String>) {
         val history = notificationHistoryRepository.findById(historyId).orElseThrow()
@@ -42,7 +43,7 @@ class NotificationDispatcher(
         }
     }
 
-    @Async
+    @Async(AsyncConfig.STARTER_EXECUTOR)
     @Transactional
     fun dispatchMulticast(historyId: UUID, tokens: List<String>, title: String, body: String, data: Map<String, String>) {
         val history = notificationHistoryRepository.findById(historyId).orElseThrow()
@@ -58,7 +59,7 @@ class NotificationDispatcher(
         }
     }
 
-    @Async
+    @Async(AsyncConfig.STARTER_EXECUTOR)
     @Transactional
     fun dispatchToTopic(historyId: UUID, topic: String, title: String, body: String, data: Map<String, String>) {
         val history = notificationHistoryRepository.findById(historyId).orElseThrow()

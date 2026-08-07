@@ -13,10 +13,19 @@ import jakarta.persistence.MapKeyEnumerated
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 import kz.innlab.starter.shared.model.BaseEntity
+import org.hibernate.annotations.BatchSize
 import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
 import java.time.Instant
 
+/**
+ * The four @ElementCollection fields stay EAGER because callers read them outside the loading
+ * transaction (token issuance runs after the provider services' DB work, and open-in-view is off).
+ * Hibernate cannot join several bag collections in one query, so each would otherwise cost one
+ * extra SELECT per user; @BatchSize collapses those into batched IN queries per page.
+ * Endpoints that don't need the collections at all should query a projection instead
+ * (see UserRepository.searchSummaries).
+ */
 @Entity
 @Table(name = "users", schema = "auth")
 class User(
@@ -46,6 +55,7 @@ class User(
     @Column(name = "telegram_username")
     var telegramUsername: String? = null
 
+    @BatchSize(size = 100)
     @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
     @CollectionTable(
@@ -57,6 +67,7 @@ class User(
     @Column(name = "provider")
     var providers: MutableSet<AuthProvider> = mutableSetOf()
 
+    @BatchSize(size = 100)
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
         name = "user_provider_ids",
@@ -69,12 +80,14 @@ class User(
     @Column(name = "provider_id")
     var providerIds: MutableMap<AuthProvider, String> = mutableMapOf()
 
+    @BatchSize(size = 100)
     @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
     @CollectionTable(name = "user_roles", schema = "auth", joinColumns = [JoinColumn(name = "user_id")])
     @Column(name = "role")
     var roles: MutableSet<Role> = mutableSetOf(Role.USER)
 
+    @BatchSize(size = 100)
     @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
     @CollectionTable(
@@ -86,6 +99,20 @@ class User(
     @Column(name = "action")
     var requiredActions: MutableSet<RequiredAction> = mutableSetOf()
 
+    /**
+     * Links a login provider to this account, optionally recording the provider's own user id.
+     * Idempotent — re-linking an already linked provider is a no-op.
+     *
+     * The rule lived inline at seventeen call sites across four services, several of which
+     * remembered to add the provider but not its id.
+     */
+    fun linkProvider(provider: AuthProvider, providerId: String? = null) {
+        providers.add(provider)
+        if (providerId != null) {
+            providerIds[provider] = providerId
+        }
+    }
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant? = null
@@ -93,12 +120,4 @@ class User(
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant? = null
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is User) return false
-        return id == other.id
-    }
-
-    override fun hashCode(): Int = id.hashCode()
 }

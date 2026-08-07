@@ -6,6 +6,9 @@ Ready-to-use Spring Boot starter for JWT authentication with multi-provider soci
 
 ---
 
+Upgrading from `0.0.x`? See [CHANGELOG.md](CHANGELOG.md) — `0.1.0` carries five breaking
+changes and three new migrations.
+
 ## Usage in Another Project
 
 The starter is published to **GitHub Packages** at [`bekzatsk/spring-boot-template`](https://github.com/bekzatsk/spring-boot-template/packages).
@@ -642,6 +645,16 @@ After publish, package appears at: https://github.com/bekzatsk/spring-boot-templ
 
 ### 0.0.5-SNAPSHOT (unreleased)
 
+**Changed**
+- Auto-configuration no longer `@ComponentScan`s the starter package. Every bean is registered
+  explicitly with `@ConditionalOnMissingBean`, so a consumer application can now replace any
+  starter bean — not just the `SmsService`/`EmailService`/`PushService` interfaces — by declaring
+  a `@Bean` of the same type. Bean names are unchanged (they equal the decapitalized class name)
+  and are covered by a contract test, so `@Qualifier`/`@Async` references keep resolving.
+- Settings moved from scattered `@Value` injections to validated `@ConfigurationProperties`
+  (`AuthTokenProperties`, `VerificationProperties`, `TelegramAuthProperties`,
+  `DeviceTokenProperties`). Property names and defaults are unchanged.
+
 **Added**
 - `app.auth.access-token.expiry-minutes` (default `15`) — JWT access token TTL is now configurable. Env: `ACCESS_TOKEN_EXPIRY_MINUTES`. Set to `1440` for 1 day, `60` for 1 hour.
 - `app.openapi.title` / `app.openapi.version` / `app.openapi.description` — Swagger UI metadata is now configurable. Title default is `spring.application.name` (was hardcoded "Spring Boot Auth Template API"). The `OpenAPI` bean uses `@ConditionalOnMissingBean(OpenAPI::class)` so consumers can fully replace it.
@@ -656,7 +669,7 @@ After publish, package appears at: https://github.com/bekzatsk/spring-boot-templ
 **Added**
 - `spring-boot-starter-actuator` is now bundled transitively. `/actuator/health` is available out of the box. Consumers no longer need to add the dependency explicitly for docker healthchecks / k8s probes.
   - Only `health` is exposed via web by default (Spring Boot default). Opt in to more endpoints via `management.endpoints.web.exposure.include`.
-  - The starter does **not** set `@Order(1)` permitAll on `/actuator/**` — consumers still register their own actuator security filter chain when needed.
+  - The starter permits `/actuator/health` (and its sub-paths) so container healthchecks work out of the box; every other actuator endpoint requires authentication. It does **not** set an `@Order(1)` chain on `/actuator/**` — consumers still register their own actuator security filter chain when they need broader access.
 
 ### 0.0.2-SNAPSHOT
 

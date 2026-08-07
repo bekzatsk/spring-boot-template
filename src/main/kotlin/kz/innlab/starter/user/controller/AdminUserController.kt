@@ -47,7 +47,7 @@ class AdminUserController(
         @PageableDefault(size = 20) pageable: Pageable
     ): ResponseEntity<PageResponse<UserSummaryResponse>> {
         val page = adminUserService.list(q, pageable)
-        return ResponseEntity.ok(PageResponse.from(page, UserSummaryResponse::from))
+        return ResponseEntity.ok(PageResponse.from(page) { it })
     }
 
     @Operation(summary = "Get a user by id.")

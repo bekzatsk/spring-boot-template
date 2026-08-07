@@ -766,7 +766,7 @@ app:
 | `management.endpoint.health.probes.enabled` | boolean | `false` | Включить `/actuator/health/liveness` + `/readiness` (k8s probes). |
 | `management.server.port` | int | (main port) | Отдельный порт для actuator (если нужно изолировать от публичного API). |
 
-⚠ Starter **не** делает `permitAll` на `/actuator/**` — это решение консьюмера. См. `AppSecurityConfig.actuatorFilterChain()` в §0.
+⚠ Starter делает `permitAll` только на `/actuator/health` (и вложенные пути) — для healthcheck'ов контейнера. Остальные actuator-эндпоинты требуют аутентификации; более широкий доступ — решение консьюмера, см. `AppSecurityConfig.actuatorFilterChain()` в §0.
 
 ### OpenAPI / Swagger UI
 
@@ -903,7 +903,26 @@ export TWILIO_SMS_FROM=+14155551234
 
 ## 5. Override Default Services
 
-The starter provides console-logging defaults for SMS, email, and push. Override them by declaring your own beans.
+**Любой bean стартера можно заменить своим.** Все bean'ы регистрируются явно с
+`@ConditionalOnMissingBean` (starter не сканирует свой пакет), поэтому достаточно объявить
+`@Bean` того же типа в своём приложении — победит твой:
+
+```kotlin
+@Configuration
+class MyOverrides {
+    // Заменяет kz.innlab.starter.authentication.service.AuthTokenIssuer целиком
+    @Bean
+    fun authTokenIssuer(tokenService: TokenService, refreshTokenService: RefreshTokenService) =
+        MyAuthTokenIssuer(tokenService, refreshTokenService)
+}
+```
+
+⚠ **Имена bean'ов — часть контракта.** Они совпадают с decapitalized именем класса
+(`authTokenIssuer`, `telegramAuthService`, …), и `@Qualifier` / `@Async` / 
+`@ConditionalOnMissingBean(name = …)` резолвятся по ним. Переименование = breaking change;
+контракт зафиксирован в `AutoConfigurationContractTest`.
+
+Ниже — частный случай: console-logging defaults для SMS, email и push.
 
 OTP delivery теперь идёт через `OtpDeliveryService` — оркестратор с цепочкой **WhatsApp → SMS**:
 - если зарегистрирован bean `WhatsAppService` — пытаемся послать через WhatsApp;
@@ -1981,7 +2000,7 @@ app:
 | `management.endpoint.health.probes.enabled` | boolean | `false` | Включить `/actuator/health/liveness` + `/readiness` (k8s probes). |
 | `management.server.port` | int | (main port) | Отдельный порт для actuator (если нужно изолировать от публичного API). |
 
-⚠ Starter **не** делает `permitAll` на `/actuator/**` — это решение консьюмера. См. `AppSecurityConfig.actuatorFilterChain()` в §0.
+⚠ Starter делает `permitAll` только на `/actuator/health` (и вложенные пути) — для healthcheck'ов контейнера. Остальные actuator-эндпоинты требуют аутентификации; более широкий доступ — решение консьюмера, см. `AppSecurityConfig.actuatorFilterChain()` в §0.
 
 ### OpenAPI / Swagger UI
 

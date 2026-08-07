@@ -1,8 +1,8 @@
 spring:
   application:
     name: template
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
+  # No default profile: Spring honors SPRING_PROFILES_ACTIVE natively. A ":dev" fallback here
+  # would silently activate dev-code OTP bypasses on any deployment that forgets to set the env var.
   threads:
     virtual:
       enabled: true
@@ -36,12 +36,13 @@ app:
     telegram:
       enabled: ${AUTH_TELEGRAM_ENABLED:false}
       bot-token: ${TELEGRAM_BOT_TOKEN:}
-      bot-username: ${TELEGRAM_BOT_USERNAME:MathHubBot}
+      bot-username: ${TELEGRAM_BOT_USERNAME:}
       webhook-secret: ${TELEGRAM_WEBHOOK_SECRET:}
       session-ttl-seconds: ${AUTH_SESSION_TTL:300}
       code-length: ${AUTH_CODE_LENGTH:6}
       max-attempts: ${AUTH_MAX_ATTEMPTS:3}
       resend-cooldown-seconds: ${AUTH_RESEND_COOLDOWN:60}
+      max-resends-per-session: ${AUTH_MAX_RESENDS_PER_SESSION:3}
       max-sessions-per-ip-per-hour: 5
       max-sessions-per-telegram-user-per-hour: 3
     access-token:

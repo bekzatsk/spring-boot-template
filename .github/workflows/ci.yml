@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '24'
+          cache: maven
+
+      # Tests run on in-memory H2, so no services are needed here.
+      - name: Build and run tests
+        run: ./mvnw -B --no-transfer-progress verify
+
+      - name: Publish test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+          if-no-files-found: ignore
+
+  migrations:
+    name: Flyway migrations on PostgreSQL
+    runs-on: ubuntu-latest
+    # The test suite uses H2 with create-drop, which never executes the migrations. Without this
+    # job a broken migration only surfaces on deploy.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply every migration in order
+        env:
+          PGPASSWORD: ci
+        run: |
+          set -euo pipefail
+          psql -h localhost -U postgres -d ci -v ON_ERROR_STOP=1 -c 'CREATE SCHEMA auth;'
+          for file in $(ls src/main/resources/db/migration-auth/V*.sql | sort -V); do
+            echo "==> $(basename "$file")"
+            psql -h localhost -U postgres -d ci -v ON_ERROR_STOP=1 \
+              -c 'SET search_path TO auth;' -f "$file"
+          done
+
+      - name: Fail if an entity table lost its version column
+        env:
+          PGPASSWORD: ci
+        # Only entities extend BaseEntity. @ElementCollection tables (user_roles,
+        # user_providers, ...) are not versioned and must not be checked.
+        run: |
+          set -euo pipefail
+          missing=$(psql -h localhost -U postgres -d ci -tAc "
+            WITH entity_tables(name) AS (VALUES
+              ('users'), ('refresh_tokens'), ('verification_codes'),
+              ('telegram_auth_sessions'), ('device_tokens'), ('notification_history'),
+              ('notification_preferences'), ('notification_topics'), ('mail_history'),
+              ('admin_audit_log'))
+            SELECT COALESCE(string_agg(e.name, ', '), '')
+            FROM entity_tables e
+            WHERE NOT EXISTS (
+              SELECT 1 FROM information_schema.columns c
+              WHERE c.table_schema = 'auth' AND c.table_name = e.name
+                AND c.column_name = 'version'
+            )")
+          if [ -n "$missing" ]; then
+            echo "Entity tables without the optimistic-locking column: $missing"
+            exit 1
+          fi
+          echo "All entity tables carry a version column."

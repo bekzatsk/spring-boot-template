@@ -1,4 +1,4 @@
-package kz.innlab.starter.authentication.service
+package kz.innlab.starter.shared.util
 
 import com.google.i18n.phonenumbers.NumberParseException
 import com.google.i18n.phonenumbers.PhoneNumberUtil as LibPhoneNumberUtil
@@ -6,6 +6,8 @@ import com.google.i18n.phonenumbers.PhoneNumberUtil as LibPhoneNumberUtil
 /**
  * Normalizes a phone number to E.164 format.
  * Requires '+' prefix (no default region — eliminates ambiguity).
+ * Lives in shared so both the user and authentication modules can depend on it
+ * without depending on each other.
  * @throws IllegalArgumentException if phone number is invalid or missing '+' prefix
  */
 fun normalizeToE164(rawPhone: String): String {

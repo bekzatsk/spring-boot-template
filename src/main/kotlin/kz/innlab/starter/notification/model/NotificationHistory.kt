@@ -13,20 +13,20 @@ import java.util.UUID
 @Table(name = "notification_history", schema = "auth")
 class NotificationHistory(
     @Column(name = "user_id", nullable = false)
-    var userId: UUID,
+    val userId: UUID,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    var type: NotificationType,
+    val type: NotificationType,
 
     @Column(nullable = false)
-    var recipient: String,
+    val recipient: String,
 
     @Column(nullable = false)
-    var title: String,
+    val title: String,
 
     @Column(nullable = false)
-    var body: String
+    val body: String
 ) : BaseEntity() {
 
     var data: String? = null

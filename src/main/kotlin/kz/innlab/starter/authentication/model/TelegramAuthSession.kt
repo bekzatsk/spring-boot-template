@@ -32,6 +32,12 @@ class TelegramAuthSession(
     @Column(name = "max_attempts", nullable = false)
     var maxAttempts: Int = 3
 
+    @Column(name = "code_sent_at")
+    var codeSentAt: Instant? = null
+
+    @Column(name = "resend_count", nullable = false)
+    var resendCount: Int = 0
+
     @Column(name = "telegram_user_id")
     var telegramUserId: Long? = null
 
@@ -50,12 +56,4 @@ class TelegramAuthSession(
 
     @Column(name = "verified_at")
     var verifiedAt: Instant? = null
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is TelegramAuthSession) return false
-        return id == other.id
-    }
-
-    override fun hashCode(): Int = id.hashCode()
 }

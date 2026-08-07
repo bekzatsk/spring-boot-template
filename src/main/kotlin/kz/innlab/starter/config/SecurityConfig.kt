@@ -65,8 +65,18 @@ class SecurityConfig(
                     authorize(path, permitAll)
                 }
                 authorize("/api/v1/admin/**", hasRole("ADMIN"))
+                // Topic broadcast reaches every subscriber; the shared IMAP inbox is org-wide mail.
+                // Neither is safe to expose to arbitrary authenticated users.
+                authorize("/api/v1/notifications/send/topic", hasRole("ADMIN"))
+                authorize("/api/v1/mail/inbox/**", hasRole("ADMIN"))
                 authorize("/api/**", authenticated)
-                authorize(anyRequest, permitAll)
+                // Health stays open for container healthchecks; every other actuator endpoint
+                // (env, beans, mappings, …) requires authentication.
+                authorize("/actuator/health", permitAll)
+                authorize("/actuator/health/**", permitAll)
+                // Fail secure: anything a consumer adds outside /api/** is protected by default
+                // and must be opted into via app.auth.security.public-paths.
+                authorize(anyRequest, authenticated)
             }
             oauth2ResourceServer {
                 jwt {

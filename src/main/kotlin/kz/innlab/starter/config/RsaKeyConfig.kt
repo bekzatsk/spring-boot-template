@@ -36,12 +36,16 @@ class RsaKeyConfig(
     @Bean
     @ConditionalOnMissingBean(KeyPair::class)
     fun rsaKeyPair(): KeyPair {
-        if (!keystoreLocation.isNullOrBlank() && !keystorePassword.isNullOrBlank()) {
-            logger.info("Loading RSA keypair from keystore: {}", keystoreLocation)
-            val resource = ClassPathResource(keystoreLocation!!)
+        // Locals rather than !!: the Kotlin `spring` plugin makes this class open, so its
+        // properties are non-final and cannot be smart-cast after the null check.
+        val location = keystoreLocation
+        val password = keystorePassword
+        if (!location.isNullOrBlank() && !password.isNullOrBlank()) {
+            logger.info("Loading RSA keypair from keystore: {}", location)
+            val resource = ClassPathResource(location)
             val keyStore = KeyStore.getInstance("PKCS12")
-            keyStore.load(resource.inputStream, keystorePassword!!.toCharArray())
-            val privateKey = keyStore.getKey(keyAlias, keystorePassword.toCharArray()) as RSAPrivateKey
+            keyStore.load(resource.inputStream, password.toCharArray())
+            val privateKey = keyStore.getKey(keyAlias, password.toCharArray()) as RSAPrivateKey
             val publicKey = keyStore.getCertificate(keyAlias).publicKey as RSAPublicKey
             return KeyPair(publicKey, privateKey)
         }

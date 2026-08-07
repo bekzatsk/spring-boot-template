@@ -1,12 +1,12 @@
 package kz.innlab.starter.user.service
 
+import kz.innlab.starter.shared.error.ResourceNotFoundException
 import kz.innlab.starter.user.model.AuthProvider
 import kz.innlab.starter.user.model.RequiredAction
 import kz.innlab.starter.user.model.Role
 import kz.innlab.starter.user.model.User
 import kz.innlab.starter.user.repository.UserRepository
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.security.access.AccessDeniedException
+import kz.innlab.starter.config.AuthTokenProperties
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -17,7 +17,7 @@ import java.util.UUID
 class UserService(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
-    @Value("\${app.auth.registration.enabled:true}") private val registrationEnabled: Boolean = true
+    private val authTokenProperties: AuthTokenProperties
 ) {
 
     /**
@@ -39,7 +39,7 @@ class UserService(
             this.name = name
             this.passwordHash = passwordEncoder.encode(rawPassword)
             this.passwordTemporary = temporary
-            providers.add(AuthProvider.LOCAL)
+            linkProvider(AuthProvider.LOCAL)
             if (!roles.isNullOrEmpty()) {
                 this.roles.clear()
                 this.roles.addAll(roles)
@@ -61,20 +61,18 @@ class UserService(
         val existing = userRepository.findByEmail(email)
         if (existing != null) {
             // Link GOOGLE provider to existing account (idempotent)
-            existing.providers.add(AuthProvider.GOOGLE)
-            existing.providerIds[AuthProvider.GOOGLE] = providerId
+            existing.linkProvider(AuthProvider.GOOGLE, providerId)
             // Only update name/picture if currently null on existing user
             if (existing.name == null && name != null) existing.name = name
             if (existing.picture == null && picture != null) existing.picture = picture
             return userRepository.save(existing)
         }
-        if (!registrationEnabled) {
+        if (!authTokenProperties.registration.enabled) {
             throw IllegalStateException("Registration is currently disabled")
         }
         return userRepository.save(
             User(email = email).also {
-                it.providers.add(AuthProvider.GOOGLE)
-                it.providerIds[AuthProvider.GOOGLE] = providerId
+                it.linkProvider(AuthProvider.GOOGLE, providerId)
                 it.name = name
                 it.picture = picture
             }
@@ -102,20 +100,18 @@ class UserService(
         // Step 3: Check if email already exists — link APPLE to existing account
         val byEmail = userRepository.findByEmail(resolvedEmail)
         if (byEmail != null) {
-            byEmail.providers.add(AuthProvider.APPLE)
-            byEmail.providerIds[AuthProvider.APPLE] = providerId
+            byEmail.linkProvider(AuthProvider.APPLE, providerId)
             if (byEmail.name == null && name != null) byEmail.name = name
             return userRepository.save(byEmail)
         }
 
         // Step 4: Create new user
-        if (!registrationEnabled) {
+        if (!authTokenProperties.registration.enabled) {
             throw IllegalStateException("Registration is currently disabled")
         }
         return userRepository.save(
             User(email = resolvedEmail).also {
-                it.providers.add(AuthProvider.APPLE)
-                it.providerIds[AuthProvider.APPLE] = providerId
+                it.linkProvider(AuthProvider.APPLE, providerId)
                 it.name = name
             }
         )
@@ -131,12 +127,12 @@ class UserService(
         val existing = userRepository.findByPhone(phoneE164)
         if (existing != null) return existing
 
-        if (!registrationEnabled) {
+        if (!authTokenProperties.registration.enabled) {
             throw IllegalStateException("Registration is currently disabled")
         }
         return userRepository.save(
             User(email = "").also {
-                it.providers.add(AuthProvider.LOCAL)
+                it.linkProvider(AuthProvider.LOCAL)
                 it.phone = phoneE164
             }
         )
@@ -153,13 +149,12 @@ class UserService(
             return existing
         }
 
-        if (!registrationEnabled) {
+        if (!authTokenProperties.registration.enabled) {
             throw IllegalStateException("Registration is currently disabled")
         }
         return userRepository.save(
             User(email = "").also {
-                it.providers.add(AuthProvider.TELEGRAM)
-                it.providerIds[AuthProvider.TELEGRAM] = telegramUserId.toString()
+                it.linkProvider(AuthProvider.TELEGRAM, telegramUserId.toString())
                 it.telegramUserId = telegramUserId
                 it.telegramUsername = telegramUsername
             }
@@ -168,5 +163,5 @@ class UserService(
 
     @Transactional(readOnly = true)
     fun findById(id: UUID): User =
-        userRepository.findById(id).orElseThrow { AccessDeniedException("User not found") }
+        userRepository.findById(id).orElseThrow { ResourceNotFoundException("User not found") }
 }

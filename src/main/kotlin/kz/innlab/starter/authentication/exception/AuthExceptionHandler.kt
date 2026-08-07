@@ -1,10 +1,14 @@
 package kz.innlab.starter.authentication.exception
 
 import kz.innlab.starter.shared.error.ErrorResponse
+import kz.innlab.starter.shared.error.ForbiddenOperationException
+import kz.innlab.starter.shared.error.ResourceNotFoundException
+import kz.innlab.starter.shared.ratelimit.RateLimitExceededException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.authentication.BadCredentialsException
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -34,6 +38,19 @@ class AuthExceptionHandler {
         )
     }
 
+    /**
+     * Unparseable body, wrong types, or a missing field that maps to a non-nullable Kotlin
+     * property. Jackson throws before validation runs, so without this the caller got a 500.
+     * The reason is deliberately generic: parser messages leak type and field internals.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleUnreadableBody(ex: HttpMessageNotReadableException): ResponseEntity<ErrorResponse> {
+        logger.debug("Rejected unreadable request body: {}", ex.message)
+        return ResponseEntity.badRequest().body(
+            ErrorResponse(error = "Bad Request", message = "Malformed or incomplete request body", status = 400)
+        )
+    }
+
     @ExceptionHandler(BadCredentialsException::class)
     fun handleBadCredentials(ex: BadCredentialsException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
@@ -58,10 +75,34 @@ class AuthExceptionHandler {
             ErrorResponse(error = "Bad Request", message = ex.message ?: "Invalid request", status = 400)
         )
 
+    @ExceptionHandler(RateLimitExceededException::class)
+    fun handleRateLimited(ex: RateLimitExceededException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .header("Retry-After", ex.retryAfterSeconds.toString())
+            .body(
+                ErrorResponse(
+                    error = "Too Many Requests",
+                    message = ex.message ?: "Too many attempts",
+                    status = 429
+                )
+            )
+
+    @ExceptionHandler(ForbiddenOperationException::class)
+    fun handleForbidden(ex: ForbiddenOperationException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+            ErrorResponse(error = "Forbidden", message = ex.message ?: "Operation not allowed", status = 403)
+        )
+
     @ExceptionHandler(NoResourceFoundException::class)
     fun handleNotFound(ex: NoResourceFoundException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(
             ErrorResponse(error = "Not Found", message = "Endpoint not found", status = 404)
+        )
+
+    @ExceptionHandler(ResourceNotFoundException::class)
+    fun handleResourceNotFound(ex: ResourceNotFoundException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+            ErrorResponse(error = "Not Found", message = ex.message ?: "Resource not found", status = 404)
         )
 
     @ExceptionHandler(Exception::class)

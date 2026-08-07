@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import kz.innlab.starter.authentication.dto.AuthResponse
+import kz.innlab.starter.authentication.dto.OtpSendResult
 import kz.innlab.starter.authentication.dto.PhoneOtpRequest
 import kz.innlab.starter.authentication.dto.PhoneVerifyRequest
 import kz.innlab.starter.authentication.service.PhoneOtpService
@@ -24,16 +25,8 @@ class PhoneAuthController(
 
     @Operation(summary = "Request SMS OTP code for phone authentication", security = [])
     @PostMapping("/phone/request")
-    fun requestPhoneOtp(@Valid @RequestBody request: PhoneOtpRequest): ResponseEntity<Map<String, Any>> {
-        val result = phoneOtpService.sendOtp(request.phone)
-        return ResponseEntity.ok(
-            mapOf(
-                "verificationId" to result.verificationId,
-                "resendAvailableAt" to result.resendAvailableAt,
-                "retryAfterSeconds" to result.retryAfterSeconds
-            )
-        )
-    }
+    fun requestPhoneOtp(@Valid @RequestBody request: PhoneOtpRequest): ResponseEntity<OtpSendResult> =
+        ResponseEntity.ok(phoneOtpService.sendOtp(request.phone))
 
     @Operation(summary = "Verify SMS OTP code and authenticate", security = [])
     @PostMapping("/phone/verify")

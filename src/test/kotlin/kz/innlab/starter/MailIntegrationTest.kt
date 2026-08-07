@@ -92,6 +92,7 @@ class MailIntegrationTest {
     private lateinit var tokenService: TokenService
 
     private lateinit var accessToken: String
+    private lateinit var adminToken: String
     private lateinit var testUser: User
 
     @BeforeEach
@@ -107,6 +108,7 @@ class MailIntegrationTest {
             }
         )
         accessToken = tokenService.generateAccessToken(testUser.id, setOf(Role.USER))
+        adminToken = tokenService.generateAccessToken(testUser.id, setOf(Role.USER, Role.ADMIN))
 
         greenMail.reset()
         greenMail.setUser("inbox@example.com", "inbox@example.com", "password")
@@ -188,12 +190,12 @@ class MailIntegrationTest {
     // --- IMAP inbox ---
 
     @Test
-    fun `listInbox returns messages`() {
+    fun `listInbox returns messages for admin`() {
         GreenMailUtil.sendTextEmailTest("inbox@example.com", "sender@test.com", "Inbox Test", "Message body")
 
         mockMvc.perform(
             get("/api/v1/mail/inbox")
-                .header("Authorization", authHeader())
+                .header("Authorization", "Bearer $adminToken")
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.total").value(1))
@@ -201,12 +203,21 @@ class MailIntegrationTest {
     }
 
     @Test
-    fun `getMessage returns full email`() {
+    fun `listInbox returns 403 for regular user`() {
+        mockMvc.perform(
+            get("/api/v1/mail/inbox")
+                .header("Authorization", authHeader())
+        )
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `getMessage returns full email for admin`() {
         GreenMailUtil.sendTextEmailTest("inbox@example.com", "sender@test.com", "Full Email", "Body content")
 
         mockMvc.perform(
             get("/api/v1/mail/inbox/1")
-                .header("Authorization", authHeader())
+                .header("Authorization", "Bearer $adminToken")
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.subject").value("Full Email"))

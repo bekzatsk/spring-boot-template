@@ -2,10 +2,12 @@ package kz.innlab.starter
 
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
 import kz.innlab.starter.authentication.service.TokenService
+import kz.innlab.starter.notification.model.DeviceToken
 import kz.innlab.starter.notification.model.NotificationHistory
 import kz.innlab.starter.notification.model.NotificationStatus
 import kz.innlab.starter.notification.model.NotificationTopic
 import kz.innlab.starter.notification.model.NotificationType
+import kz.innlab.starter.notification.model.Platform
 import kz.innlab.starter.notification.repository.DeviceTokenRepository
 import kz.innlab.starter.notification.repository.NotificationHistoryRepository
 import kz.innlab.starter.notification.repository.NotificationTopicRepository
@@ -61,6 +63,7 @@ class NotificationIntegrationTest {
     private lateinit var tokenService: TokenService
 
     private lateinit var accessToken: String
+    private lateinit var adminToken: String
     private lateinit var testUser: User
 
     @BeforeEach
@@ -77,6 +80,7 @@ class NotificationIntegrationTest {
             }
         )
         accessToken = tokenService.generateAccessToken(testUser.id, setOf(Role.USER))
+        adminToken = tokenService.generateAccessToken(testUser.id, setOf(Role.USER, Role.ADMIN))
 
         // Stub PushService methods
         `when`(pushService.sendToToken(anyString(), anyString(), anyString(), anyMap())).thenReturn("mock-message-id")
@@ -240,8 +244,14 @@ class NotificationIntegrationTest {
 
     // --- Send Endpoints ---
 
+    private fun registerDeviceToken(fcmToken: String, deviceId: String) {
+        deviceTokenRepository.save(DeviceToken(testUser.id, Platform.ANDROID, fcmToken, deviceId))
+    }
+
     @Test
-    fun `sendToToken returns 202 Accepted`() {
+    fun `sendToToken returns 202 Accepted for own token`() {
+        registerDeviceToken("test-token", "device-1")
+
         mockMvc.perform(
             post("/api/v1/notifications/send/token")
                 .header("Authorization", authHeader())
@@ -253,7 +263,21 @@ class NotificationIntegrationTest {
     }
 
     @Test
-    fun `sendMulticast returns 202 Accepted`() {
+    fun `sendToToken returns 403 for token not owned by caller`() {
+        mockMvc.perform(
+            post("/api/v1/notifications/send/token")
+                .header("Authorization", authHeader())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"token": "someone-elses-token", "title": "Test", "body": "Test body"}""")
+        )
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `sendMulticast returns 202 Accepted for own tokens`() {
+        registerDeviceToken("t1", "device-1")
+        registerDeviceToken("t2", "device-2")
+
         mockMvc.perform(
             post("/api/v1/notifications/send/multicast")
                 .header("Authorization", authHeader())
@@ -265,10 +289,23 @@ class NotificationIntegrationTest {
     }
 
     @Test
+    fun `sendMulticast returns 403 when any token is foreign`() {
+        registerDeviceToken("t1", "device-1")
+
+        mockMvc.perform(
+            post("/api/v1/notifications/send/multicast")
+                .header("Authorization", authHeader())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"tokens": ["t1", "foreign"], "title": "Test", "body": "Test body"}""")
+        )
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
     fun `sendToTopic requires existing topic`() {
         mockMvc.perform(
             post("/api/v1/notifications/send/topic")
-                .header("Authorization", authHeader())
+                .header("Authorization", "Bearer $adminToken")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"topic": "nonexistent", "title": "Test", "body": "Body"}""")
         )
@@ -276,7 +313,21 @@ class NotificationIntegrationTest {
     }
 
     @Test
-    fun `sendToTopic returns 202 for existing topic`() {
+    fun `sendToTopic returns 202 for existing topic as admin`() {
+        notificationTopicRepository.save(NotificationTopic("news"))
+
+        mockMvc.perform(
+            post("/api/v1/notifications/send/topic")
+                .header("Authorization", "Bearer $adminToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"topic": "news", "title": "Test", "body": "Body"}""")
+        )
+            .andExpect(status().isAccepted)
+            .andExpect(jsonPath("$.notificationId").exists())
+    }
+
+    @Test
+    fun `sendToTopic returns 403 for regular user`() {
         notificationTopicRepository.save(NotificationTopic("news"))
 
         mockMvc.perform(
@@ -285,8 +336,56 @@ class NotificationIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"topic": "news", "title": "Test", "body": "Body"}""")
         )
-            .andExpect(status().isAccepted)
-            .andExpect(jsonPath("$.notificationId").exists())
+            .andExpect(status().isForbidden)
+    }
+
+    // --- Topic administration ---
+
+    @Test
+    fun `createTopic accepts a valid name`() {
+        mockMvc.perform(
+            post("/api/v1/admin/topics")
+                .header("Authorization", "Bearer $adminToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"name": "product-updates"}""")
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.name").value("product-updates"))
+    }
+
+    @Test
+    fun `createTopic rejects a blank name`() {
+        // The endpoint took a raw Map before, so @Valid never ran on it.
+        mockMvc.perform(
+            post("/api/v1/admin/topics")
+                .header("Authorization", "Bearer $adminToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"name": "  "}""")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.status").value(400))
+    }
+
+    @Test
+    fun `createTopic rejects characters FCM does not allow`() {
+        mockMvc.perform(
+            post("/api/v1/admin/topics")
+                .header("Authorization", "Bearer $adminToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"name": "bad name/with slashes"}""")
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `createTopic rejects a missing name field`() {
+        mockMvc.perform(
+            post("/api/v1/admin/topics")
+                .header("Authorization", "Bearer $adminToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}")
+        )
+            .andExpect(status().isBadRequest)
     }
 
     // --- History ---

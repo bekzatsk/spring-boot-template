@@ -11,7 +11,10 @@ import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
-import org.springframework.beans.factory.annotation.Value
+import kz.innlab.starter.config.AuthTokenProperties
+import kz.innlab.starter.config.RateLimitProperties
+import kz.innlab.starter.shared.ratelimit.RateLimitExceededException
+import kz.innlab.starter.shared.ratelimit.RateLimiter
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -23,12 +26,12 @@ class LocalAuthService(
     private val authenticationManager: AuthenticationManager,
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
-    private val tokenService: TokenService,
-    private val refreshTokenService: RefreshTokenService,
+    private val authTokenIssuer: AuthTokenIssuer,
     private val verificationCodeService: VerificationCodeService,
     private val emailService: EmailService,
-    @Value("\${app.auth.registration.enabled:true}") private val registrationEnabled: Boolean = true,
-    @Value("\${app.auth.email-verification.enabled:false}") private val emailVerificationEnabled: Boolean = false
+    private val authTokenProperties: AuthTokenProperties,
+    private val rateLimiter: RateLimiter,
+    private val rateLimitProperties: RateLimitProperties
 ) {
 
     /**
@@ -50,20 +53,20 @@ class LocalAuthService(
         val user = if (existing != null) {
             // Existing social account — link LOCAL provider and set password.
             // Email is already owned/verified via the social provider — no re-verification.
-            existing.providers.add(AuthProvider.LOCAL)
+            existing.linkProvider(AuthProvider.LOCAL)
             existing.passwordHash = passwordEncoder.encode(rawPassword)
             if (existing.name == null && name != null) existing.name = name
             userRepository.save(existing)
         } else {
-            if (!registrationEnabled) {
+            if (!authTokenProperties.registration.enabled) {
                 throw IllegalStateException("Registration is currently disabled")
             }
             // New user
             val newUser = User(email = email)
-            newUser.providers.add(AuthProvider.LOCAL)
+            newUser.linkProvider(AuthProvider.LOCAL)
             newUser.name = name
             newUser.passwordHash = passwordEncoder.encode(rawPassword)
-            if (emailVerificationEnabled) {
+            if (authTokenProperties.emailVerification.enabled) {
                 // Soft gate: user is issued tokens but must verify email before accessing protected APIs.
                 // Enforcement is via the VERIFY_EMAIL required action (RequiredActionFilter).
                 newUser.emailVerified = false
@@ -74,21 +77,13 @@ class LocalAuthService(
 
         // Send the verification code only for genuinely new LOCAL registrations.
         var verificationId: java.util.UUID? = null
-        if (isNewUser && emailVerificationEnabled) {
+        if (isNewUser && authTokenProperties.emailVerification.enabled) {
             val (id, code) = verificationCodeService.createCode(email, VerificationPurpose.VERIFY_EMAIL)
             verificationId = id
             emailService.sendCode(email, code, "VERIFY_EMAIL")
         }
 
-        val accessToken = tokenService.generateAccessToken(user.id, user.roles, user.requiredActions)
-        val refreshToken = refreshTokenService.createToken(user)
-
-        return AuthResponse(
-            accessToken = accessToken,
-            refreshToken = refreshToken,
-            requiredActions = user.requiredActions.map { it.name },
-            verificationId = verificationId
-        )
+        return authTokenIssuer.issue(user).copy(verificationId = verificationId)
     }
 
     /**
@@ -96,20 +91,28 @@ class LocalAuthService(
      * Throws BadCredentialsException (401) on invalid credentials via DaoAuthenticationProvider.
      */
     fun login(email: String, rawPassword: String): AuthResponse {
+        // Without this the password check is an unlimited oracle: an attacker can try
+        // candidates as fast as the server answers.
+        val rule = rateLimitProperties.login
+        val key = "login:${email.lowercase()}"
+        if (rateLimitProperties.enabled && !rateLimiter.tryAcquire(key, rule.maxAttempts, rule.windowSeconds)) {
+            throw RateLimitExceededException(
+                "Too many login attempts. Try again later.",
+                rule.windowSeconds
+            )
+        }
+
         authenticationManager.authenticate(
             UsernamePasswordAuthenticationToken.unauthenticated(email, rawPassword)
         )
 
+        // Successful login clears the counter so a legitimate user is not locked out by
+        // someone else guessing against their address.
+        rateLimiter.reset(key)
+
         val user = userRepository.findByEmail(email)
             ?: throw BadCredentialsException("User not found")
 
-        val accessToken = tokenService.generateAccessToken(user.id, user.roles, user.requiredActions)
-        val refreshToken = refreshTokenService.createToken(user)
-
-        return AuthResponse(
-            accessToken = accessToken,
-            refreshToken = refreshToken,
-            requiredActions = user.requiredActions.map { it.name }
-        )
+        return authTokenIssuer.issue(user)
     }
 }

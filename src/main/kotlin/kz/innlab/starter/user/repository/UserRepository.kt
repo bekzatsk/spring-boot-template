@@ -1,5 +1,6 @@
 package kz.innlab.starter.user.repository
 
+import kz.innlab.starter.user.dto.UserSummaryResponse
 import kz.innlab.starter.user.model.User
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -22,12 +23,30 @@ interface UserRepository : JpaRepository<User, UUID> {
         """
         SELECT u FROM User u
         WHERE :q IS NULL OR :q = ''
-           OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%'))
-           OR LOWER(COALESCE(u.name, '')) LIKE LOWER(CONCAT('%', :q, '%'))
-           OR COALESCE(u.phone, '') LIKE CONCAT('%', :q, '%')
+           OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%')) ESCAPE '\'
+           OR LOWER(COALESCE(u.name, '')) LIKE LOWER(CONCAT('%', :q, '%')) ESCAPE '\'
+           OR COALESCE(u.phone, '') LIKE CONCAT('%', :q, '%') ESCAPE '\'
         """
     )
     fun search(@Param("q") query: String?, pageable: Pageable): Page<User>
+
+    /**
+     * Projection for the admin user list: selects only the summary columns so none of User's
+     * four eager @ElementCollection tables are queried at all.
+     */
+    @Query(
+        """
+        SELECT new kz.innlab.starter.user.dto.UserSummaryResponse(
+            CAST(u.id AS string), u.email, u.name, u.phone, u.createdAt
+        )
+        FROM User u
+        WHERE :q IS NULL OR :q = ''
+           OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%')) ESCAPE '\'
+           OR LOWER(COALESCE(u.name, '')) LIKE LOWER(CONCAT('%', :q, '%')) ESCAPE '\'
+           OR COALESCE(u.phone, '') LIKE CONCAT('%', :q, '%') ESCAPE '\'
+        """
+    )
+    fun searchSummaries(@Param("q") query: String?, pageable: Pageable): Page<UserSummaryResponse>
 
     @Query("SELECT COUNT(u) FROM User u JOIN u.roles r WHERE r = kz.innlab.starter.user.model.Role.ADMIN")
     fun countAdmins(): Long

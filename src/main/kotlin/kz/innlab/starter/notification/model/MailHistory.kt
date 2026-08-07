@@ -13,13 +13,13 @@ import java.util.UUID
 @Table(name = "mail_history", schema = "auth")
 class MailHistory(
     @Column(name = "user_id", nullable = false)
-    var userId: UUID,
+    val userId: UUID,
 
     @Column(name = "to_address", nullable = false)
-    var toAddress: String,
+    val toAddress: String,
 
     @Column(nullable = false)
-    var subject: String
+    val subject: String
 ) : BaseEntity() {
 
     @Column(name = "text_body")

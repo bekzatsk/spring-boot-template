@@ -28,13 +28,12 @@ class LocalUserDetailsService(
             throw UsernameNotFoundException("No local account for email: $email")
         }
 
-        if (user.passwordHash == null) {
-            throw BadCredentialsException("No password set")
-        }
+        val passwordHash = user.passwordHash
+            ?: throw BadCredentialsException("No password set")
 
         return org.springframework.security.core.userdetails.User
             .withUsername(email)
-            .password(user.passwordHash!!)
+            .password(passwordHash)
             .roles(*user.roles.map { it.name }.toTypedArray())
             .build()
     }

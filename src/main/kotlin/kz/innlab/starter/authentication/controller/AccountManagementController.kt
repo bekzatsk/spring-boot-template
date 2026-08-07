@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import kz.innlab.starter.authentication.dto.ChangeEmailRequest
+import kz.innlab.starter.authentication.dto.VerificationIdResponse
 import kz.innlab.starter.authentication.dto.ChangePasswordRequest
 import kz.innlab.starter.authentication.dto.ChangePhoneRequest
 import kz.innlab.starter.authentication.dto.VerifyChangeEmailRequest
@@ -30,7 +31,6 @@ class AccountManagementController(
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: ChangePasswordRequest
     ): ResponseEntity<Void> {
-        // TODO: rate limiting
         accountManagementService.changePassword(
             UUID.fromString(jwt.subject), request.currentPassword, request.newPassword
         )
@@ -41,12 +41,11 @@ class AccountManagementController(
     fun requestChangeEmail(
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: ChangeEmailRequest
-    ): ResponseEntity<Map<String, Any>> {
-        // TODO: rate limiting
+    ): ResponseEntity<VerificationIdResponse> {
         val verificationId = accountManagementService.requestEmailChange(
             UUID.fromString(jwt.subject), request.newEmail
         )
-        return ResponseEntity.ok(mapOf("verificationId" to verificationId))
+        return ResponseEntity.ok(VerificationIdResponse(verificationId))
     }
 
     @PostMapping("/change-email/verify")
@@ -54,7 +53,6 @@ class AccountManagementController(
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: VerifyChangeEmailRequest
     ): ResponseEntity<Void> {
-        // TODO: rate limiting
         accountManagementService.verifyEmailChange(
             UUID.fromString(jwt.subject), request.verificationId, request.code
         )
@@ -65,12 +63,11 @@ class AccountManagementController(
     fun requestChangePhone(
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: ChangePhoneRequest
-    ): ResponseEntity<Map<String, Any>> {
-        // TODO: rate limiting
+    ): ResponseEntity<VerificationIdResponse> {
         val verificationId = accountManagementService.requestPhoneChange(
             UUID.fromString(jwt.subject), request.phone
         )
-        return ResponseEntity.ok(mapOf("verificationId" to verificationId))
+        return ResponseEntity.ok(VerificationIdResponse(verificationId))
     }
 
     @PostMapping("/change-phone/verify")
@@ -78,7 +75,6 @@ class AccountManagementController(
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: VerifyChangePhoneRequest
     ): ResponseEntity<Void> {
-        // TODO: rate limiting
         accountManagementService.verifyPhoneChange(
             UUID.fromString(jwt.subject), request.verificationId, request.phone, request.code
         )

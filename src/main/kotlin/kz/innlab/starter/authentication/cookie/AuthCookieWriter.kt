@@ -2,7 +2,7 @@ package kz.innlab.starter.authentication.cookie
 
 import jakarta.servlet.http.HttpServletRequest
 import kz.innlab.starter.config.AuthCookieProperties
-import org.springframework.beans.factory.annotation.Value
+import kz.innlab.starter.config.AuthTokenProperties
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.ResponseCookie
 import org.springframework.stereotype.Component
@@ -15,15 +15,14 @@ import org.springframework.stereotype.Component
 @ConditionalOnProperty(name = ["app.auth.cookie.enabled"], havingValue = "true")
 class AuthCookieWriter(
     private val props: AuthCookieProperties,
-    @Value("\${app.auth.access-token.expiry-minutes:15}")
-    private val accessExpiryMinutes: Long
+    private val authTokenProperties: AuthTokenProperties
 ) {
 
     val accessCookieName: String get() = props.accessCookieName
     val refreshCookieName: String get() = props.refreshCookieName
 
     private fun accessMaxAgeSeconds(): Long =
-        if (props.accessMaxAgeSeconds >= 0) props.accessMaxAgeSeconds else accessExpiryMinutes * 60
+        if (props.accessMaxAgeSeconds >= 0) props.accessMaxAgeSeconds else authTokenProperties.accessToken.expiryMinutes * 60
 
     private fun refreshMaxAgeSeconds(): Long = props.refreshMaxAgeDays * 86_400
 

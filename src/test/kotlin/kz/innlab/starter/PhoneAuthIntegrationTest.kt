@@ -1,7 +1,7 @@
 package kz.innlab.starter
 
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
-import kz.innlab.starter.authentication.repository.SmsVerificationRepository
+import kz.innlab.starter.authentication.repository.VerificationCodeRepository
 import kz.innlab.starter.authentication.service.SmsService
 import kz.innlab.starter.user.model.AuthProvider
 import kz.innlab.starter.user.model.User
@@ -41,7 +41,7 @@ class PhoneAuthIntegrationTest {
     private lateinit var refreshTokenRepository: RefreshTokenRepository
 
     @Autowired
-    private lateinit var smsVerificationRepository: SmsVerificationRepository
+    private lateinit var verificationCodeRepository: VerificationCodeRepository
 
     private val testPhone = "+77001234567"
 
@@ -49,7 +49,7 @@ class PhoneAuthIntegrationTest {
     fun cleanUp() {
         // Delete refresh tokens first to avoid FK constraint violation (Phase 04-01 decision)
         refreshTokenRepository.deleteAll()
-        smsVerificationRepository.deleteAll()
+        verificationCodeRepository.deleteAll()
         userRepository.deleteAll()
     }
 
@@ -93,10 +93,10 @@ class PhoneAuthIntegrationTest {
 
     @Test
     fun `verify OTP success for new user creates user and returns tokens`() {
-        // Setup: capture the OTP code sent by real SmsVerificationService via doAnswer
+        // Setup: capture the OTP code sent by real VerificationCodeService via doAnswer
         val getCode = captureCodeOnSend()
 
-        // Step 1: Request OTP — triggers real SmsVerificationService.sendCode -> real BCrypt hash stored in H2
+        // Step 1: Request OTP — triggers real VerificationCodeService.sendCode -> real BCrypt hash stored in H2
         val requestResult = mockMvc.perform(
             post("/api/v1/auth/phone/request")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -136,7 +136,7 @@ class PhoneAuthIntegrationTest {
             }
         )
 
-        // Setup: capture the OTP code sent by real SmsVerificationService via doAnswer
+        // Setup: capture the OTP code sent by real VerificationCodeService via doAnswer
         val getCode = captureCodeOnSend()
 
         // Step 1: Request OTP — triggers real code generation and H2 storage
@@ -196,6 +196,71 @@ class PhoneAuthIntegrationTest {
     }
 
     @Test
+    fun `verify OTP stops accepting the correct code after the attempt limit`() {
+        // Phone OTP now shares the one-time-code service with email and Telegram; this asserts
+        // the shared attempt limit actually applies to the phone channel, which had its own copy
+        // of the check before the merge.
+        val getCode = captureCodeOnSend()
+
+        val requestResult = mockMvc.perform(
+            post("/api/v1/auth/phone/request")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"phone": "$testPhone"}""")
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+
+        val verificationId = extractVerificationId(requestResult)
+        val correctCode = getCode()
+
+        // Burn the three allowed attempts with a wrong code
+        repeat(3) {
+            mockMvc.perform(
+                post("/api/v1/auth/phone/verify")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"verificationId": "$verificationId", "phone": "$testPhone", "code": "000000"}""")
+            )
+                .andExpect(status().isUnauthorized)
+        }
+
+        // The correct code must no longer be accepted
+        mockMvc.perform(
+            post("/api/v1/auth/phone/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"verificationId": "$verificationId", "phone": "$testPhone", "code": "$correctCode"}""")
+        )
+            .andExpect(status().isUnauthorized)
+
+        assert(userRepository.findByPhone(testPhone) == null) {
+            "No user may be created once the attempt limit is exhausted"
+        }
+    }
+
+    @Test
+    fun `verify OTP rejects a code issued for a different phone`() {
+        val getCode = captureCodeOnSend()
+
+        val requestResult = mockMvc.perform(
+            post("/api/v1/auth/phone/request")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"phone": "$testPhone"}""")
+        )
+            .andExpect(status().isOk)
+            .andReturn()
+
+        val verificationId = extractVerificationId(requestResult)
+        val code = getCode()
+
+        // Same verificationId and code, different phone — identifier binding must reject it
+        mockMvc.perform(
+            post("/api/v1/auth/phone/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"verificationId": "$verificationId", "phone": "+77007654321", "code": "$code"}""")
+        )
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
     fun `request OTP with empty phone returns 400`() {
         mockMvc.perform(
             post("/api/v1/auth/phone/request")
@@ -232,7 +297,7 @@ class PhoneAuthIntegrationTest {
             .andExpect(status().isOk)
 
         // Step 2: Immediate second request hits 60-second rate limit -> 409 Conflict
-        // IllegalStateException from SmsVerificationService is caught by AuthExceptionHandler -> 409
+        // IllegalStateException from VerificationCodeService is caught by AuthExceptionHandler -> 409
         mockMvc.perform(
             post("/api/v1/auth/phone/request")
                 .contentType(MediaType.APPLICATION_JSON)

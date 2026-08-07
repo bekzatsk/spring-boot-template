@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import tools.jackson.databind.json.JsonMapper
+import java.time.Instant
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -71,6 +72,14 @@ class TelegramAuthIntegrationTest {
             null
         }.`when`(telegramBotService).sendMessage(anyLong(), anyString())
         return { capturedCode ?: error("telegramBotService.sendMessage was not called with a code") }
+    }
+
+    /** Rewinds the server-side resend cooldown so a test can resend immediately. */
+    private fun expireResendCooldown(sessionId: String) {
+        val session = telegramAuthSessionRepository.findBySessionId(sessionId)
+            ?: error("Session $sessionId not found")
+        session.codeSentAt = Instant.now().minusSeconds(61)
+        telegramAuthSessionRepository.save(session)
     }
 
     private fun simulateWebhookStart(sessionId: String) {
@@ -256,6 +265,7 @@ class TelegramAuthIntegrationTest {
 
         val sessionId = extractSessionId(initResult.response.contentAsString)
         simulateWebhookStart(sessionId)
+        expireResendCooldown(sessionId)
 
         // Resend
         mockMvc.perform(
@@ -276,6 +286,80 @@ class TelegramAuthIntegrationTest {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.verified").value(true))
+    }
+
+    @Test
+    fun `webhook tolerates payloads that do not match the expected shape`() {
+        // Parsing used to be nested Map casts, so an unexpected shape raised ClassCastException
+        // and was swallowed by a blanket catch. Typed binding ignores unknown/missing fields.
+        val payloads = listOf(
+            """{"update_id": 1}""",
+            """{"update_id": 1, "message": {}}""",
+            """{"update_id": 1, "message": {"text": "/start", "chat": {}}}""",
+            """{"update_id": 1, "message": {"text": "/start", "chat": {"id": 1}}}"""
+        )
+
+        payloads.forEach { payload ->
+            mockMvc.perform(
+                post("/telegram/webhook")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("X-Telegram-Bot-Api-Secret-Token", "test-secret")
+                    .content(payload)
+            ).andExpect(status().isOk)
+        }
+    }
+
+    @Test
+    fun `resend within cooldown returns 409`() {
+        captureCodeOnBotSend()
+
+        val initResult = mockMvc.perform(
+            post("/api/v1/auth/telegram/init")
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andExpect(status().isCreated).andReturn()
+
+        val sessionId = extractSessionId(initResult.response.contentAsString)
+        simulateWebhookStart(sessionId)
+
+        // Immediately after the initial code was sent — cooldown still active
+        mockMvc.perform(
+            post("/api/v1/auth/telegram/resend")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"sessionId": "$sessionId"}""")
+        )
+            .andExpect(status().isConflict)
+    }
+
+    @Test
+    fun `resend limit per session returns 409`() {
+        captureCodeOnBotSend()
+
+        val initResult = mockMvc.perform(
+            post("/api/v1/auth/telegram/init")
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andExpect(status().isCreated).andReturn()
+
+        val sessionId = extractSessionId(initResult.response.contentAsString)
+        simulateWebhookStart(sessionId)
+
+        // max-resends-per-session = 3
+        repeat(3) {
+            expireResendCooldown(sessionId)
+            mockMvc.perform(
+                post("/api/v1/auth/telegram/resend")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"sessionId": "$sessionId"}""")
+            )
+                .andExpect(status().isOk)
+        }
+
+        expireResendCooldown(sessionId)
+        mockMvc.perform(
+            post("/api/v1/auth/telegram/resend")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"sessionId": "$sessionId"}""")
+        )
+            .andExpect(status().isConflict)
     }
 
     @Test
