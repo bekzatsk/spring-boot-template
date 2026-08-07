@@ -17,6 +17,7 @@ import kz.innlab.starter.config.GoogleAuthConfig
 import kz.innlab.starter.config.LocalAuthConfig
 import kz.innlab.starter.config.MailConfig
 import kz.innlab.starter.config.MailProperties
+import kz.innlab.starter.config.RateLimitProperties
 import kz.innlab.starter.config.NotificationConfig
 import kz.innlab.starter.config.OpenApiConfig
 import kz.innlab.starter.config.ProductionSafetyConfig
@@ -52,6 +53,7 @@ import org.springframework.context.annotation.Import
     VerificationProperties::class,
     TelegramAuthProperties::class,
     DeviceTokenProperties::class,
+    RateLimitProperties::class,
     MailProperties::class,
     CorsProperties::class,
     AuthSecurityProperties::class,

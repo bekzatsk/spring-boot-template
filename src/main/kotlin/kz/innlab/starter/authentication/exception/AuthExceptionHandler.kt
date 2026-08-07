@@ -3,6 +3,7 @@ package kz.innlab.starter.authentication.exception
 import kz.innlab.starter.shared.error.ErrorResponse
 import kz.innlab.starter.shared.error.ForbiddenOperationException
 import kz.innlab.starter.shared.error.ResourceNotFoundException
+import kz.innlab.starter.shared.ratelimit.RateLimitExceededException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -73,6 +74,18 @@ class AuthExceptionHandler {
         ResponseEntity.badRequest().body(
             ErrorResponse(error = "Bad Request", message = ex.message ?: "Invalid request", status = 400)
         )
+
+    @ExceptionHandler(RateLimitExceededException::class)
+    fun handleRateLimited(ex: RateLimitExceededException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .header("Retry-After", ex.retryAfterSeconds.toString())
+            .body(
+                ErrorResponse(
+                    error = "Too Many Requests",
+                    message = ex.message ?: "Too many attempts",
+                    status = 429
+                )
+            )
 
     @ExceptionHandler(ForbiddenOperationException::class)
     fun handleForbidden(ex: ForbiddenOperationException): ResponseEntity<ErrorResponse> =

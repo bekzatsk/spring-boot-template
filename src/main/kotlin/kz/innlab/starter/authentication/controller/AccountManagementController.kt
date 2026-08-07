@@ -31,7 +31,6 @@ class AccountManagementController(
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: ChangePasswordRequest
     ): ResponseEntity<Void> {
-        // TODO: rate limiting
         accountManagementService.changePassword(
             UUID.fromString(jwt.subject), request.currentPassword, request.newPassword
         )
@@ -43,7 +42,6 @@ class AccountManagementController(
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: ChangeEmailRequest
     ): ResponseEntity<VerificationIdResponse> {
-        // TODO: rate limiting
         val verificationId = accountManagementService.requestEmailChange(
             UUID.fromString(jwt.subject), request.newEmail
         )
@@ -55,7 +53,6 @@ class AccountManagementController(
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: VerifyChangeEmailRequest
     ): ResponseEntity<Void> {
-        // TODO: rate limiting
         accountManagementService.verifyEmailChange(
             UUID.fromString(jwt.subject), request.verificationId, request.code
         )
@@ -67,7 +64,6 @@ class AccountManagementController(
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: ChangePhoneRequest
     ): ResponseEntity<VerificationIdResponse> {
-        // TODO: rate limiting
         val verificationId = accountManagementService.requestPhoneChange(
             UUID.fromString(jwt.subject), request.phone
         )
@@ -79,7 +75,6 @@ class AccountManagementController(
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: VerifyChangePhoneRequest
     ): ResponseEntity<Void> {
-        // TODO: rate limiting
         accountManagementService.verifyPhoneChange(
             UUID.fromString(jwt.subject), request.verificationId, request.phone, request.code
         )

@@ -24,6 +24,8 @@ import kz.innlab.starter.authentication.service.TelegramBotService
 import kz.innlab.starter.authentication.service.VerificationCodeService
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
 import kz.innlab.starter.config.AuthTokenProperties
+import kz.innlab.starter.config.RateLimitProperties
+import kz.innlab.starter.shared.ratelimit.RateLimiter
 import kz.innlab.starter.config.TelegramAuthProperties
 import kz.innlab.starter.shared.transaction.AfterCommitRunner
 import kz.innlab.starter.user.repository.UserRepository
@@ -62,10 +64,12 @@ class AuthProvidersAutoConfiguration {
             authTokenIssuer: AuthTokenIssuer,
             verificationCodeService: VerificationCodeService,
             emailService: EmailService,
-            authTokenProperties: AuthTokenProperties
+            authTokenProperties: AuthTokenProperties,
+            rateLimiter: RateLimiter,
+            rateLimitProperties: RateLimitProperties
         ): LocalAuthService = LocalAuthService(
-            authenticationManager, userRepository, passwordEncoder,
-            authTokenIssuer, verificationCodeService, emailService, authTokenProperties
+            authenticationManager, userRepository, passwordEncoder, authTokenIssuer,
+            verificationCodeService, emailService, authTokenProperties, rateLimiter, rateLimitProperties
         )
 
         @Bean

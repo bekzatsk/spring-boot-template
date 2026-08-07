@@ -23,7 +23,10 @@ import kz.innlab.starter.authentication.service.WhatsAppService
 import kz.innlab.starter.authentication.cookie.AuthResponseCookieAdvice
 import kz.innlab.starter.config.AuthSecurityProperties
 import kz.innlab.starter.config.AuthTokenProperties
+import kz.innlab.starter.config.RateLimitProperties
 import kz.innlab.starter.config.VerificationProperties
+import kz.innlab.starter.shared.ratelimit.InMemoryRateLimiter
+import kz.innlab.starter.shared.ratelimit.RateLimiter
 import kz.innlab.starter.shared.transaction.AfterCommitRunner
 import kz.innlab.starter.user.repository.UserRepository
 import org.springframework.beans.factory.ObjectProvider
@@ -54,6 +57,11 @@ class AuthCoreAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     fun afterCommitRunner(): AfterCommitRunner = AfterCommitRunner()
+
+    /** Per-instance by default; replace with a shared-store implementation for a cluster. */
+    @Bean
+    @ConditionalOnMissingBean
+    fun rateLimiter(): RateLimiter = InMemoryRateLimiter()
 
     @Bean
     @ConditionalOnMissingBean
@@ -103,10 +111,12 @@ class AuthCoreAutoConfiguration {
         emailService: EmailService,
         otpDeliveryService: OtpDeliveryService,
         passwordEncoder: PasswordEncoder,
-        refreshTokenRepository: RefreshTokenRepository
+        refreshTokenRepository: RefreshTokenRepository,
+        rateLimiter: RateLimiter,
+        rateLimitProperties: RateLimitProperties
     ): AccountManagementService = AccountManagementService(
-        userRepository, verificationCodeService, emailService,
-        otpDeliveryService, passwordEncoder, refreshTokenRepository
+        userRepository, verificationCodeService, emailService, otpDeliveryService,
+        passwordEncoder, refreshTokenRepository, rateLimiter, rateLimitProperties
     )
 
     // --- web layer ---

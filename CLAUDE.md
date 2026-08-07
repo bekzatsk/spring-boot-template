@@ -51,6 +51,7 @@ Cross-cutting concerns:
 
 - **Email is the universal identity key** for account linking. One email = one user across all providers. Phone-only users have `email = ""` with a partial unique index.
 - **Refresh token rotation** with reuse detection: used tokens within 10s grace window return 409; reuse after grace revokes all user tokens.
+- **Credential-checking endpoints are attempt-limited**: `/auth/local/login` (per email) and `/users/me/change-password` (per user) go through the `RateLimiter` bean and answer 429 with `Retry-After` once the limit is hit; a success clears the counter. The default implementation is in-memory, so limits are per instance — declare a `RateLimiter` bean backed by a shared store for a cluster. Tunable via `app.auth.rate-limit.*`.
 - **Provider linking lives on `User.linkProvider(provider, providerId)`**, not inline at each call site — twelve places used to add the provider by hand and some forgot the provider id.
 - **Bot copy is a replaceable `TelegramBotMessages` bean**, so the starter does not message a consumer's users under someone else's brand.
 - **Entities carry `@Version` and inherit identity semantics from `BaseEntity`**: optimistic locking guards the read-modify-write flows that update a user from several places, and `equals`/`hashCode` are id-based in one place rather than copy-pasted into some entities and missing from others.

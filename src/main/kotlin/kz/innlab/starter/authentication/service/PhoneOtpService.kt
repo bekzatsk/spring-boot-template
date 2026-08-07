@@ -28,7 +28,8 @@ class PhoneOtpService(
      * Throws IllegalStateException (-> 409) if rate limit exceeded (1 request per phone per 60s).
      * Returns an OtpSendResult with the verification UUID (to pass back to the verify endpoint)
      * and the resend cooldown info for the client.
-     * TODO: return a dedicated 429 Too Many Requests response for rate limit violations.
+     * Note: this path answers 409, not 429, unlike the login and change-password limits.
+     * Changing it would break existing clients, so it is left to the API owner to decide.
      */
     @Transactional
     fun sendOtp(rawPhone: String): OtpSendResult {

@@ -2,7 +2,10 @@ package kz.innlab.starter.authentication.service
 
 import kz.innlab.starter.authentication.model.VerificationPurpose
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
+import kz.innlab.starter.config.RateLimitProperties
 import kz.innlab.starter.shared.error.ResourceNotFoundException
+import kz.innlab.starter.shared.ratelimit.RateLimitExceededException
+import kz.innlab.starter.shared.ratelimit.RateLimiter
 import kz.innlab.starter.shared.util.normalizeToE164
 import kz.innlab.starter.user.model.AuthProvider
 import kz.innlab.starter.user.model.RequiredAction
@@ -20,7 +23,9 @@ class AccountManagementService(
     private val emailService: EmailService,
     private val otpDeliveryService: OtpDeliveryService,
     private val passwordEncoder: PasswordEncoder,
-    private val refreshTokenRepository: RefreshTokenRepository
+    private val refreshTokenRepository: RefreshTokenRepository,
+    private val rateLimiter: RateLimiter,
+    private val rateLimitProperties: RateLimitProperties
 ) {
 
     /**
@@ -107,9 +112,18 @@ class AccountManagementService(
             throw IllegalStateException("No password credentials to change")
         }
 
+        // A stolen access token must not be enough to guess the current password and take the
+        // account over permanently.
+        val rule = rateLimitProperties.changePassword
+        val key = "change-password:$userId"
+        if (rateLimitProperties.enabled && !rateLimiter.tryAcquire(key, rule.maxAttempts, rule.windowSeconds)) {
+            throw RateLimitExceededException("Too many attempts. Try again later.", rule.windowSeconds)
+        }
+
         if (!passwordEncoder.matches(currentPassword, user.passwordHash)) {
             throw BadCredentialsException("Current password is incorrect")
         }
+        rateLimiter.reset(key)
 
         user.passwordHash = passwordEncoder.encode(newPassword)
         user.passwordTemporary = false

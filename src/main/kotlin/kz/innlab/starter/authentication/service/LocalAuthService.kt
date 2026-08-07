@@ -12,6 +12,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import kz.innlab.starter.config.AuthTokenProperties
+import kz.innlab.starter.config.RateLimitProperties
+import kz.innlab.starter.shared.ratelimit.RateLimitExceededException
+import kz.innlab.starter.shared.ratelimit.RateLimiter
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -26,7 +29,9 @@ class LocalAuthService(
     private val authTokenIssuer: AuthTokenIssuer,
     private val verificationCodeService: VerificationCodeService,
     private val emailService: EmailService,
-    private val authTokenProperties: AuthTokenProperties
+    private val authTokenProperties: AuthTokenProperties,
+    private val rateLimiter: RateLimiter,
+    private val rateLimitProperties: RateLimitProperties
 ) {
 
     /**
@@ -86,9 +91,24 @@ class LocalAuthService(
      * Throws BadCredentialsException (401) on invalid credentials via DaoAuthenticationProvider.
      */
     fun login(email: String, rawPassword: String): AuthResponse {
+        // Without this the password check is an unlimited oracle: an attacker can try
+        // candidates as fast as the server answers.
+        val rule = rateLimitProperties.login
+        val key = "login:${email.lowercase()}"
+        if (rateLimitProperties.enabled && !rateLimiter.tryAcquire(key, rule.maxAttempts, rule.windowSeconds)) {
+            throw RateLimitExceededException(
+                "Too many login attempts. Try again later.",
+                rule.windowSeconds
+            )
+        }
+
         authenticationManager.authenticate(
             UsernamePasswordAuthenticationToken.unauthenticated(email, rawPassword)
         )
+
+        // Successful login clears the counter so a legitimate user is not locked out by
+        // someone else guessing against their address.
+        rateLimiter.reset(key)
 
         val user = userRepository.findByEmail(email)
             ?: throw BadCredentialsException("User not found")
