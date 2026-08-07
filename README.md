@@ -6,6 +6,9 @@ Ready-to-use Spring Boot starter for JWT authentication with multi-provider soci
 
 ---
 
+Upgrading from `0.0.x`? See [CHANGELOG.md](CHANGELOG.md) — `0.1.0` carries five breaking
+changes and three new migrations.
+
 ## Usage in Another Project
 
 The starter is published to **GitHub Packages** at [`bekzatsk/spring-boot-template`](https://github.com/bekzatsk/spring-boot-template/packages).
