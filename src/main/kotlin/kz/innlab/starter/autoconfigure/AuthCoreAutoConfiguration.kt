@@ -14,6 +14,7 @@ import kz.innlab.starter.authentication.service.AccountManagementService
 import kz.innlab.starter.authentication.service.AuthTokenIssuer
 import kz.innlab.starter.authentication.service.EmailService
 import kz.innlab.starter.authentication.service.OtpDeliveryService
+import kz.innlab.starter.authentication.service.RefreshTokenFamilyRevoker
 import kz.innlab.starter.authentication.service.RefreshTokenService
 import kz.innlab.starter.authentication.service.SmsService
 import kz.innlab.starter.authentication.service.TokenService
@@ -70,10 +71,17 @@ class AuthCoreAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    fun refreshTokenFamilyRevoker(
+        refreshTokenRepository: RefreshTokenRepository
+    ): RefreshTokenFamilyRevoker = RefreshTokenFamilyRevoker(refreshTokenRepository)
+
+    @Bean
+    @ConditionalOnMissingBean
     fun refreshTokenService(
         refreshTokenRepository: RefreshTokenRepository,
+        familyRevoker: RefreshTokenFamilyRevoker,
         authTokenProperties: AuthTokenProperties
-    ): RefreshTokenService = RefreshTokenService(refreshTokenRepository, authTokenProperties)
+    ): RefreshTokenService = RefreshTokenService(refreshTokenRepository, familyRevoker, authTokenProperties)
 
     @Bean
     @ConditionalOnMissingBean

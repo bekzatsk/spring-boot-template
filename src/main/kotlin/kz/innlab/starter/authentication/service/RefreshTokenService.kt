@@ -18,6 +18,7 @@ import java.util.Base64
 @Service
 class RefreshTokenService(
     private val refreshTokenRepository: RefreshTokenRepository,
+    private val familyRevoker: RefreshTokenFamilyRevoker,
     private val authTokenProperties: AuthTokenProperties
 ) : RefreshTokenRevoker {
 
@@ -69,8 +70,10 @@ class RefreshTokenService(
                 // Return 409 Conflict so the mobile client retries with the token it already received.
                 throw TokenGracePeriodException("Token already rotated, retry with new token")
             }
-            // Outside grace window (or no usedAt): reuse detected — revoke entire token family
-            refreshTokenRepository.deleteAllByUser(stored.user)
+            // Outside grace window (or no usedAt): reuse detected — revoke entire token family.
+            // Committed independently: the throw below rolls this transaction back, which used
+            // to undo the revocation and leave the leaked family usable.
+            familyRevoker.revokeAllFor(stored.user)
             throw BadCredentialsException("Refresh token reuse detected")
         }
 
