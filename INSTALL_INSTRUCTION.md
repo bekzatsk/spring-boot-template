@@ -1,5 +1,40 @@
 # Installation Guide
 
+> ## ⚠ Upgrading from 0.0.x to 0.1.0
+>
+> Five breaking changes — [CHANGELOG.md](CHANGELOG.md) has the full list. These either stop the
+> application from starting or change behaviour silently:
+>
+> 1. **`SPRING_PROFILES_ACTIVE` must be set explicitly.** There is no default profile any more.
+>    It used to fall back to `dev`, which enabled the fixed verification code `123456` on every
+>    OTP flow — a deployment that forgot the variable accepted that code in production.
+> 2. **The filter chain ends in `authenticated`, not `permitAll`.** Any path served outside
+>    `/api/**` now needs a token unless listed in `app.auth.security.public-paths`.
+>    `/actuator/health` stays public.
+> 3. **`POST /api/v1/notifications/send/topic` and `/api/v1/mail/inbox/**` require `ROLE_ADMIN`.**
+> 4. **Signatures changed**: `AdminUserService.list()` returns `Page<UserSummaryResponse>`;
+>    `TopicService.subscribe/unsubscribe` take a `userId` first.
+> 5. **Apply migrations V8–V10.** V9 merges `sms_verifications` into `verification_codes` and
+>    drops the old table; V10 adds optimistic-locking columns.
+>
+> Settings added in 0.1.0:
+>
+> | Property | Default | Purpose |
+> |---|---|---|
+> | `app.auth.rate-limit.enabled` | `true` | Attempt limits on login and change-password |
+> | `app.auth.rate-limit.login.max-attempts` | `10` | Per email, per window |
+> | `app.auth.rate-limit.login.window-seconds` | `300` | Window length |
+> | `app.auth.rate-limit.change-password.max-attempts` | `5` | Per user, per window |
+> | `app.auth.telegram.max-resends-per-session` | `3` | Cap on code resends per session |
+> | `app.auth.telegram.trust-forwarded-headers` | `false` | Honour `X-Forwarded-For` — only behind a trusted proxy |
+> | `app.security.allow-console-fallbacks` | `false` | Let the `prod` profile start with console SMS/mail stubs |
+>
+> Rate limiting is in-memory, so limits apply **per instance**. Declare a `RateLimiter` bean
+> backed by a shared store for a clustered deployment.
+>
+> **Note:** this file currently contains the whole guide twice — the second copy starts mid-line
+> around line 1235. Only this first copy carries the notice above.
+
 > **TL;DR — почему новый проект не стартует.**
 > 1. Не добавляй `spring-boot-starter-security` явно — он приходит транзитивно через `auth-spring-boot-starter`. Явное добавление ломает autoconfig в Boot 4.
 > 2. Зарегистрируй **хотя бы один свой `@Bean SecurityFilterChain`** с узким `securityMatcher` (например, `/actuator/**`). Без этого `ServletWebSecurityAutoConfiguration` публикует default form-login chain → `UnreachableFilterChainException` на старте.
