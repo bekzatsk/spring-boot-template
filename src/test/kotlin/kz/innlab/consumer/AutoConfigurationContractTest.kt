@@ -124,9 +124,7 @@ class AutoConfigurationContractTest {
 
     private val contractTypes = alwaysPresent + enabledByTestConfig
 
-    private fun conventionalName(type: KClass<*>) =
-        Introspector.decapitalize(type.java.simpleName)
-            .let { if (type == RateLimiter::class) "rateLimiter" else it }
+    private fun conventionalName(type: KClass<*>) = Introspector.decapitalize(type.java.simpleName)
 
     @Test
     fun `every starter bean is registered under its conventional name`() {

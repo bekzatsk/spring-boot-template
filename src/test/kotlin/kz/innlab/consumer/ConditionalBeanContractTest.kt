@@ -1,6 +1,5 @@
 package kz.innlab.consumer
 
-import com.google.firebase.FirebaseApp
 import kz.innlab.starter.authentication.controller.AppleAuthController
 import kz.innlab.starter.authentication.controller.GoogleAuthController
 import kz.innlab.starter.authentication.controller.LocalAuthController
@@ -15,8 +14,6 @@ import kz.innlab.starter.authentication.service.TelegramAuthService
 import kz.innlab.starter.notification.service.FirebasePushService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.mock
-import org.springframework.boot.test.context.runner.WebApplicationContextRunner
 
 /**
  * Covers the beans that are conditional on a property.
@@ -31,36 +28,31 @@ import org.springframework.boot.test.context.runner.WebApplicationContextRunner
  */
 class ConditionalBeanContractTest {
 
-    private fun runnerWithout(vararg flagsOff: String): WebApplicationContextRunner =
-        consumerContextRunner().withPropertyValues(*flagsOff)
-
     @Test
     fun `cookie writer is present when cookie mode is enabled`() {
-        consumerContextRunner()
-            .withPropertyValues("app.auth.cookie.enabled=true")
+        consumerContextRunner("app.auth.cookie.enabled=true")
             .run { assertThat(it).hasSingleBean(AuthCookieWriter::class.java) }
     }
 
     @Test
     fun `cookie writer is absent when cookie mode is disabled`() {
-        runnerWithout("app.auth.cookie.enabled=false")
+        consumerContextRunner("app.auth.cookie.enabled=false")
             .run { assertThat(it).doesNotHaveBean(AuthCookieWriter::class.java) }
     }
 
     @Test
     fun `cookie writer is absent when cookie mode is not configured at all`() {
-        runnerWithout().run { assertThat(it).doesNotHaveBean(AuthCookieWriter::class.java) }
+        consumerContextRunner().run { assertThat(it).doesNotHaveBean(AuthCookieWriter::class.java) }
     }
 
     @Test
     fun `google provider beans follow the google flag`() {
-        consumerContextRunner()
-            .withPropertyValues("app.auth.google.enabled=true", "app.auth.google.client-id=test")
+        consumerContextRunner("app.auth.google.enabled=true", "app.auth.google.client-id=test")
             .run {
                 assertThat(it).hasSingleBean(GoogleOAuth2Service::class.java)
                 assertThat(it).hasSingleBean(GoogleAuthController::class.java)
             }
-        runnerWithout("app.auth.google.enabled=false").run {
+        consumerContextRunner("app.auth.google.enabled=false").run {
             assertThat(it).doesNotHaveBean(GoogleOAuth2Service::class.java)
             assertThat(it).doesNotHaveBean(GoogleAuthController::class.java)
         }
@@ -68,13 +60,12 @@ class ConditionalBeanContractTest {
 
     @Test
     fun `apple provider beans follow the apple flag`() {
-        consumerContextRunner()
-            .withPropertyValues("app.auth.apple.enabled=true", "app.auth.apple.bundle-id=test")
+        consumerContextRunner("app.auth.apple.enabled=true", "app.auth.apple.bundle-id=test")
             .run {
                 assertThat(it).hasSingleBean(AppleOAuth2Service::class.java)
                 assertThat(it).hasSingleBean(AppleAuthController::class.java)
             }
-        runnerWithout("app.auth.apple.enabled=false").run {
+        consumerContextRunner("app.auth.apple.enabled=false").run {
             assertThat(it).doesNotHaveBean(AppleOAuth2Service::class.java)
             assertThat(it).doesNotHaveBean(AppleAuthController::class.java)
         }
@@ -82,13 +73,12 @@ class ConditionalBeanContractTest {
 
     @Test
     fun `telegram provider beans follow the telegram flag`() {
-        consumerContextRunner()
-            .withPropertyValues("app.auth.telegram.enabled=true")
+        consumerContextRunner("app.auth.telegram.enabled=true")
             .run {
                 assertThat(it).hasSingleBean(TelegramAuthService::class.java)
                 assertThat(it).hasSingleBean(TelegramAuthController::class.java)
             }
-        runnerWithout("app.auth.telegram.enabled=false").run {
+        consumerContextRunner("app.auth.telegram.enabled=false").run {
             assertThat(it).doesNotHaveBean(TelegramAuthService::class.java)
             assertThat(it).doesNotHaveBean(TelegramAuthController::class.java)
         }
@@ -96,11 +86,11 @@ class ConditionalBeanContractTest {
 
     @Test
     fun `local provider beans are on by default and can be switched off`() {
-        runnerWithout().run {
+        consumerContextRunner().run {
             assertThat(it).hasSingleBean(LocalAuthService::class.java)
             assertThat(it).hasSingleBean(LocalAuthController::class.java)
         }
-        runnerWithout("app.auth.local.enabled=false").run {
+        consumerContextRunner("app.auth.local.enabled=false").run {
             assertThat(it).doesNotHaveBean(LocalAuthService::class.java)
             assertThat(it).doesNotHaveBean(LocalAuthController::class.java)
         }
@@ -108,11 +98,11 @@ class ConditionalBeanContractTest {
 
     @Test
     fun `phone provider beans are on by default and can be switched off`() {
-        runnerWithout().run {
+        consumerContextRunner().run {
             assertThat(it).hasSingleBean(PhoneOtpService::class.java)
             assertThat(it).hasSingleBean(PhoneAuthController::class.java)
         }
-        runnerWithout("app.auth.phone.enabled=false").run {
+        consumerContextRunner("app.auth.phone.enabled=false").run {
             assertThat(it).doesNotHaveBean(PhoneOtpService::class.java)
             assertThat(it).doesNotHaveBean(PhoneAuthController::class.java)
         }
@@ -120,12 +110,11 @@ class ConditionalBeanContractTest {
 
     @Test
     fun `firebase push service follows the firebase flag`() {
-        consumerContextRunner()
-            .withPropertyValues("app.firebase.enabled=true")
-            .withBean(FirebaseApp::class.java, { mock(FirebaseApp::class.java) })
+        consumerContextRunner("app.firebase.enabled=true")
+            .withStubFirebaseApp()
             .run { assertThat(it).hasSingleBean(FirebasePushService::class.java) }
 
-        runnerWithout("app.firebase.enabled=false")
+        consumerContextRunner("app.firebase.enabled=false")
             .run { assertThat(it).doesNotHaveBean(FirebasePushService::class.java) }
     }
 }

@@ -1,9 +1,7 @@
 package kz.innlab.consumer
 
-import com.google.firebase.FirebaseApp
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.mock
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.AnnotatedElementUtils
@@ -26,23 +24,18 @@ import org.springframework.stereotype.Component
  */
 class AutoConfigurationCoverageTest {
 
-    /**
-     * Every switch the starter has, turned on, so conditional beans are in scope. FirebaseApp is
-     * supplied by the test: the real one reads FIREBASE_CREDENTIALS_JSON from the environment.
-     */
-    private fun maximalContext() = consumerContextRunner()
-        .withPropertyValues(
-            "app.auth.cookie.enabled=true",
-            "app.auth.local.enabled=true",
-            "app.auth.google.enabled=true",
-            "app.auth.apple.enabled=true",
-            "app.auth.phone.enabled=true",
-            "app.auth.telegram.enabled=true",
-            "app.firebase.enabled=true",
-            "app.mail.enabled=true",
-            "app.mail.smtp.host=localhost"
-        )
-        .withBean(FirebaseApp::class.java, { mock(FirebaseApp::class.java) })
+    /** Every switch the starter has, turned on, so no conditional bean is out of scope. */
+    private fun maximalContext() = consumerContextRunner(
+        "app.auth.cookie.enabled=true",
+        "app.auth.local.enabled=true",
+        "app.auth.google.enabled=true",
+        "app.auth.apple.enabled=true",
+        "app.auth.phone.enabled=true",
+        "app.auth.telegram.enabled=true",
+        "app.firebase.enabled=true",
+        "app.mail.enabled=true",
+        "app.mail.smtp.host=localhost"
+    ).withStubFirebaseApp()
 
     /**
      * Classes carrying a stereotype that the auto-configuration deliberately does not register.

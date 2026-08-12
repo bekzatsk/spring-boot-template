@@ -1,6 +1,8 @@
 package kz.innlab.consumer
 
+import com.google.firebase.FirebaseApp
 import kz.innlab.starter.AuthAutoConfiguration
+import org.mockito.Mockito.mock
 import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration
 import org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration
@@ -29,7 +31,19 @@ import org.springframework.context.ConfigurableApplicationContext
  * with 174 green tests. A consumer application lives in a different package and gets no such
  * backfill; this runner reproduces that position.
  */
-fun consumerContextRunner(): WebApplicationContextRunner = WebApplicationContextRunner()
+fun consumerContextRunner(vararg properties: String): WebApplicationContextRunner = baseRunner()
+    .withPropertyValues(*properties)
+
+/**
+ * Firebase beans need a `FirebaseApp`, and the starter's own builds one from
+ * FIREBASE_CREDENTIALS_JSON in the environment. Supplying it here is what lets a test reach
+ * `FirebasePushService` — and it works only because `FirebaseConfig.firebaseApp` is
+ * `@ConditionalOnMissingBean`.
+ */
+fun WebApplicationContextRunner.withStubFirebaseApp(): WebApplicationContextRunner =
+    withBean(FirebaseApp::class.java, { mock(FirebaseApp::class.java) })
+
+private fun baseRunner(): WebApplicationContextRunner = WebApplicationContextRunner()
     .withInitializer(
         ConfigDataApplicationContextInitializer()
             as ApplicationContextInitializer<ConfigurableApplicationContext>
