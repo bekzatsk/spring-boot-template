@@ -9,6 +9,7 @@ import kz.innlab.starter.notification.service.MailService
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
@@ -19,11 +20,22 @@ import org.springframework.context.annotation.Profile
  * Refuses to start under the `prod` profile when:
  * - any `app.auth.*.dev-code` fixed-OTP override is set (account-takeover backdoor),
  * - Telegram auth is enabled without a webhook secret (webhook would accept forged updates),
- * - console fallback beans are serving SMS/email (verification codes would go to logs
- *   instead of users) — unless explicitly allowed via `app.security.allow-console-fallbacks=true`.
+ * - a console fallback bean is serving a channel the application actually uses (verification codes
+ *   would go to the log instead of to users).
+ *
+ * The console-fallback checks are waived per channel through
+ * [ConsoleFallbackProperties], because an application typically uses some channels and not others.
+ * `app.security.allow-console-fallbacks=true` still waives all three at once and is kept for
+ * compatibility, but prefer the per-channel switches: a blanket waiver set to get past a missing
+ * SMS provider also disarms the mail guards.
+ *
+ * Whether a channel is used is not derivable from configuration — the `change-phone` endpoints send
+ * an OTP whether or not the phone provider is enabled, and any consumer can call `MailService`
+ * directly — so the waiver is a statement by the operator, not a guess by the starter.
  */
 @Configuration
 @Profile("prod")
+@EnableConfigurationProperties(ConsoleFallbackProperties::class)
 class ProductionSafetyConfig {
 
     @Bean
@@ -31,6 +43,7 @@ class ProductionSafetyConfig {
         smsService: ObjectProvider<SmsService>,
         emailService: ObjectProvider<EmailService>,
         mailService: ObjectProvider<MailService>,
+        consoleFallbacks: ConsoleFallbackProperties,
         @Value("\${app.security.allow-console-fallbacks:false}") allowConsoleFallbacks: Boolean,
         @Value("\${app.auth.sms.dev-code:}") smsDevCode: String,
         @Value("\${app.auth.verification.dev-code:}") verificationDevCode: String,
@@ -48,22 +61,22 @@ class ProductionSafetyConfig {
             problems += "app.auth.telegram.enabled=true but app.auth.telegram.webhook-secret is blank — " +
                 "the webhook endpoint would accept forged updates from anyone"
         }
-        if (!allowConsoleFallbacks) {
-            if (smsService.ifAvailable is ConsoleSmsService) {
-                problems += "SmsService is the console fallback — OTP codes would be logged instead of sent; " +
-                    "configure a real provider (e.g. app.twilio.enabled=true) or set " +
-                    "app.security.allow-console-fallbacks=true"
-            }
-            if (emailService.ifAvailable is ConsoleEmailService) {
-                problems += "EmailService is the console fallback — verification codes would be logged instead " +
-                    "of sent; configure mail (app.mail.enabled=true) or set " +
-                    "app.security.allow-console-fallbacks=true"
-            }
-            if (mailService.ifAvailable is ConsoleMailService) {
-                problems += "MailService is the console fallback — outgoing mail would be logged instead of " +
-                    "sent; configure mail (app.mail.enabled=true) or set " +
-                    "app.security.allow-console-fallbacks=true"
-            }
+        if (!allowConsoleFallbacks && !consoleFallbacks.allowSms && smsService.ifAvailable is ConsoleSmsService) {
+            problems += "SmsService is the console fallback — OTP codes for phone login and " +
+                "/users/me/change-phone would be logged instead of sent; configure a real provider " +
+                "(e.g. app.twilio.enabled=true), or set app.security.console-fallbacks.allow-sms=true " +
+                "if this application sends no SMS"
+        }
+        if (!allowConsoleFallbacks && !consoleFallbacks.allowEmail && emailService.ifAvailable is ConsoleEmailService) {
+            problems += "EmailService is the console fallback — verification codes for registration, " +
+                "password reset and email change would be logged instead of sent; configure mail " +
+                "(app.mail.enabled=true), or set app.security.console-fallbacks.allow-email=true if this " +
+                "application sends no verification email"
+        }
+        if (!allowConsoleFallbacks && !consoleFallbacks.allowMail && mailService.ifAvailable is ConsoleMailService) {
+            problems += "MailService is the console fallback — outgoing mail from /api/v1/mail would be " +
+                "logged instead of sent; configure mail (app.mail.enabled=true), or set " +
+                "app.security.console-fallbacks.allow-mail=true if this application sends no mail"
         }
 
         check(problems.isEmpty()) {

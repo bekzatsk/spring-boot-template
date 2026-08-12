@@ -16,6 +16,29 @@ still applies.
 - `FirebaseConfig.firebaseApp` gained `@ConditionalOnMissingBean(FirebaseApp::class)`, so a
   consumer that builds its own `FirebaseApp` no longer collides with the starter's.
 
+### Changed
+
+- **`ProductionSafetyConfig`'s console-fallback checks are waived per channel.** An application
+  with no SMS provider could only get past the SMS check with
+  `app.security.allow-console-fallbacks=true`, which disarmed the email and outgoing-mail guards
+  along with it — the blanket switch bought a start-up at the cost of the guards that were still
+  doing their job. Three new switches replace it for that purpose:
+
+  | Property | Waives |
+  |---|---|
+  | `app.security.console-fallbacks.allow-sms` | phone OTP and `change-phone` codes |
+  | `app.security.console-fallbacks.allow-email` | registration, password-reset and email-change codes |
+  | `app.security.console-fallbacks.allow-mail` | outgoing mail from `/api/v1/mail` |
+
+  `app.security.allow-console-fallbacks=true` still waives all three and keeps working; nothing
+  needs to change on upgrade. The guard's messages now name the affected flows and the exact
+  switch to set.
+
+  The checks are not tied to whether a provider is enabled, which would be the obvious move:
+  `/users/me/change-phone/request` sends an OTP whether or not `app.auth.phone.enabled` is set,
+  and any consumer can call `MailService` directly, so "provider disabled" does not mean "channel
+  unused". Declaring the waiver is the operator's call.
+
 ### Tests
 
 The starter's own suite could not have caught this, and stayed green (174 tests) against the

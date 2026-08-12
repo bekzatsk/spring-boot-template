@@ -49,7 +49,10 @@
 > | `app.auth.rate-limit.change-password.max-attempts` | `5` | Per user, per window |
 > | `app.auth.telegram.max-resends-per-session` | `3` | Cap on code resends per session |
 > | `app.auth.telegram.trust-forwarded-headers` | `false` | Honour `X-Forwarded-For` — only behind a trusted proxy |
-> | `app.security.allow-console-fallbacks` | `false` | Let the `prod` profile start with console SMS/mail stubs |
+> | `app.security.console-fallbacks.allow-sms` | `false` | Let `prod` start on the console SMS stub — set it when the application sends no SMS |
+> | `app.security.console-fallbacks.allow-email` | `false` | Same for verification email |
+> | `app.security.console-fallbacks.allow-mail` | `false` | Same for outgoing mail (`/api/v1/mail`) |
+> | `app.security.allow-console-fallbacks` | `false` | Waives all three at once. Kept for compatibility — prefer the per-channel switches, since a blanket waiver set to get past a missing SMS provider disarms the mail guards too |
 >
 > Rate limiting is in-memory, so limits apply **per instance**. Declare a `RateLimiter` bean
 > backed by a shared store for a clustered deployment.

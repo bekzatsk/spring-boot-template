@@ -71,7 +71,7 @@ Cross-cutting concerns:
 ### Security Posture
 
 - **No default Spring profile.** `SPRING_PROFILES_ACTIVE` must be set explicitly; a `:dev` fallback would silently enable the fixed `123456` OTP override in production.
-- **`ProductionSafetyConfig` refuses to start under `prod`** when a `dev-code` override is set, Telegram is enabled without a webhook secret, or console SMS/mail fallbacks are serving real traffic (override with `app.security.allow-console-fallbacks=true`).
+- **`ProductionSafetyConfig` refuses to start under `prod`** when a `dev-code` override is set, Telegram is enabled without a webhook secret, or console SMS/mail fallbacks are serving real traffic. The fallback checks are waived **per channel** (`app.security.console-fallbacks.allow-sms|allow-email|allow-mail`) because most applications use some channels and not others; `app.security.allow-console-fallbacks=true` waives all three and stays only for compatibility. Which channels an application uses is not derivable from config — `change-phone` sends an OTP whether or not the phone provider is enabled — so the waiver is the operator's statement, not a guess.
 - **Authorization is fail-secure**: `anyRequest` is `authenticated`. Consumers open extra paths via `app.auth.security.public-paths`. Only `/actuator/health*` is public by default.
 - **Admin-only endpoints**: `/api/v1/admin/**`, `POST /api/v1/notifications/send/topic` (broadcast), `/api/v1/mail/inbox/**` (shared org mailbox).
 - **Ownership checks**: push send/multicast and topic subscribe only accept FCM tokens registered to the caller.
