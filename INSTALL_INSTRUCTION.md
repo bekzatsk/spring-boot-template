@@ -1,6 +1,28 @@
 # Installation Guide
 
-> ## ⚠ Upgrading from 0.0.x to 0.1.0
+> ## ⛔ Do not use 0.1.0 — use 0.1.1
+>
+> **0.1.0 ships with cookie authentication dead.** `AuthCookieWriter` is not registered by the
+> auto-configuration, and every component injects it optionally, so the application starts clean,
+> logs nothing, answers `200` — and never sends `Set-Cookie`. `app.auth.cookie.enabled=true` has no
+> effect in that release, whatever you set it through (yaml, env, `SPRING_APPLICATION_JSON`).
+>
+> 0.1.0 stays on Maven Central because Central is immutable; treat it as withdrawn. Upgrade to
+> **0.1.1**, which is 0.1.0 plus that fix. Nothing else changed — the 0.0.x upgrade steps below
+> apply to both.
+>
+> Check your deployment with:
+>
+> ```bash
+> curl -D - -s -o /dev/null -X POST https://<host>/api/v1/auth/local/login \
+>   -H 'Content-Type: application/json' \
+>   -d '{"email":"...","password":"..."}' | grep -i set-cookie
+> ```
+>
+> Two `Set-Cookie` lines (`access_token`, `refresh_token`) means the fix is in place. No output on
+> 0.1.0 with cookie mode on is the bug.
+
+> ## ⚠ Upgrading from 0.0.x to 0.1.x
 >
 > Five breaking changes — [CHANGELOG.md](CHANGELOG.md) has the full list. These either stop the
 > application from starting or change behaviour silently:
@@ -17,7 +39,7 @@
 > 5. **Apply migrations V8–V10.** V9 merges `sms_verifications` into `verification_codes` and
 >    drops the old table; V10 adds optimistic-locking columns.
 >
-> Settings added in 0.1.0:
+> Settings added in 0.1.x:
 >
 > | Property | Default | Purpose |
 > |---|---|---|
@@ -31,9 +53,6 @@
 >
 > Rate limiting is in-memory, so limits apply **per instance**. Declare a `RateLimiter` bean
 > backed by a shared store for a clustered deployment.
->
-> **Note:** this file currently contains the whole guide twice — the second copy starts mid-line
-> around line 1235. Only this first copy carries the notice above.
 
 > **TL;DR — почему новый проект не стартует.**
 > 1. Не добавляй `spring-boot-starter-security` явно — он приходит транзитивно через `auth-spring-boot-starter`. Явное добавление ломает autoconfig в Boot 4.
@@ -103,7 +122,7 @@
         <dependency>
             <groupId>kz.innlab</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>0.0.7</version>
+            <version>0.1.1</version>
         </dependency>
 
         <dependency>
@@ -362,7 +381,7 @@ cd /path/to/{projectName}/backend && ./mvnw spring-boot:run
 
 ## 1. Publish Starter
 
-> **Starter уже опубликован на Maven Central** под `kz.innlab:auth-spring-boot-starter:0.0.7`.
+> **Starter уже опубликован на Maven Central** под `kz.innlab:auth-spring-boot-starter:0.1.1`.
 > Если ты **используешь** starter — переходи к §2. Эта секция нужна только если ты **форкнул** его и публикуешь свой вариант.
 
 ### Option A: Maven Central (canonical, no extra config for consumers)
@@ -517,7 +536,7 @@ Artifact goes to `~/.m2/repository`. Works only on your machine.
 <dependency>
     <groupId>kz.innlab</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>0.0.7</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
@@ -557,7 +576,7 @@ repositories {
 }
 
 dependencies {
-    implementation("kz.innlab:auth-spring-boot-starter:0.0.7")
+    implementation("kz.innlab:auth-spring-boot-starter:0.1.1")
 }
 ```
 
@@ -580,7 +599,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'kz.innlab:auth-spring-boot-starter:0.0.7'
+    implementation 'kz.innlab:auth-spring-boot-starter:0.1.1'
 }
 ```
 

@@ -1,6 +1,45 @@
 # Changelog
 
+## 0.1.1
+
+Fixes a regression introduced in 0.1.0. No other changes — everything in the 0.1.0 notes below
+still applies.
+
+### Fixed
+
+- **Cookie authentication did nothing in 0.1.0.** `AuthCookieWriter` was left out when the
+  auto-configuration stopped scanning the starter package, and no `@Bean` method declared it.
+  Every consumer of that bean injects it as `ObjectProvider<AuthCookieWriter>` and reads absence
+  as "cookie mode off", so nothing failed: the application started clean, logged nothing, answered
+  `200` — and never sent `Set-Cookie`. `app.auth.cookie.enabled=true` had no effect through yaml,
+  environment variables or `SPRING_APPLICATION_JSON`.
+- `FirebaseConfig.firebaseApp` gained `@ConditionalOnMissingBean(FirebaseApp::class)`, so a
+  consumer that builds its own `FirebaseApp` no longer collides with the starter's.
+
+### Tests
+
+The starter's own suite could not have caught this, and stayed green (174 tests) against the
+broken artifact: `@SpringBootTest` boots `AuthStarterApplication`, whose `@SpringBootApplication`
+scan covers `kz.innlab.starter` and creates any bean the auto-configuration forgets. A consumer
+application lives in another package and gets no such backfill.
+
+New tests under `kz.innlab.consumer` build the context the way a consumer does — from
+`AuthAutoConfiguration` alone, with no scan of the starter package:
+
+- `AutoConfigurationContractTest` — bean names and types, rebuilt on `ApplicationContextRunner`.
+- `ConditionalBeanContractTest` — every `@ConditionalOnProperty` bean asserted present with the
+  flag on and absent with it off. A missing optional bean does not break startup, so this is the
+  only kind of test that catches this class of regression.
+- `AutoConfigurationCoverageTest` — audits every stereotype-annotated class in the starter against
+  the beans a real consumer context holds. Run against the broken commit it reports exactly one
+  missing class, `AuthCookieWriter`, which is also the evidence that nothing else was dropped.
+- `ConsumerCookieAuthIntegrationTest` — logs in over MockMvc from a consumer application and
+  asserts the `Set-Cookie` headers with `HttpOnly`, `Secure` and `SameSite`.
+
 ## 0.1.0
+
+**⛔ Withdrawn — use 0.1.1.** Cookie authentication is dead in this release (see 0.1.1 above).
+Maven Central is immutable, so the artifact stays published; do not depend on it.
 
 Security, transaction and architecture hardening. **Upgrading requires action** — see below.
 
