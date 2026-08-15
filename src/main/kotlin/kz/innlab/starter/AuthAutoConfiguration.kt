@@ -10,6 +10,7 @@ import kz.innlab.starter.config.AuthCookieProperties
 import kz.innlab.starter.config.AuthFlywayConfig
 import kz.innlab.starter.config.AuthSecurityProperties
 import kz.innlab.starter.config.AuthTokenProperties
+import kz.innlab.starter.config.ConsoleFallbackProperties
 import kz.innlab.starter.config.CorsProperties
 import kz.innlab.starter.config.DeviceTokenProperties
 import kz.innlab.starter.config.FirebaseConfig
@@ -57,7 +58,8 @@ import org.springframework.context.annotation.Import
     MailProperties::class,
     CorsProperties::class,
     AuthSecurityProperties::class,
-    AuthCookieProperties::class
+    AuthCookieProperties::class,
+    ConsoleFallbackProperties::class
 )
 @Import(
     // feature beans

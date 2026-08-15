@@ -3,6 +3,7 @@ package kz.innlab.starter.config
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -13,6 +14,7 @@ import java.util.Base64
 class FirebaseConfig {
 
     @Bean
+    @ConditionalOnMissingBean(FirebaseApp::class)
     @ConditionalOnProperty(name = ["app.firebase.enabled"], havingValue = "true")
     fun firebaseApp(): FirebaseApp {
         if (FirebaseApp.getApps().isEmpty()) {

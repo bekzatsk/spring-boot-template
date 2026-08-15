@@ -22,6 +22,7 @@ import kz.innlab.starter.authentication.service.VerificationAttemptRecorder
 import kz.innlab.starter.authentication.service.VerificationCodeService
 import kz.innlab.starter.authentication.service.WhatsAppService
 import kz.innlab.starter.authentication.cookie.AuthResponseCookieAdvice
+import kz.innlab.starter.config.AuthCookieProperties
 import kz.innlab.starter.config.AuthSecurityProperties
 import kz.innlab.starter.config.AuthTokenProperties
 import kz.innlab.starter.config.RateLimitProperties
@@ -32,6 +33,7 @@ import kz.innlab.starter.shared.transaction.AfterCommitRunner
 import kz.innlab.starter.user.repository.UserRepository
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -149,6 +151,19 @@ class AuthCoreAutoConfiguration {
         properties: AuthSecurityProperties,
         objectMapper: ObjectMapper
     ): RequiredActionFilter = RequiredActionFilter(properties, objectMapper)
+
+    /**
+     * Cookie mode. Missing this bean does not fail anything — every consumer injects it through
+     * ObjectProvider and reads absence as "cookie mode off" — so when it was left out of the
+     * explicit registration, logins simply stopped setting Set-Cookie with no error anywhere.
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(name = ["app.auth.cookie.enabled"], havingValue = "true")
+    fun authCookieWriter(
+        props: AuthCookieProperties,
+        authTokenProperties: AuthTokenProperties
+    ): AuthCookieWriter = AuthCookieWriter(props, authTokenProperties)
 
     @Bean
     @ConditionalOnMissingBean
