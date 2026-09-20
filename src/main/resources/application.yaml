@@ -33,6 +33,10 @@ app:
       enabled: ${AUTH_EMAIL_VERIFICATION_ENABLED:true}
     phone:
       enabled: ${AUTH_PHONE_ENABLED:true}
+      code-length: ${AUTH_PHONE_CODE_LENGTH:6}
+    email-otp:
+      enabled: ${AUTH_EMAIL_OTP_ENABLED:true}
+      code-length: ${AUTH_EMAIL_OTP_CODE_LENGTH:6}
     telegram:
       enabled: ${AUTH_TELEGRAM_ENABLED:false}
       bot-token: ${TELEGRAM_BOT_TOKEN:}

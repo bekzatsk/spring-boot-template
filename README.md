@@ -1,8 +1,8 @@
 # Auth Spring Boot Starter
 
-Ready-to-use Spring Boot starter for JWT authentication with multi-provider social login (Google, Apple, email+password, phone+SMS OTP), push notifications (Firebase), and email (SMTP/IMAP).
+Ready-to-use Spring Boot starter for JWT authentication with multi-provider login (Google, Apple, email+password, email OTP, phone OTP), push notifications (Firebase), and email (SMTP/IMAP).
 
-**Stack:** Spring Boot 4.0.5 / Kotlin / Java 24 / PostgreSQL 18 / Flyway / Firebase Admin SDK
+**Stack:** Spring Boot 4.1.1 / Kotlin 2.3.21 / Java 25 / PostgreSQL 18 / Flyway / Firebase Admin SDK
 
 ---
 
@@ -137,6 +137,8 @@ The starter auto-registers these endpoints:
 | `POST /api/v1/auth/local/login` | Login with email + password |
 | `POST /api/v1/auth/google` | Google ID token auth |
 | `POST /api/v1/auth/apple` | Apple ID token auth |
+| `POST /api/v1/auth/email/request` | Request passwordless email OTP |
+| `POST /api/v1/auth/email/verify` | Verify email OTP |
 | `POST /api/v1/auth/phone/request` | Request SMS OTP |
 | `POST /api/v1/auth/phone/verify` | Verify SMS OTP |
 | `POST /api/v1/auth/telegram/init` | Init Telegram auth session → returns `sessionId`, `botUrl`, `botUsername`, `expiresAt` |
@@ -301,6 +303,9 @@ class MyService(
 | `app.auth.apple.enabled` | `true` | Apple Sign In |
 | `app.auth.apple.bundle-id` | `com.example.app` | Apple app bundle ID |
 | `app.auth.phone.enabled` | `true` | Phone + SMS OTP |
+| `app.auth.phone.code-length` | `6` | Phone OTP length: `4` or `6` |
+| `app.auth.email-otp.enabled` | `true` | Passwordless email OTP |
+| `app.auth.email-otp.code-length` | `6` | Email OTP length: `4` or `6` |
 | `app.auth.telegram.enabled` | `false` | Telegram bot authentication |
 | `app.auth.telegram.bot-token` | — | Telegram Bot API token |
 | `app.auth.telegram.bot-username` | `MathHubBot` | Bot username for deep link URL. Also exposed in `TelegramInitResponse.botUsername` (any leading `@` stripped). |

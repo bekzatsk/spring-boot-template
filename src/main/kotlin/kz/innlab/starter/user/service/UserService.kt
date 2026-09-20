@@ -138,6 +138,28 @@ class UserService(
         )
     }
 
+    /** Find or create a passwordless email user after ownership was proven by OTP. */
+    @Transactional
+    fun findOrCreateEmailOtpUser(email: String): User {
+        val existing = userRepository.findByEmailIgnoreCase(email)
+        if (existing != null) {
+            existing.linkProvider(AuthProvider.LOCAL)
+            existing.emailVerified = true
+            existing.requiredActions.remove(RequiredAction.VERIFY_EMAIL)
+            return userRepository.save(existing)
+        }
+
+        if (!authTokenProperties.registration.enabled) {
+            throw IllegalStateException("Registration is currently disabled")
+        }
+        return userRepository.save(
+            User(email = email).also {
+                it.linkProvider(AuthProvider.LOCAL)
+                it.emailVerified = true
+            }
+        )
+    }
+
     @Transactional
     fun findOrCreateTelegramUser(telegramUserId: Long, telegramUsername: String?): User {
         val existing = userRepository.findByTelegramUserId(telegramUserId)

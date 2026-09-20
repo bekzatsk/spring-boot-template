@@ -55,7 +55,7 @@ class VerificationCodeService(
             throw IllegalStateException("Please wait before requesting a new code")
         }
 
-        val code = OneTimeCodes.generate(devCodeFor(purpose))
+        val code = OneTimeCodes.generate(devCodeFor(purpose), codeLengthFor(purpose))
         val hash = requireNotNull(passwordEncoder.encode(code)) { "PasswordEncoder returned null hash" }
 
         // Only one live code per identifier+purpose
@@ -126,10 +126,23 @@ class VerificationCodeService(
     }
 
     private fun expiryMinutesFor(purpose: VerificationPurpose): Long =
-        if (purpose == VerificationPurpose.PHONE_LOGIN) PHONE_EXPIRY_MINUTES else DEFAULT_EXPIRY_MINUTES
+        if (purpose == VerificationPurpose.PHONE_LOGIN || purpose == VerificationPurpose.EMAIL_LOGIN) {
+            PHONE_EXPIRY_MINUTES
+        } else {
+            DEFAULT_EXPIRY_MINUTES
+        }
+
+    private fun codeLengthFor(purpose: VerificationPurpose): Int = when (purpose) {
+        VerificationPurpose.PHONE_LOGIN -> verificationProperties.phone.codeLength
+        VerificationPurpose.EMAIL_LOGIN -> verificationProperties.emailOtp.codeLength
+        else -> 6
+    }
 
     // Phone OTP keeps its own dev override so app.auth.sms.dev-code stays meaningful.
     private fun devCodeFor(purpose: VerificationPurpose): String =
-        if (purpose == VerificationPurpose.PHONE_LOGIN) verificationProperties.sms.devCode
-        else verificationProperties.verification.devCode
+        when (purpose) {
+            VerificationPurpose.PHONE_LOGIN -> verificationProperties.sms.devCode
+            VerificationPurpose.EMAIL_LOGIN -> verificationProperties.emailOtp.devCode
+            else -> verificationProperties.verification.devCode
+        }
 }

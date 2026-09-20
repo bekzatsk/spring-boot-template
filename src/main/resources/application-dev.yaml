@@ -26,6 +26,8 @@ app:
       dev-code: "123456"
     verification:
       dev-code: "123456"
+    email-otp:
+      dev-code: "123456"
     telegram:
       enabled: true
       dev-code: "123456"

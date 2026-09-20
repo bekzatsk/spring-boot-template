@@ -60,7 +60,7 @@
 > **TL;DR — почему новый проект не стартует.**
 > 1. Не добавляй `spring-boot-starter-security` явно — он приходит транзитивно через `auth-spring-boot-starter`. Явное добавление ломает autoconfig в Boot 4.
 > 2. Зарегистрируй **хотя бы один свой `@Bean SecurityFilterChain`** с узким `securityMatcher` (например, `/actuator/**`). Без этого `ServletWebSecurityAutoConfiguration` публикует default form-login chain → `UnreachableFilterChainException` на старте.
-> 3. JVM **24** (Kotlin 2.2.x не поддерживает JVM 25).
+> 3. JVM **25** с Kotlin **2.3.21**.
 > 4. Auth-starter тянет свой `application-dev.yaml` внутри jar. Твои `application-*.yml` в `src/main/resources/` его перекрывают — они **обязательны**, иначе подхватится starter-овский DB (`template/postgres`).
 > 5. У starter-а свой Flyway на `db/migration/auth`. Твои миграции — отдельно в `db/migration/`. Не перемешивай.
 > 6. `spring-boot-starter-actuator` идёт транзитивно (starter ≥ 0.0.3-SNAPSHOT) → `/actuator/health` доступен из коробки. Явно подключать в свой `pom.xml` не нужно.
@@ -69,7 +69,7 @@
 > **TL;DR — почему новый проект не стартует.**
 > 1. Не добавляй `spring-boot-starter-security` явно — он приходит транзитивно через `auth-spring-boot-starter`. Явное добавление ломает autoconfig в Boot 4.
 > 2. Зарегистрируй **хотя бы один свой `@Bean SecurityFilterChain`** с узким `securityMatcher` (например, `/actuator/**`). Без этого `ServletWebSecurityAutoConfiguration` публикует default form-login chain → `UnreachableFilterChainException` на старте.
-> 3. JVM **24** (Kotlin 2.2.x не поддерживает JVM 25).
+> 3. JVM **25** с Kotlin **2.3.21**.
 > 4. Auth-starter тянет свой `application-dev.yaml` внутри jar. Твои `application-*.yml` в `src/main/resources/` его перекрывают — они **обязательны**, иначе подхватится starter-овский DB (`template/postgres`).
 > 5. У starter-а свой Flyway на `db/migration/auth`. Твои миграции — отдельно в `db/migration/`. Не перемешивай.
 > 6. `spring-boot-starter-actuator` идёт транзитивно (starter ≥ 0.0.3-SNAPSHOT) → `/actuator/health` доступен из коробки. Явно подключать в свой `pom.xml` не нужно.
@@ -91,7 +91,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.5</version>
+        <version>4.1.1</version>
         <relativePath/>
     </parent>
     <groupId>kz.innlab</groupId>
@@ -99,9 +99,9 @@
     <version>0.0.1-SNAPSHOT</version>
 
     <properties>
-        <java.version>24</java.version>             <!-- НЕ 25 — Kotlin 2.2 не поддерживает -->
-        <kotlin.version>2.2.21</kotlin.version>
-        <uuid-creator.version>6.0.0</uuid-creator.version>
+        <java.version>25</java.version>
+        <kotlin.version>2.3.21</kotlin.version>
+        <uuid-creator.version>6.1.1</uuid-creator.version>
     </properties>
 
     <dependencies>
@@ -425,9 +425,9 @@ cd /path/to/{projectName}/backend && ./mvnw spring-boot:run
 
 4. **Bump version** в `pom.xml` (no `-SNAPSHOT` — Maven Central rejects snapshots).
 
-5. **Deploy** (JDK 24 required; Kotlin 2.2.x daemon ломается на JDK 26):
+5. **Deploy** (JDK 25 required; Kotlin 2.3.21):
    ```bash
-   export JAVA_HOME="$(/usr/libexec/java_home -v 24)"
+   export JAVA_HOME="$(/usr/libexec/java_home -v 25)"
    ./mvnw clean deploy -P release -DskipTests
    ```
 
@@ -1275,7 +1275,7 @@ Generate the bcrypt hash with `org.springframework.security.crypto.bcrypt.BCrypt
 | Симптом | Причина | Фикс |
 |---------|---------|------|
 | `UnreachableFilterChainException` на старте | Нет своего `SecurityFilterChain` → Boot 4 публикует default form-login chain поверх starter-овского `anyRequest`-chain | Добавь bean из §0 (actuator chain с узким `securityMatcher`) |
-| `Unsupported class file major version` / Kotlin compile error | JVM 25 + Kotlin 2.2 | Откати на JVM 24 |
+| `Unsupported class file major version` / Kotlin compile error | Java/Kotlin не совпадают с baseline проекта | Используй JVM 25 + Kotlin 2.3.21 |
 | Подключается к БД `template` с юзером `postgres` | Нет своего `application-dev.yml` → подхватился bundled из jar starter-а | Создай `src/main/resources/application-dev.yml` с твоей БД |
 | `BeanDefinitionOverrideException` для security-конфига | Явно добавлен `spring-boot-starter-security` | Убери — приходит транзитивно |
 | Flyway: «migration checksum mismatch» на auth-таблицах | Свои миграции положены в `db/migration/auth` | Перенеси свои в `db/migration/`, оставь `auth` за starter-ом |
@@ -1402,7 +1402,7 @@ fun consoleMailService(): ConsoleMailService = ConsoleMailService()
 
 ## Quick Checklist
 
-- [ ] JVM **24** (не 25)
+- [ ] JVM **25**
 - [ ] `pom.xml` из §0 — БЕЗ явного `spring-boot-starter-security`
 - [ ] `application.yml` + `application-dev.yml` + `application-prod.yml` лежат в `src/main/resources/`
 - [ ] Свой `SecurityFilterChain`-bean с узким `securityMatcher` зарегистрирован

@@ -5,7 +5,7 @@ import java.util.UUID
 
 /**
  * Result of an OTP send request.
- * [resendAvailableAt] is the earliest instant a new code may be requested for the same phone;
+ * [resendAvailableAt] is the earliest instant a new code may be requested for the same identifier;
  * [retryAfterSeconds] is the cooldown window length in seconds (for client countdown timers).
  */
 data class OtpSendResult(

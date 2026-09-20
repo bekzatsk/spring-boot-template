@@ -3,6 +3,7 @@ package kz.innlab.consumer
 import kz.innlab.starter.authentication.controller.AccountManagementController
 import kz.innlab.starter.authentication.controller.AppleAuthController
 import kz.innlab.starter.authentication.controller.AuthController
+import kz.innlab.starter.authentication.controller.EmailOtpController
 import kz.innlab.starter.authentication.controller.GoogleAuthController
 import kz.innlab.starter.authentication.controller.LocalAuthController
 import kz.innlab.starter.authentication.controller.PhoneAuthController
@@ -18,6 +19,7 @@ import kz.innlab.starter.authentication.service.SmsService
 import kz.innlab.starter.authentication.service.TelegramBotService
 import kz.innlab.starter.authentication.service.AppleOAuth2Service
 import kz.innlab.starter.authentication.service.AuthTokenIssuer
+import kz.innlab.starter.authentication.service.EmailOtpService
 import kz.innlab.starter.authentication.service.GoogleOAuth2Service
 import kz.innlab.starter.authentication.service.LocalAuthService
 import kz.innlab.starter.authentication.service.LocalUserDetailsService
@@ -118,6 +120,8 @@ class AutoConfigurationContractTest {
         LocalAuthService::class,
         LocalUserDetailsService::class,
         LocalAuthController::class,
+        EmailOtpService::class,
+        EmailOtpController::class,
         PhoneOtpService::class,
         PhoneAuthController::class
     )

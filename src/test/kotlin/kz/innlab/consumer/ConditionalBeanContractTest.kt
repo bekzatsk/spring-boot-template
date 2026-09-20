@@ -1,12 +1,14 @@
 package kz.innlab.consumer
 
 import kz.innlab.starter.authentication.controller.AppleAuthController
+import kz.innlab.starter.authentication.controller.EmailOtpController
 import kz.innlab.starter.authentication.controller.GoogleAuthController
 import kz.innlab.starter.authentication.controller.LocalAuthController
 import kz.innlab.starter.authentication.controller.PhoneAuthController
 import kz.innlab.starter.authentication.controller.TelegramAuthController
 import kz.innlab.starter.authentication.cookie.AuthCookieWriter
 import kz.innlab.starter.authentication.service.AppleOAuth2Service
+import kz.innlab.starter.authentication.service.EmailOtpService
 import kz.innlab.starter.authentication.service.GoogleOAuth2Service
 import kz.innlab.starter.authentication.service.LocalAuthService
 import kz.innlab.starter.authentication.service.PhoneOtpService
@@ -105,6 +107,30 @@ class ConditionalBeanContractTest {
         consumerContextRunner("app.auth.phone.enabled=false").run {
             assertThat(it).doesNotHaveBean(PhoneOtpService::class.java)
             assertThat(it).doesNotHaveBean(PhoneAuthController::class.java)
+        }
+    }
+
+    @Test
+    fun `email OTP provider beans are on by default and can be switched off`() {
+        consumerContextRunner().run {
+            assertThat(it).hasSingleBean(EmailOtpService::class.java)
+            assertThat(it).hasSingleBean(EmailOtpController::class.java)
+        }
+        consumerContextRunner("app.auth.email-otp.enabled=false").run {
+            assertThat(it).doesNotHaveBean(EmailOtpService::class.java)
+            assertThat(it).doesNotHaveBean(EmailOtpController::class.java)
+        }
+    }
+
+    @Test
+    fun `OTP code lengths reject unsupported values`() {
+        consumerContextRunner("app.auth.phone.code-length=5").run {
+            assertThat(it).hasFailed()
+            assertThat(it.startupFailure).hasStackTraceContaining("code-length must be 4 or 6")
+        }
+        consumerContextRunner("app.auth.email-otp.code-length=8").run {
+            assertThat(it).hasFailed()
+            assertThat(it.startupFailure).hasStackTraceContaining("code-length must be 4 or 6")
         }
     }
 

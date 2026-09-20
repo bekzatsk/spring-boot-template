@@ -47,13 +47,16 @@ class ProductionSafetyConfig {
         @Value("\${app.security.allow-console-fallbacks:false}") allowConsoleFallbacks: Boolean,
         @Value("\${app.auth.sms.dev-code:}") smsDevCode: String,
         @Value("\${app.auth.verification.dev-code:}") verificationDevCode: String,
+        @Value("\${app.auth.email-otp.dev-code:}") emailOtpDevCode: String,
         @Value("\${app.auth.telegram.dev-code:}") telegramDevCode: String,
         @Value("\${app.auth.telegram.enabled:false}") telegramEnabled: Boolean,
         @Value("\${app.auth.telegram.webhook-secret:}") telegramWebhookSecret: String
     ): InitializingBean = InitializingBean {
         val problems = mutableListOf<String>()
 
-        if (smsDevCode.isNotBlank() || verificationDevCode.isNotBlank() || telegramDevCode.isNotBlank()) {
+        if (smsDevCode.isNotBlank() || verificationDevCode.isNotBlank() ||
+            emailOtpDevCode.isNotBlank() || telegramDevCode.isNotBlank()
+        ) {
             problems += "a fixed OTP override (app.auth.*.dev-code) is set — this is an account-takeover " +
                 "backdoor and must never be enabled in production"
         }
@@ -69,7 +72,7 @@ class ProductionSafetyConfig {
         }
         if (!allowConsoleFallbacks && !consoleFallbacks.allowEmail && emailService.ifAvailable is ConsoleEmailService) {
             problems += "EmailService is the console fallback — verification codes for registration, " +
-                "password reset and email change would be logged instead of sent; configure mail " +
+                "passwordless login, password reset and email change would be logged instead of sent; configure mail " +
                 "(app.mail.enabled=true), or set app.security.console-fallbacks.allow-email=true if this " +
                 "application sends no verification email"
         }

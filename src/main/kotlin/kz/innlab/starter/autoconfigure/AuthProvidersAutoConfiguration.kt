@@ -2,6 +2,7 @@ package kz.innlab.starter.autoconfigure
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier
 import kz.innlab.starter.authentication.controller.AppleAuthController
+import kz.innlab.starter.authentication.controller.EmailOtpController
 import kz.innlab.starter.authentication.controller.GoogleAuthController
 import kz.innlab.starter.authentication.controller.LocalAuthController
 import kz.innlab.starter.authentication.controller.PhoneAuthController
@@ -12,6 +13,7 @@ import kz.innlab.starter.authentication.service.AccountManagementService
 import kz.innlab.starter.authentication.service.AppleOAuth2Service
 import kz.innlab.starter.authentication.service.AuthTokenIssuer
 import kz.innlab.starter.authentication.service.EmailService
+import kz.innlab.starter.authentication.service.EmailOtpService
 import kz.innlab.starter.authentication.service.GoogleOAuth2Service
 import kz.innlab.starter.authentication.service.LocalAuthService
 import kz.innlab.starter.authentication.service.LocalUserDetailsService
@@ -136,6 +138,27 @@ class AuthProvidersAutoConfiguration {
         @ConditionalOnMissingBean
         fun phoneAuthController(phoneOtpService: PhoneOtpService): PhoneAuthController =
             PhoneAuthController(phoneOtpService)
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnProperty(name = ["app.auth.email-otp.enabled"], havingValue = "true", matchIfMissing = true)
+    class EmailOtpAuth {
+
+        @Bean
+        @ConditionalOnMissingBean
+        fun emailOtpService(
+            verificationCodeService: VerificationCodeService,
+            emailService: EmailService,
+            userService: UserService,
+            authTokenIssuer: AuthTokenIssuer
+        ): EmailOtpService = EmailOtpService(
+            verificationCodeService, emailService, userService, authTokenIssuer
+        )
+
+        @Bean
+        @ConditionalOnMissingBean
+        fun emailOtpController(emailOtpService: EmailOtpService): EmailOtpController =
+            EmailOtpController(emailOtpService)
     }
 
     @Configuration(proxyBeanMethods = false)
