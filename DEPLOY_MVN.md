@@ -28,7 +28,7 @@ sed -i '' 's/0\.0\.PREV/0.0.X/g' INSTALL_INSTRUCTION.md
 ### 2. Environment
 
 ```bash
-export JAVA_HOME="$(/usr/libexec/java_home -v 24)"   # JDK 24 only — Kotlin 2.2.x breaks on 25/26
+export JAVA_HOME="$(/usr/libexec/java_home -v 25)"   # Project baseline: Java 25 + Kotlin 2.3.21
 export GPG_TTY=$(tty)                                 # needed for gpg pinentry loopback
 ```
 
@@ -80,7 +80,7 @@ git push && git push --tags
 | `gpg: Note: database_open waiting for lock (held by PID)` | Stale gpg keybox lock from dead PID | `rm -f ~/.gnupg/public-keys.d/*.lock && gpgconf --kill all` |
 | `gpg: signing failed: Inappropriate ioctl for device` | Pinentry can't reach TTY | `export GPG_TTY=$(tty)` before deploy |
 | `Failed to deploy: version already exists` | Re-publishing same version | Bump patch — Maven Central forbids overwrite |
-| `Unsupported class file major version` | JDK 25/26 with Kotlin 2.2 | `export JAVA_HOME="$(/usr/libexec/java_home -v 24)"` |
+| `Unsupported class file major version` | Java/Kotlin do not match project baseline | `export JAVA_HOME="$(/usr/libexec/java_home -v 25)"` and use Kotlin 2.3.21 |
 | Sonatype validation: `missing javadoc` | Plugin not bound | Verify `release` profile has `maven-javadoc-plugin` |
 | Sonatype validation: `signature missing` | GPG sign step skipped | Check `maven-gpg-plugin` bound to `verify` phase in `release` profile |
 
@@ -89,7 +89,7 @@ git push && git push --tags
 ```bash
 # 1. bump <version> in pom.xml
 # 2.
-export JAVA_HOME="$(/usr/libexec/java_home -v 24)"
+export JAVA_HOME="$(/usr/libexec/java_home -v 25)"
 export GPG_TTY=$(tty)
 ./mvnw clean deploy -P release -DskipTests
 # 3. https://central.sonatype.com/publishing/deployments → click Publish

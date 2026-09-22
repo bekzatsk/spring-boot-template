@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.2
+
+### Changed
+
+- Upgraded to Spring Boot 4.1.1, Java 25 and Kotlin 2.3.21.
+- Phone and email OTP lengths are independently configurable as 4 or 6 digits through
+  `app.auth.phone.code-length` and `app.auth.email-otp.code-length`.
+
+### Added
+
+- Passwordless email OTP authentication through `POST /api/v1/auth/email/request` and
+  `POST /api/v1/auth/email/verify`.
+- Email OTP provider toggle: `app.auth.email-otp.enabled`.
+
 ## 0.1.1
 
 Fixes a regression introduced in 0.1.0. No other changes — everything in the 0.1.0 notes below

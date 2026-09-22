@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Spring Boot 4.0.5 auth template in **Kotlin** (Java 24) with JWT authentication, multi-provider social login (Google, Apple, email+password, phone+SMS OTP), push notifications (Firebase), and email (SMTP/IMAP). Uses PostgreSQL 18 with Flyway migrations and UUID v7 primary keys.
+Spring Boot 4.1.1 auth template in **Kotlin 2.3.21** (Java 25) with JWT authentication, multi-provider login (Google, Apple, email+password, email OTP, phone OTP), push notifications (Firebase), and email (SMTP/IMAP). Uses PostgreSQL 18 with Flyway migrations and UUID v7 primary keys.
 
 ## Build & Run Commands
 

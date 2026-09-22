@@ -1,15 +1,15 @@
 # Installation Guide
 
-> ## ⛔ Do not use 0.1.0 — use 0.1.1
+> ## ⛔ Do not use 0.1.0 — use 0.1.2
 >
 > **0.1.0 ships with cookie authentication dead.** `AuthCookieWriter` is not registered by the
 > auto-configuration, and every component injects it optionally, so the application starts clean,
 > logs nothing, answers `200` — and never sends `Set-Cookie`. `app.auth.cookie.enabled=true` has no
 > effect in that release, whatever you set it through (yaml, env, `SPRING_APPLICATION_JSON`).
 >
-> 0.1.0 stays on Maven Central because Central is immutable; treat it as withdrawn. Upgrade to
-> **0.1.1**, which is 0.1.0 plus that fix. Nothing else changed — the 0.0.x upgrade steps below
-> apply to both.
+> 0.1.0 stays on Maven Central because Central is immutable; treat it as withdrawn. Version 0.1.1
+> fixed cookie authentication; current **0.1.2** contains that fix plus Spring Boot 4.1.1,
+> Java 25, Kotlin 2.3.21 and configurable email/phone OTP. The 0.0.x upgrade steps below still apply.
 >
 > Check your deployment with:
 >
@@ -125,7 +125,7 @@
         <dependency>
             <groupId>kz.innlab</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>0.1.1</version>
+            <version>0.1.2</version>
         </dependency>
 
         <dependency>
@@ -384,7 +384,7 @@ cd /path/to/{projectName}/backend && ./mvnw spring-boot:run
 
 ## 1. Publish Starter
 
-> **Starter уже опубликован на Maven Central** под `kz.innlab:auth-spring-boot-starter:0.1.1`.
+> **Текущая версия starter:** `kz.innlab:auth-spring-boot-starter:0.1.2`.
 > Если ты **используешь** starter — переходи к §2. Эта секция нужна только если ты **форкнул** его и публикуешь свой вариант.
 
 ### Option A: Maven Central (canonical, no extra config for consumers)
@@ -539,7 +539,7 @@ Artifact goes to `~/.m2/repository`. Works only on your machine.
 <dependency>
     <groupId>kz.innlab</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>0.1.1</version>
+    <version>0.1.2</version>
 </dependency>
 ```
 
@@ -579,7 +579,7 @@ repositories {
 }
 
 dependencies {
-    implementation("kz.innlab:auth-spring-boot-starter:0.1.1")
+    implementation("kz.innlab:auth-spring-boot-starter:0.1.2")
 }
 ```
 
@@ -602,7 +602,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'kz.innlab:auth-spring-boot-starter:0.1.1'
+    implementation 'kz.innlab:auth-spring-boot-starter:0.1.2'
 }
 ```
 
