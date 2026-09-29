@@ -441,6 +441,30 @@ class AccountManagementIntegrationTest {
     }
 
     @Test
+    fun `change phone code cannot verify a different number`() {
+        val user = createLocalUser(email = "phone-binding@example.com")
+        val accessToken = generateAccessToken(user)
+        val getCode = capturePhoneCodeOnSend()
+        val requestResult = mockMvc.perform(
+            post("/api/v1/users/me/change-phone/request")
+                .header("Authorization", "Bearer $accessToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"phone":"+77009876543"}""")
+        ).andExpect(status().isOk).andReturn()
+
+        val verificationId = extractVerificationId(requestResult)
+        val code = getCode()
+        mockMvc.perform(
+            post("/api/v1/users/me/change-phone/verify")
+                .header("Authorization", "Bearer $accessToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"verificationId":"$verificationId","phone":"+77009876544","code":"$code"}""")
+        ).andExpect(status().isBadRequest)
+
+        assert(userRepository.findById(user.id).orElseThrow().phone == null)
+    }
+
+    @Test
     fun `change phone request rejects already-taken phone`() {
         val existingPhoneUser = User(email = "existing-phone@example.com").also {
             it.providers.add(AuthProvider.LOCAL)

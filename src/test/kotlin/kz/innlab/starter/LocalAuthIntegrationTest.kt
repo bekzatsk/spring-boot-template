@@ -2,6 +2,8 @@ package kz.innlab.starter
 
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
 import kz.innlab.starter.user.model.AuthProvider
+import kz.innlab.starter.user.model.Role
+import kz.innlab.starter.user.model.User
 import kz.innlab.starter.user.repository.UserRepository
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -26,6 +28,7 @@ class LocalAuthIntegrationTest {
 
     @Autowired
     private lateinit var refreshTokenRepository: RefreshTokenRepository
+
 
     @BeforeEach
     fun cleanUp() {
@@ -75,6 +78,48 @@ class LocalAuthIntegrationTest {
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.error").value("Conflict"))
             .andExpect(jsonPath("$.status").value(409))
+    }
+
+    @Test
+    fun `anonymous registration cannot add password to existing social admin`() {
+        val victim = userRepository.save(User(email = "social-admin@example.com").apply {
+            linkProvider(AuthProvider.GOOGLE, "google-sub-123")
+            roles.add(Role.ADMIN)
+        })
+
+        mockMvc.perform(
+            post("/api/v1/auth/local/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email":"social-admin@example.com","password":"AttackerPassword123"}""")
+        ).andExpect(status().isConflict)
+
+        val unchanged = userRepository.findById(victim.id).orElseThrow()
+        assert(unchanged.passwordHash == null)
+        assert(AuthProvider.LOCAL !in unchanged.providers)
+        assert(Role.ADMIN in unchanged.roles)
+        assert(refreshTokenRepository.count() == 0L)
+
+        mockMvc.perform(
+            post("/api/v1/auth/local/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email":"social-admin@example.com","password":"AttackerPassword123"}""")
+        ).andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `registration rejects existing social email with different case`() {
+        val victim = userRepository.save(User(email = "CaseSensitive@example.com").apply {
+            linkProvider(AuthProvider.GOOGLE, "case-google-sub")
+        })
+
+        mockMvc.perform(
+            post("/api/v1/auth/local/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email":"casesensitive@example.com","password":"AttackerPassword123"}""")
+        ).andExpect(status().isConflict)
+
+        assert(userRepository.findById(victim.id).orElseThrow().passwordHash == null)
+        assert(userRepository.count() == 1L)
     }
 
     @Test

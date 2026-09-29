@@ -68,10 +68,12 @@ class AuthProvidersAutoConfiguration {
             emailService: EmailService,
             authTokenProperties: AuthTokenProperties,
             rateLimiter: RateLimiter,
-            rateLimitProperties: RateLimitProperties
+            rateLimitProperties: RateLimitProperties,
+            afterCommitRunner: AfterCommitRunner
         ): LocalAuthService = LocalAuthService(
             authenticationManager, userRepository, passwordEncoder, authTokenIssuer,
-            verificationCodeService, emailService, authTokenProperties, rateLimiter, rateLimitProperties
+            verificationCodeService, emailService, authTokenProperties, rateLimiter,
+            rateLimitProperties, afterCommitRunner
         )
 
         @Bean
@@ -150,9 +152,10 @@ class AuthProvidersAutoConfiguration {
             verificationCodeService: VerificationCodeService,
             emailService: EmailService,
             userService: UserService,
-            authTokenIssuer: AuthTokenIssuer
+            authTokenIssuer: AuthTokenIssuer,
+            afterCommitRunner: AfterCommitRunner
         ): EmailOtpService = EmailOtpService(
-            verificationCodeService, emailService, userService, authTokenIssuer
+            verificationCodeService, emailService, userService, authTokenIssuer, afterCommitRunner
         )
 
         @Bean

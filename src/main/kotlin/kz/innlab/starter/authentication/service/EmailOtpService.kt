@@ -4,6 +4,7 @@ import kz.innlab.starter.authentication.dto.AuthResponse
 import kz.innlab.starter.authentication.dto.OtpSendResult
 import kz.innlab.starter.authentication.model.VerificationPurpose
 import kz.innlab.starter.user.service.UserService
+import kz.innlab.starter.shared.transaction.AfterCommitRunner
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -16,14 +17,15 @@ class EmailOtpService(
     private val verificationCodeService: VerificationCodeService,
     private val emailService: EmailService,
     private val userService: UserService,
-    private val authTokenIssuer: AuthTokenIssuer
+    private val authTokenIssuer: AuthTokenIssuer,
+    private val afterCommitRunner: AfterCommitRunner
 ) {
 
     @Transactional
     fun sendOtp(rawEmail: String): OtpSendResult {
         val email = normalizeEmail(rawEmail)
         val issued = verificationCodeService.createCode(email, VerificationPurpose.EMAIL_LOGIN)
-        emailService.sendCode(email, issued.code, "EMAIL_LOGIN")
+        afterCommitRunner.run { emailService.sendCode(email, issued.code, "EMAIL_LOGIN") }
         return OtpSendResult(
             verificationId = issued.verificationId,
             resendAvailableAt = issued.resendAvailableAt,

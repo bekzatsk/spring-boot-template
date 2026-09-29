@@ -56,13 +56,25 @@ class ProductionSafetyConfigTest {
         .withBean(SmsService::class.java, { RealSmsService() })
         .withBean(EmailService::class.java, { RealEmailService() })
         .withBean(MailService::class.java, { RealMailService() })
-        .withPropertyValues(*properties)
+        .withPropertyValues(
+            "app.security.jwt.issuer=https://auth.example.test",
+            "app.security.jwt.audience=example-api",
+            *properties
+        )
 
     @Test
     fun `starts when real providers are configured and no dev override is set`() {
         runner().run { context ->
             assertThat(context).hasNotFailed()
             assertThat(context).hasBean("productionSafetyGuard")
+        }
+    }
+
+    @Test
+    fun `refuses default JWT issuer in production`() {
+        runner("app.security.jwt.issuer=template-app").run { context ->
+            assertThat(context).hasFailed()
+            assertThat(context.startupFailure).hasStackTraceContaining("issuer and audience")
         }
     }
 
@@ -104,6 +116,10 @@ class ProductionSafetyConfigTest {
     private fun runnerWithConsole(vararg channels: Channel) = ApplicationContextRunner()
         .withInitializer { it.environment.setActiveProfiles("prod") }
         .withUserConfiguration(ProductionSafetyConfig::class.java)
+        .withPropertyValues(
+            "app.security.jwt.issuer=https://auth.example.test",
+            "app.security.jwt.audience=example-api"
+        )
         .withBean(
             SmsService::class.java,
             { if (Channel.SMS in channels) ConsoleSmsService() else RealSmsService() }

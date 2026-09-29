@@ -19,6 +19,8 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository
+import org.springframework.security.web.util.matcher.RequestMatcher
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
@@ -41,7 +43,29 @@ class SecurityConfig(
     @ConditionalOnProperty(name = ["app.auth.security.enabled"], havingValue = "true", matchIfMissing = true)
     fun authSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http {
-            csrf { disable() }
+            csrf {
+                if (authCookieProperties.enabled) {
+                    val repository = CookieCsrfTokenRepository.withHttpOnlyFalse()
+                    repository.setCookieCustomizer { cookie ->
+                        cookie.secure(authCookieProperties.secure)
+                            .sameSite(authCookieProperties.sameSite)
+                            .path(authCookieProperties.path)
+                        if (authCookieProperties.domain.isNotBlank()) {
+                            cookie.domain(authCookieProperties.domain)
+                        }
+                    }
+                    csrfTokenRepository = repository
+                    requireCsrfProtectionMatcher = RequestMatcher { request ->
+                        request.method !in setOf("GET", "HEAD", "OPTIONS", "TRACE") &&
+                            request.cookies?.any {
+                                it.name == authCookieProperties.accessCookieName ||
+                                    it.name == authCookieProperties.refreshCookieName
+                            } == true
+                    }
+                } else {
+                    disable()
+                }
+            }
             httpBasic { disable() }
             formLogin { disable() }
             logout { disable() }

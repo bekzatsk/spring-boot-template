@@ -35,7 +35,7 @@ import org.springframework.context.annotation.Profile
  */
 @Configuration
 @Profile("prod")
-@EnableConfigurationProperties(ConsoleFallbackProperties::class)
+@EnableConfigurationProperties(ConsoleFallbackProperties::class, JwtIdentityProperties::class)
 class ProductionSafetyConfig {
 
     @Bean
@@ -44,6 +44,7 @@ class ProductionSafetyConfig {
         emailService: ObjectProvider<EmailService>,
         mailService: ObjectProvider<MailService>,
         consoleFallbacks: ConsoleFallbackProperties,
+        jwtIdentity: JwtIdentityProperties,
         @Value("\${app.security.allow-console-fallbacks:false}") allowConsoleFallbacks: Boolean,
         @Value("\${app.auth.sms.dev-code:}") smsDevCode: String,
         @Value("\${app.auth.verification.dev-code:}") verificationDevCode: String,
@@ -53,6 +54,10 @@ class ProductionSafetyConfig {
         @Value("\${app.auth.telegram.webhook-secret:}") telegramWebhookSecret: String
     ): InitializingBean = InitializingBean {
         val problems = mutableListOf<String>()
+
+        if (jwtIdentity.issuer == "template-app" || jwtIdentity.audience == "template-app") {
+            problems += "app.security.jwt.issuer and audience must identify this production environment and API"
+        }
 
         if (smsDevCode.isNotBlank() || verificationDevCode.isNotBlank() ||
             emailOtpDevCode.isNotBlank() || telegramDevCode.isNotBlank()

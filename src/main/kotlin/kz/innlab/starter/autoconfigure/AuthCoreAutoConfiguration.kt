@@ -25,6 +25,7 @@ import kz.innlab.starter.authentication.cookie.AuthResponseCookieAdvice
 import kz.innlab.starter.config.AuthCookieProperties
 import kz.innlab.starter.config.AuthSecurityProperties
 import kz.innlab.starter.config.AuthTokenProperties
+import kz.innlab.starter.config.JwtIdentityProperties
 import kz.innlab.starter.config.RateLimitProperties
 import kz.innlab.starter.config.VerificationProperties
 import kz.innlab.starter.shared.ratelimit.InMemoryRateLimiter
@@ -68,8 +69,11 @@ class AuthCoreAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    fun tokenService(jwtEncoder: JwtEncoder, authTokenProperties: AuthTokenProperties): TokenService =
-        TokenService(jwtEncoder, authTokenProperties)
+    fun tokenService(
+        jwtEncoder: JwtEncoder,
+        authTokenProperties: AuthTokenProperties,
+        jwtIdentityProperties: JwtIdentityProperties
+    ): TokenService = TokenService(jwtEncoder, authTokenProperties, jwtIdentityProperties)
 
     @Bean
     @ConditionalOnMissingBean

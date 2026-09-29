@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import tools.jackson.databind.json.JsonMapper
 
 @SpringBootTest(
     properties = [
@@ -47,6 +48,15 @@ class CookieAuthIntegrationTest {
         val access = result.response.getCookie("access_token")!!
         val refresh = result.response.getCookie("refresh_token")!!
         return access to refresh
+    }
+
+    private fun csrf(): Pair<Cookie, String> {
+        val response = mockMvc.perform(get("/api/v1/auth/csrf"))
+            .andExpect(status().isOk)
+            .andReturn().response
+        val cookie = response.getCookie("XSRF-TOKEN")!!
+        val token = JsonMapper.builder().build().readTree(response.contentAsString).get("token").asText()
+        return cookie to token
     }
 
     @Test
@@ -90,9 +100,10 @@ class CookieAuthIntegrationTest {
     @Test
     fun `refresh from cookie rotates and re-sets cookies`() {
         val (_, refresh) = register("refresh@example.com")
+        val (csrfCookie, csrfToken) = csrf()
 
         val result = mockMvc.perform(
-            post("/api/v1/auth/refresh").cookie(refresh)
+            post("/api/v1/auth/refresh").cookie(refresh, csrfCookie).header("X-XSRF-TOKEN", csrfToken)
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.accessToken").exists())
@@ -109,22 +120,24 @@ class CookieAuthIntegrationTest {
     @Test
     fun `reusing refresh cookie within grace window returns 409`() {
         val (_, refresh) = register("grace@example.com")
+        val (csrfCookie, csrfToken) = csrf()
 
         // First rotation succeeds
-        mockMvc.perform(post("/api/v1/auth/refresh").cookie(refresh))
+        mockMvc.perform(post("/api/v1/auth/refresh").cookie(refresh, csrfCookie).header("X-XSRF-TOKEN", csrfToken))
             .andExpect(status().isOk)
 
         // Immediate reuse of the same (now revoked) token — within 10s grace window → 409
-        mockMvc.perform(post("/api/v1/auth/refresh").cookie(refresh))
+        mockMvc.perform(post("/api/v1/auth/refresh").cookie(refresh, csrfCookie).header("X-XSRF-TOKEN", csrfToken))
             .andExpect(status().isConflict)
     }
 
     @Test
     fun `logout revokes refresh token and clears cookies`() {
         val (_, refresh) = register("logout@example.com")
+        val (csrfCookie, csrfToken) = csrf()
 
         val result = mockMvc.perform(
-            post("/api/v1/auth/logout").cookie(refresh)
+            post("/api/v1/auth/logout").cookie(refresh, csrfCookie).header("X-XSRF-TOKEN", csrfToken)
         )
             .andExpect(status().isNoContent)
             .andReturn()
@@ -138,8 +151,20 @@ class CookieAuthIntegrationTest {
         }
 
         // Token is revoked — reusing it now fails (reuse detection revoked it)
-        mockMvc.perform(post("/api/v1/auth/refresh").cookie(refresh))
+        mockMvc.perform(post("/api/v1/auth/refresh").cookie(refresh, csrfCookie).header("X-XSRF-TOKEN", csrfToken))
             .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `refresh cookie without CSRF token is rejected without rotating`() {
+        val (_, refresh) = register("csrf@example.com")
+        mockMvc.perform(post("/api/v1/auth/refresh").cookie(refresh))
+            .andExpect(status().isForbidden)
+        val (csrfCookie, csrfToken) = csrf()
+        mockMvc.perform(post("/api/v1/auth/refresh").cookie(refresh, csrfCookie).header("X-XSRF-TOKEN", "invalid"))
+            .andExpect(status().isForbidden)
+        mockMvc.perform(post("/api/v1/auth/refresh").cookie(refresh, csrfCookie).header("X-XSRF-TOKEN", csrfToken))
+            .andExpect(status().isOk)
     }
 
     @Test

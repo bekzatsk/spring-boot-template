@@ -16,6 +16,7 @@ import kz.innlab.starter.config.DeviceTokenProperties
 import kz.innlab.starter.config.FirebaseConfig
 import kz.innlab.starter.config.GoogleAuthConfig
 import kz.innlab.starter.config.LocalAuthConfig
+import kz.innlab.starter.config.JwtIdentityProperties
 import kz.innlab.starter.config.MailConfig
 import kz.innlab.starter.config.MailProperties
 import kz.innlab.starter.config.RateLimitProperties
@@ -59,6 +60,7 @@ import org.springframework.context.annotation.Import
     CorsProperties::class,
     AuthSecurityProperties::class,
     AuthCookieProperties::class,
+    JwtIdentityProperties::class,
     ConsoleFallbackProperties::class
 )
 @Import(
