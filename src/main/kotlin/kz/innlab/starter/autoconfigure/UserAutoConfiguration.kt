@@ -1,5 +1,6 @@
 package kz.innlab.starter.autoconfigure
 
+import kz.innlab.starter.config.AuthSecurityProperties
 import kz.innlab.starter.config.AuthTokenProperties
 import kz.innlab.starter.user.controller.AdminUserController
 import kz.innlab.starter.user.controller.UserController
@@ -50,6 +51,7 @@ class UserAutoConfiguration {
     @ConditionalOnMissingBean
     fun adminUserController(
         userService: UserService,
-        adminUserService: AdminUserService
-    ): AdminUserController = AdminUserController(userService, adminUserService)
+        adminUserService: AdminUserService,
+        authSecurityProperties: AuthSecurityProperties
+    ): AdminUserController = AdminUserController(userService, adminUserService, authSecurityProperties)
 }

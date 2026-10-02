@@ -105,6 +105,8 @@ class AdminUserService(
         val before = user.email
         user.email = newEmail
         val saved = userRepository.save(user)
+        // Sessions were opened under the old address; whoever holds them must log in again.
+        refreshTokenRevoker.revokeAllFor(saved)
         audit(adminId, "UPDATE_EMAIL", targetId, before = before, after = newEmail)
         return saved
     }
