@@ -45,7 +45,7 @@ class LocalAuthController(
 
     @Operation(summary = "Request password reset verification code", security = [])
     @PostMapping("/forgot-password")
-    fun forgotPassword(@Valid @RequestBody request: ForgotPasswordRequest): ResponseEntity<Map<String, Any?>> {
+    fun forgotPassword(@Valid @RequestBody request: ForgotPasswordRequest): ResponseEntity<Map<String, Any>> {
         val verificationId = accountManagementService.requestPasswordReset(request.email)
         return ResponseEntity.accepted().body(mapOf("verificationId" to verificationId))
     }
@@ -66,7 +66,7 @@ class LocalAuthController(
 
     @Operation(summary = "Resend the email-verification code", security = [])
     @PostMapping("/verify-email/resend")
-    fun resendEmailVerification(@Valid @RequestBody request: ResendEmailVerificationRequest): ResponseEntity<Map<String, Any?>> {
+    fun resendEmailVerification(@Valid @RequestBody request: ResendEmailVerificationRequest): ResponseEntity<Map<String, Any>> {
         val verificationId = accountManagementService.resendEmailVerification(request.email)
         return ResponseEntity.accepted().body(mapOf("verificationId" to verificationId))
     }

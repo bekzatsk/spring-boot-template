@@ -3,6 +3,7 @@ package kz.innlab.starter.authentication.service
 import kz.innlab.starter.authentication.dto.ReauthCodeResponse
 import kz.innlab.starter.authentication.model.VerificationPurpose
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
+import kz.innlab.starter.config.AsyncConfig
 import kz.innlab.starter.config.RateLimitProperties
 import kz.innlab.starter.shared.error.ForbiddenOperationException
 import kz.innlab.starter.shared.error.ResourceNotFoundException
@@ -13,12 +14,14 @@ import kz.innlab.starter.user.model.AuthProvider
 import kz.innlab.starter.user.model.RequiredAction
 import kz.innlab.starter.user.model.User
 import kz.innlab.starter.user.repository.UserRepository
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.Executor
 
 @Service
 class AccountManagementService(
@@ -29,23 +32,30 @@ class AccountManagementService(
     private val passwordEncoder: PasswordEncoder,
     private val refreshTokenRepository: RefreshTokenRepository,
     private val rateLimiter: RateLimiter,
-    private val rateLimitProperties: RateLimitProperties
+    private val rateLimitProperties: RateLimitProperties,
+    // Qualified here as well as at the @Bean method: a scan-built instance would otherwise see
+    // two Executor beans (this one and Spring's taskScheduler).
+    @param:Qualifier(AsyncConfig.STARTER_EXECUTOR) private val codeSendExecutor: Executor
 ) {
 
     /**
      * Request password reset (unauthenticated).
-     * Returns verificationId if email exists with LOCAL+password, null otherwise (anti-enumeration).
+     *
+     * Answers the same way whether or not the address has a password account: a verificationId
+     * (a random one when there is nothing to reset), the same cooldown, and roughly the same time.
+     * The code is sent off the request thread, so mail latency does not tell the two apart either.
      */
-    fun requestPasswordReset(email: String): UUID? {
-        val user = userRepository.findByEmail(email) ?: return null
+    fun requestPasswordReset(email: String): UUID {
+        enforceCodeRequestCooldown(email, VerificationPurpose.FORGOT_PASSWORD)
+        val user = userRepository.findByEmail(email)
 
         // Social-only users have no password to reset
-        if (AuthProvider.LOCAL !in user.providers || user.passwordHash == null) {
-            return null
+        if (user == null || AuthProvider.LOCAL !in user.providers || user.passwordHash == null) {
+            return decoyVerificationId()
         }
 
         val (verificationId, code) = verificationCodeService.createCode(email, VerificationPurpose.FORGOT_PASSWORD)
-        emailService.sendCode(email, code, "FORGOT_PASSWORD")
+        codeSendExecutor.execute { emailService.sendCode(email, code, "FORGOT_PASSWORD") }
         return verificationId
     }
 
@@ -70,18 +80,17 @@ class AccountManagementService(
     /**
      * Verify email ownership with a code (unauthenticated).
      * Clears the VERIFY_EMAIL required action so the user gains full access on next token issuance.
-     * Idempotent: an already-verified email succeeds without error.
+     *
+     * Not idempotent on purpose: answering 200 for an already-verified address without checking
+     * the code told anyone which addresses have verified accounts. A repeat call fails like a
+     * wrong code, because the code is spent.
      */
     @Transactional
     fun verifyEmail(email: String, verificationId: UUID, code: String) {
+        verificationCodeService.verifyCode(verificationId, email, VerificationPurpose.VERIFY_EMAIL, code)
+
         val user = userRepository.findByEmail(email)
             ?: throw BadCredentialsException("Invalid verification code")
-
-        if (user.emailVerified && RequiredAction.VERIFY_EMAIL !in user.requiredActions) {
-            return
-        }
-
-        verificationCodeService.verifyCode(verificationId, email, VerificationPurpose.VERIFY_EMAIL, code)
 
         user.emailVerified = true
         user.requiredActions.remove(RequiredAction.VERIFY_EMAIL)
@@ -90,16 +99,36 @@ class AccountManagementService(
 
     /**
      * Resend the email-verification code (unauthenticated).
-     * Anti-enumeration: returns verificationId only when a matching unverified user exists.
-     * Rate limiting (1/60s per email+purpose) is enforced by VerificationCodeService.
+     * Answers alike for unknown, verified and unverified addresses; see [requestPasswordReset].
      */
-    fun resendEmailVerification(email: String): UUID? {
-        val user = userRepository.findByEmail(email) ?: return null
-        if (user.emailVerified) return null
+    fun resendEmailVerification(email: String): UUID {
+        enforceCodeRequestCooldown(email, VerificationPurpose.VERIFY_EMAIL)
+        val user = userRepository.findByEmail(email)
+        if (user == null || user.emailVerified) return decoyVerificationId()
 
         val (verificationId, code) = verificationCodeService.createCode(email, VerificationPurpose.VERIFY_EMAIL)
-        emailService.sendCode(email, code, "VERIFY_EMAIL")
+        codeSendExecutor.execute { emailService.sendCode(email, code, "VERIFY_EMAIL") }
         return verificationId
+    }
+
+    /**
+     * The once-a-minute cooldown, applied to every address. createCode enforces it only where a
+     * code is actually issued, so a second request answered 409 for real accounts and 202 for
+     * unknown ones.
+     */
+    private fun enforceCodeRequestCooldown(email: String, purpose: VerificationPurpose) {
+        if (!rateLimiter.tryAcquire("code-request:$purpose:${email.lowercase()}", 1, CODE_REQUEST_COOLDOWN_SECONDS)) {
+            throw IllegalStateException("Please wait before requesting a new code")
+        }
+    }
+
+    /**
+     * Stands in for a real verificationId. Hashes a throwaway code as createCode would, so the
+     * response takes about as long; redeeming the id fails like a wrong code.
+     */
+    private fun decoyVerificationId(): UUID {
+        passwordEncoder.encode(UUID.randomUUID().toString())
+        return UUID.randomUUID()
     }
 
     /**
@@ -296,6 +325,7 @@ class AccountManagementService(
 
     companion object {
         private const val FRESH_LOGIN_SECONDS = 300L
+        private const val CODE_REQUEST_COOLDOWN_SECONDS = 60L
     }
 }
 
