@@ -26,6 +26,23 @@
 - **Last-admin check counts admins in a separate statement after locking them**; on PostgreSQL the
   locking query's own result still counted an admin demoted by a concurrent transaction.
 - **Actuator endpoints other than health are admin-only.**
+- **Per-client code-send limit buckets IPv6 by /64**, so rotating addresses inside one subscriber's
+  prefix no longer escapes it.
+- **Input bounds**: push `data` keys/values (64/1024 characters), topic broadcast body and data,
+  `fcmToken` (512) and `deviceId` (255) at registration, mail subject (255). Each used to be
+  unbounded or wider than its column, answering `500` or storing megabytes per call.
+- **Mail**: recipient addresses are masked in every mail log; `ExternalMailService.sendCode` sends
+  after commit with connect/read timeouts instead of synchronously inside the caller's transaction;
+  inbox HTML also drops `<img>` (tracking pixels).
+- **Errors**: malformed path variables and missing parameters answer `400`, concurrent-update and
+  unique-constraint conflicts `409` (all were `500`). `IllegalStateException`/`IllegalArgumentException`
+  messages reach the client only when the starter threw them, not a library.
+- **Key material**: `generate-keystore.sh` writes to `secrets/` with a generated password and refuses
+  paths under `src/`; the jar excludes `*.p12`, `*.jks`, `*.pem`, `*.key`. `publish.sh` no longer
+  puts the GitHub token on the command line.
+- **`V15` no longer rewrites `refresh_tokens`**: the column is added with a constant default
+  (metadata-only), existing sessions count as "logged in at the epoch", and instances on the
+  previous version keep working during a rolling deploy.
 - **The in-memory rate limiter no longer locks newcomers out when full.** At capacity it refused
   every key it was not already tracking, so filling it with fresh emails answered `429` to every
   other user. It now evicts expired entries, then the lowest-count ones; a flood of fresh keys
