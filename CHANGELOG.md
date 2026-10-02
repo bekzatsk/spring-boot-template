@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.1.4 — 2026-10-02
+
+Security release. It closes an account takeover through email-OTP login, an open mail relay and
+several smaller holes found in a security review, and updates Jackson for seven advisories. It
+contains **breaking changes** (listed below) and two migrations, `V14` and `V15`.
+
+### Dependencies
+
+- Jackson 3.1.7 and 2.21.7, overriding the 3.1.5 / 2.21.5 that Spring Boot 4.1.1 manages:
+  GHSA-7hhh-6rmp-j9qf, GHSA-cxp5-3px4-pw24, GHSA-gx83-3vf8-gh7j, GHSA-p6pp-m3f8-5c89,
+  GHSA-q4xh-88c3-wmh7, GHSA-wjgm-6hv5-3cvf, GHSA-wv8q-qhhj-9h54.
 
 ### Security
 
