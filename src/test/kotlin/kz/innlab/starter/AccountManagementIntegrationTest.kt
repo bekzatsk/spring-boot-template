@@ -1,5 +1,8 @@
 package kz.innlab.starter
 
+import kz.innlab.starter.shared.ratelimit.RateLimiter
+import java.time.Duration
+import org.awaitility.Awaitility.await
 import java.time.Instant
 import org.springframework.security.oauth2.jwt.JwtDecoder
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
@@ -65,11 +68,18 @@ class AccountManagementIntegrationTest {
     @Autowired
     private lateinit var jwtDecoder: JwtDecoder
 
+    @Autowired
+    private lateinit var rateLimiter: RateLimiter
+
     @BeforeEach
     fun cleanUp() {
         refreshTokenRepository.deleteAll()
         verificationCodeRepository.deleteAll()
         userRepository.deleteAll()
+        // The request cooldown lives in the shared in-memory limiter, not in the wiped tables.
+        listOf("test@example.com", "unknown@example.com", "rate-test@example.com").forEach { email ->
+            rateLimiter.reset("code-request:FORGOT_PASSWORD:$email")
+        }
     }
 
     // --- Helpers ---
@@ -92,7 +102,11 @@ class AccountManagementIntegrationTest {
             capturedCode = invocation.arguments[1] as String
             null
         }.`when`(emailService).sendCode(anyString(), anyString(), anyString())
-        return { capturedCode ?: error("emailService.sendCode was not called") }
+        // Reset and resend codes are sent off the request thread.
+        return {
+            await().atMost(Duration.ofSeconds(5)).until { capturedCode != null }
+            capturedCode!!
+        }
     }
 
     private fun capturePhoneCodeOnSend(): () -> String {
@@ -148,7 +162,7 @@ class AccountManagementIntegrationTest {
     }
 
     @Test
-    fun `forgot password unknown email returns 202 with null verificationId`() {
+    fun `forgot password unknown email answers like a known one`() {
         doNothing().`when`(emailService).sendCode(anyString(), anyString(), anyString())
 
         mockMvc.perform(
@@ -157,7 +171,15 @@ class AccountManagementIntegrationTest {
                 .content("""{"email": "unknown@example.com"}""")
         )
             .andExpect(status().isAccepted)
-            .andExpect(jsonPath("$.verificationId").doesNotExist())
+            .andExpect(jsonPath("$.verificationId").exists())
+
+        // Same cooldown as a real account, or a second request would tell them apart.
+        mockMvc.perform(
+            post("/api/v1/auth/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email": "unknown@example.com"}""")
+        )
+            .andExpect(status().isConflict)
 
         // EmailService should NOT have been called
         verify(emailService, never()).sendCode(anyString(), anyString(), anyString())

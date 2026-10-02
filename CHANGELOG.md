@@ -43,6 +43,13 @@
   revokes all refresh tokens.
 - **Access tokens carry `auth_time`**, the time of the login they descend from. Refresh keeps it:
   migration `V15` adds `refresh_tokens.authenticated_at`, copied on every rotation.
+- **Password reset, verification resend and email verification no longer reveal which addresses
+  have accounts.** `forgot-password` and `verify-email/resend` answered `{"verificationId": null}`
+  for unknown addresses and a UUID for real ones, took longer for real ones (synchronous mail
+  send), and only real ones hit the once-a-minute cooldown. They now return a verificationId either
+  way (a random one when nothing is sent), apply the cooldown to every address, hash a throwaway
+  code when there is nothing to send, and send mail on the starter's executor. `verify-email` used
+  to answer `200` for any already-verified address without checking the code.
 - **Changing a user's roles revokes their refresh tokens**, so a demoted admin cannot keep minting
   tokens that carry the old roles.
 
@@ -65,6 +72,12 @@
 - `AccountManagementService.requestEmailChange`/`requestPhoneChange` take a `ReauthProof`.
 - Re-authentication codes reach `EmailService.sendCode` with purpose `"REAUTH"`; custom
   implementations that pick a template by purpose need one for it.
+- `forgot-password` and `verify-email/resend` always return a `verificationId`; clients can no
+  longer use `null` to say "no such account". `AccountManagementService.requestPasswordReset` and
+  `resendEmailVerification` return `UUID` instead of `UUID?`.
+- `verify-email` is no longer idempotent: repeating it after success answers `401`, as a spent code.
+- Reset and resend codes are sent asynchronously on `authStarterTaskExecutor`; a failure to send
+  no longer fails the request.
 
 ### Fixed
 
