@@ -212,6 +212,21 @@
 		<sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
 		<testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
 		<plugins>
+			<!-- The application*.yaml files configure this repository's own runnable app. Packaged,
+			     they load into every consumer that lacks a file of the same name: a consumer
+			     running with the dev profile and no application-dev.yaml of its own got the
+			     fixed 123456 login codes. They stay in target/classes for spring-boot:run. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>application*.yaml</exclude>
+						<exclude>application*.yml</exclude>
+						<exclude>application*.properties</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.jetbrains.kotlin</groupId>
 				<artifactId>kotlin-maven-plugin</artifactId>
