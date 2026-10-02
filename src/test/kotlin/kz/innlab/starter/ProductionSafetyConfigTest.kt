@@ -1,5 +1,7 @@
 package kz.innlab.starter
 
+import kz.innlab.starter.authentication.service.TelegramBotService
+import kz.innlab.starter.authentication.service.ConsoleTelegramBotService
 import kz.innlab.starter.authentication.service.ConsoleSmsService
 import kz.innlab.starter.authentication.service.EmailService
 import kz.innlab.starter.authentication.service.SmsService
@@ -140,6 +142,19 @@ class ProductionSafetyConfigTest {
         ).run { context ->
             assertThat(context).hasNotFailed()
         }
+    }
+
+    @Test
+    fun `refuses to start when Telegram is enabled without a bot token`() {
+        runner(
+            "app.auth.telegram.enabled=true",
+            "app.auth.telegram.webhook-secret=s3cret"
+        )
+            .withBean(TelegramBotService::class.java, { ConsoleTelegramBotService() })
+            .run { context ->
+                assertThat(context).hasFailed()
+                assertThat(context.startupFailure).hasStackTraceContaining("bot-token")
+            }
     }
 
     /** Console fallback on the named channels, real providers everywhere else. */

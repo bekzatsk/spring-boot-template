@@ -82,6 +82,8 @@ Cross-cutting concerns:
 - **Admin-only endpoints**: `/api/v1/admin/**`, `POST /api/v1/notifications/send/topic` (broadcast), `/api/v1/mail/inbox/**` (shared org mailbox), `/api/v1/mail/send/**` (outbound mail from the app domain).
 - **Ownership checks**: push send/multicast and topic subscribe only accept FCM tokens registered to the caller. An FCM token is unique; registering one another user holds takes it over.
 - **Rate limits**: Telegram resend has a server-side cooldown plus a per-session cap; mail send has a per-user hourly quota and attachment caps (`app.mail.limits.*`).
+- **Code sends are limited per client address and per purpose** (`VerificationCodeService.checkSendAllowed`, against SMS toll fraud). Flows that pretend to send a code to hide whether an account exists must call it too. The client address is `request.remoteAddr`: behind a proxy, `server.forward-headers-strategy` must be set.
+- **`InMemoryRateLimiter` evicts lowest-count entries at capacity** rather than refusing new keys, which let a flood of fresh keys lock everyone else out.
 - **`X-Forwarded-For` is ignored** unless `app.auth.telegram.trust-forwarded-headers=true` (set only behind a trusted proxy).
 
 ## Test Setup

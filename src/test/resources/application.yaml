@@ -40,6 +40,13 @@ app:
       dev-code: ""
     refresh-token:
       expiry-days: 30
+    # Every MockMvc request comes from 127.0.0.1 and the limiter outlives each test: production
+    # send limits would trip across the suite. OtpSendLimitIntegrationTest sets its own.
+    rate-limit:
+      code-send-per-client:
+        max-attempts: 100000
+      code-send-per-purpose:
+        max-attempts: 100000
     sms:
       dev-code: ""
     verification:

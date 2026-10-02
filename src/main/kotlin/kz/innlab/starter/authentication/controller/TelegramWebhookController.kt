@@ -1,5 +1,6 @@
 package kz.innlab.starter.authentication.controller
 
+import java.security.MessageDigest
 import io.swagger.v3.oas.annotations.Hidden
 import kz.innlab.starter.authentication.dto.TelegramUpdate
 import kz.innlab.starter.authentication.service.TelegramAuthService
@@ -41,7 +42,13 @@ class TelegramWebhookController(
             )
             return ResponseEntity.ok().build()
         }
-        if (secretToken != telegramProperties.webhookSecret) {
+        // Constant-time: a plain comparison returns at the first differing byte, which lets the
+        // secret be recovered a byte at a time from response timing.
+        if (!MessageDigest.isEqual(
+                (secretToken ?: "").toByteArray(Charsets.UTF_8),
+                telegramProperties.webhookSecret.toByteArray(Charsets.UTF_8)
+            )
+        ) {
             logger.warn("Telegram webhook request with invalid secret token")
             return ResponseEntity.ok().build()
         }

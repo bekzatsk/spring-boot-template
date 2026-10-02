@@ -23,7 +23,19 @@ data class RateLimitProperties(
      * The window is long on purpose: anyone who knows the address can use up the budget, so
      * this trades a day of code login for the target against an open-ended guessing run.
      */
-    @field:Valid val otpVerify: Rule = Rule(maxAttempts = 10, windowSeconds = 86_400)
+    @field:Valid val otpVerify: Rule = Rule(maxAttempts = 10, windowSeconds = 86_400),
+    /**
+     * Codes sent per client address, across purposes. The per-identifier cooldown alone lets one
+     * client walk through phone numbers and run up the SMS bill (toll fraud). Behind a reverse
+     * proxy set `server.forward-headers-strategy` so the client address is the real one, or every
+     * request shares the proxy's address and this becomes a global limit.
+     */
+    @field:Valid val codeSendPerClient: Rule = Rule(maxAttempts = 20, windowSeconds = 3_600),
+    /**
+     * Codes sent per purpose across all clients: a circuit breaker that caps the cost of a
+     * distributed attack. When it trips, every user waits — size it to your real traffic.
+     */
+    @field:Valid val codeSendPerPurpose: Rule = Rule(maxAttempts = 1_000, windowSeconds = 3_600)
 ) {
     data class Rule(
         @field:Positive val maxAttempts: Int = 10,
