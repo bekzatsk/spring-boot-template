@@ -12,8 +12,9 @@ data class SendEmailRequest(
     @field:Size(max = 254)
     val to: String,
 
+    // mail_history.subject is VARCHAR(255); longer subjects failed the insert with 500.
     @field:NotBlank
-    @field:Size(max = 998)
+    @field:Size(max = 255)
     val subject: String,
 
     @field:Size(max = 1_000_000)

@@ -444,4 +444,25 @@ class NotificationIntegrationTest {
                 .content("""{"token": "big-token", "title": "T", "body": "${"x".repeat(2001)}"}""")
         ).andExpect(status().isBadRequest)
     }
+
+    @Test
+    fun `push data values over the size limit are rejected`() {
+        registerDeviceToken("data-token", "device-data")
+        mockMvc.perform(
+            post("/api/v1/notifications/send/token")
+                .header("Authorization", authHeader())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"token": "data-token", "title": "T", "body": "B", "data": {"k": "${"x".repeat(1025)}"}}""")
+        ).andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `an oversized FCM token is rejected at registration`() {
+        mockMvc.perform(
+            post("/api/v1/notifications/tokens")
+                .header("Authorization", authHeader())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"platform": "ANDROID", "fcmToken": "${"t".repeat(513)}", "deviceId": "d"}""")
+        ).andExpect(status().isBadRequest)
+    }
 }

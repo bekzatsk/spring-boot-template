@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.ServletRequestAttributes
 import java.time.Instant
+import java.net.Inet6Address
+import java.net.InetAddress
 import java.util.Locale
 import java.util.UUID
 
@@ -180,6 +182,18 @@ class VerificationCodeService(
     // Null outside an HTTP request (a scheduled job, a test calling the service directly).
     private fun currentClientAddress(): String? =
         (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)?.request?.remoteAddr
+            ?.let(::clientBucket)
+
+    /**
+     * IPv6 clients are bucketed by /64: one subscriber normally gets a whole /64, so keying on the
+     * full address let a client use a fresh address per request and never hit the limit.
+     * IPv4 addresses are used as they are.
+     */
+    internal fun clientBucket(address: String): String {
+        val parsed = runCatching { InetAddress.ofLiteral(address) }.getOrNull() ?: return address
+        if (parsed !is Inet6Address) return address
+        return parsed.address.copyOf(8).joinToString(":", postfix = "::/64") { "%02x".format(it) }
+    }
 
     /**
      * Email identifiers are compared without case: the cooldown, the guessing budget and the code

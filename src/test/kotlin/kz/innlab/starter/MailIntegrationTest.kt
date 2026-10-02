@@ -309,4 +309,14 @@ class MailIntegrationTest {
             get("/api/v1/mail/inbox").param("offset", "-5").header("Authorization", "Bearer $adminToken")
         ).andExpect(status().isBadRequest)
     }
+
+    @Test
+    fun `subject longer than the history column is rejected`() {
+        mockMvc.perform(
+            post("/api/v1/mail/send")
+                .header("Authorization", "Bearer $adminToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"to": "recipient@example.com", "subject": "${"s".repeat(256)}", "textBody": "B"}""")
+        ).andExpect(status().isBadRequest)
+    }
 }
