@@ -27,6 +27,13 @@
 - **An FCM token belongs to one user.** Registering a token another user holds removes their
   registration, so the previous owner of a device can no longer push to whoever signs in on it next.
   Migration `V14` keeps the most recent registration of each duplicated token and adds a unique index.
+- **One-time codes have a guessing budget across codes.** Each code allowed 3 attempts, but a new
+  code (one a minute) started a fresh count, so an attacker could keep guessing indefinitely —
+  about 28 hours on average to hit a 4-digit phone code. Code checks are now limited per identifier
+  and purpose across codes: `app.auth.rate-limit.otp-verify` (default 10 per 24 hours), answered
+  with `429` and `Retry-After`; a correct code clears the count. Anyone who knows an address can
+  spend that budget, which blocks code login for that address for the window — lower the window if
+  that trade-off does not suit you.
 - **Changing a user's roles revokes their refresh tokens**, so a demoted admin cannot keep minting
   tokens that carry the old roles.
 

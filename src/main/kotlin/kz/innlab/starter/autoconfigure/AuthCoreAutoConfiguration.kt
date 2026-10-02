@@ -107,9 +107,13 @@ class AuthCoreAutoConfiguration {
         verificationCodeRepository: VerificationCodeRepository,
         attemptRecorder: VerificationAttemptRecorder,
         passwordEncoder: PasswordEncoder,
-        verificationProperties: VerificationProperties
-    ): VerificationCodeService =
-        VerificationCodeService(verificationCodeRepository, attemptRecorder, passwordEncoder, verificationProperties)
+        verificationProperties: VerificationProperties,
+        rateLimiter: RateLimiter,
+        rateLimitProperties: RateLimitProperties
+    ): VerificationCodeService = VerificationCodeService(
+        verificationCodeRepository, attemptRecorder, passwordEncoder, verificationProperties,
+        rateLimiter, rateLimitProperties
+    )
 
     @Bean
     @ConditionalOnMissingBean
