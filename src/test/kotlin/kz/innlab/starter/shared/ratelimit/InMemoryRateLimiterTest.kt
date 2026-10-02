@@ -61,14 +61,15 @@ class InMemoryRateLimiterTest {
     }
 
     @Test
-    fun `fails open rather than refusing everyone once at capacity`() {
+    fun `at capacity existing keys remain limited and new keys are rejected`() {
         val tiny = InMemoryRateLimiter(maxEntries = 2)
         // Long window so nothing can be purged as expired.
         tiny.tryAcquire("a", limit = 1, windowSeconds = 3600)
         tiny.tryAcquire("b", limit = 1, windowSeconds = 3600)
 
-        // Third key cannot be tracked; refusing it would turn the limiter into a DoS lever.
-        assertThat(tiny.tryAcquire("c", limit = 1, windowSeconds = 3600)).isTrue()
+        assertThat(tiny.tryAcquire("a", limit = 1, windowSeconds = 3600)).isFalse()
+        assertThat(tiny.tryAcquire("c", limit = 1, windowSeconds = 3600)).isFalse()
+        tiny.reset("b")
         assertThat(tiny.tryAcquire("c", limit = 1, windowSeconds = 3600)).isTrue()
     }
 

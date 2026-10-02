@@ -4,6 +4,7 @@ import kz.innlab.starter.authentication.repository.VerificationCodeRepository
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -22,12 +23,14 @@ class VerificationAttemptRecorder(
 ) {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    fun recordAttempt(verificationId: UUID) {
-        verificationCodeRepository.incrementAttempts(verificationId)
-    }
+    fun recordAttempt(verificationId: UUID, maxAttempts: Int): Boolean =
+        verificationCodeRepository.incrementAttemptsIfActive(
+            verificationId, Instant.now(), maxAttempts
+        ) == 1
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    fun markUsed(verificationId: UUID) {
-        verificationCodeRepository.markUsed(verificationId)
-    }
+    fun markUsed(verificationId: UUID, maxAttempts: Int): Boolean =
+        verificationCodeRepository.markUsedIfActive(
+            verificationId, Instant.now(), maxAttempts
+        ) == 1
 }

@@ -10,7 +10,9 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import tools.jackson.databind.json.JsonMapper
 
 /**
  * The cookie feature, exercised over HTTP from a consumer application.
@@ -82,7 +84,16 @@ class ConsumerCookieAuthIntegrationTest {
         val refresh = registered.getCookie("refresh_token")
         checkNotNull(refresh) { "register must set a refresh cookie in cookie mode" }
 
-        val rotated = mockMvc.perform(post("/api/v1/auth/refresh").cookie(refresh))
+        val csrf = mockMvc.perform(get("/api/v1/auth/csrf"))
+            .andExpect(status().isOk).andReturn().response
+        val csrfCookie = csrf.getCookie("XSRF-TOKEN")!!
+        val csrfToken = JsonMapper.builder().build().readTree(csrf.contentAsString).get("token").asText()
+
+        val rotated = mockMvc.perform(
+            post("/api/v1/auth/refresh")
+                .cookie(refresh, csrfCookie)
+                .header("X-XSRF-TOKEN", csrfToken)
+        )
             .andExpect(status().isOk)
             .andReturn()
             .response

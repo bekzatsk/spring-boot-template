@@ -16,6 +16,9 @@ interface UserRepository : JpaRepository<User, UUID> {
 
     fun findByPhone(phone: String): User?
 
+    @Query("SELECT u FROM User u JOIN u.providerIds pid WHERE KEY(pid) = 'GOOGLE' AND VALUE(pid) = :sub")
+    fun findByGoogleProviderId(@Param("sub") sub: String): User?
+
     @Query("SELECT u FROM User u JOIN u.providerIds pid WHERE KEY(pid) = 'APPLE' AND VALUE(pid) = :sub")
     fun findByAppleProviderId(@Param("sub") sub: String): User?
 

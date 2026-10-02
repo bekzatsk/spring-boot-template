@@ -27,6 +27,9 @@ class GoogleOAuth2Service(
         val providerId = payload.subject
         val email = payload.email
             ?: throw BadCredentialsException("Google account does not have an email")
+        if (payload.emailVerified != true) {
+            throw BadCredentialsException("Google account email is not verified")
+        }
         val name = payload["name"] as? String ?: clientName
         val picture = payload["picture"] as? String ?: clientPicture
 

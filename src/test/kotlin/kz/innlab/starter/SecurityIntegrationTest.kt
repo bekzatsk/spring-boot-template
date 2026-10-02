@@ -22,6 +22,10 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.security.oauth2.jwt.JwtClaimsSet
+import org.springframework.security.oauth2.jwt.JwtEncoder
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters
+import java.time.Instant
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -42,6 +46,9 @@ class SecurityIntegrationTest {
 
     @Autowired
     private lateinit var tokenService: TokenService
+
+    @Autowired
+    private lateinit var jwtEncoder: JwtEncoder
 
     @Autowired
     private lateinit var userRepository: UserRepository
@@ -88,6 +95,22 @@ class SecurityIntegrationTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.id").exists())
             .andExpect(jsonPath("$.roles[0]").value("USER"))
+    }
+
+    @Test
+    fun `signed token with wrong audience is rejected`() {
+        val now = Instant.now()
+        val claims = JwtClaimsSet.builder()
+            .issuer("template-app")
+            .audience(listOf("different-service"))
+            .subject(UUID.randomUUID().toString())
+            .issuedAt(now)
+            .expiresAt(now.plusSeconds(300))
+            .build()
+        val token = jwtEncoder.encode(JwtEncoderParameters.from(claims)).tokenValue
+
+        mockMvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer $token"))
+            .andExpect(status().isUnauthorized)
     }
 
     // --- Fail-secure default authorization ---

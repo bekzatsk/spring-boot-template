@@ -24,12 +24,28 @@ interface VerificationCodeRepository : JpaRepository<VerificationCode, UUID> {
      * not lose concurrent increments.
      */
     @Modifying
-    @Query("UPDATE VerificationCode vc SET vc.attempts = vc.attempts + 1 WHERE vc.id = :id")
-    fun incrementAttempts(@Param("id") id: UUID): Int
+    @Query("""
+        UPDATE VerificationCode vc SET vc.attempts = vc.attempts + 1
+        WHERE vc.id = :id AND vc.used = false AND vc.expiresAt > :now
+          AND vc.attempts < :maxAttempts
+    """)
+    fun incrementAttemptsIfActive(
+        @Param("id") id: UUID,
+        @Param("now") now: Instant,
+        @Param("maxAttempts") maxAttempts: Int
+    ): Int
 
     @Modifying
-    @Query("UPDATE VerificationCode vc SET vc.used = true WHERE vc.id = :id")
-    fun markUsed(@Param("id") id: UUID): Int
+    @Query("""
+        UPDATE VerificationCode vc SET vc.used = true
+        WHERE vc.id = :id AND vc.used = false AND vc.expiresAt > :now
+          AND vc.attempts <= :maxAttempts
+    """)
+    fun markUsedIfActive(
+        @Param("id") id: UUID,
+        @Param("now") now: Instant,
+        @Param("maxAttempts") maxAttempts: Int
+    ): Int
 
     @Modifying
     @Transactional

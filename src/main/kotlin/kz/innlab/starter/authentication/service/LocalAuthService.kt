@@ -15,6 +15,7 @@ import kz.innlab.starter.config.AuthTokenProperties
 import kz.innlab.starter.config.RateLimitProperties
 import kz.innlab.starter.shared.ratelimit.RateLimitExceededException
 import kz.innlab.starter.shared.ratelimit.RateLimiter
+import kz.innlab.starter.shared.transaction.AfterCommitRunner
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -31,56 +32,35 @@ class LocalAuthService(
     private val emailService: EmailService,
     private val authTokenProperties: AuthTokenProperties,
     private val rateLimiter: RateLimiter,
-    private val rateLimitProperties: RateLimitProperties
+    private val rateLimitProperties: RateLimitProperties,
+    private val afterCommitRunner: AfterCommitRunner
 ) {
 
-    /**
-     * Register a new LOCAL email+password user, or link LOCAL credentials to existing social account.
-     * - If email exists AND has password: 409 Conflict (already registered)
-     * - If email exists AND no password: link LOCAL provider, set password (social user adding local credentials)
-     * - If email not found: create new LOCAL user
-     */
+    /** Register a new LOCAL email+password user. Existing accounts require a separate, authenticated linking flow. */
     @Transactional
     fun register(email: String, rawPassword: String, name: String?): AuthResponse {
-        val existing = userRepository.findByEmail(email)
-
-        if (existing != null && existing.passwordHash != null) {
+        if (userRepository.findByEmailIgnoreCase(email) != null) {
             throw IllegalStateException("Email already registered")
         }
-
-        val isNewUser = existing == null
-
-        val user = if (existing != null) {
-            // Existing social account — link LOCAL provider and set password.
-            // Email is already owned/verified via the social provider — no re-verification.
-            existing.linkProvider(AuthProvider.LOCAL)
-            existing.passwordHash = passwordEncoder.encode(rawPassword)
-            if (existing.name == null && name != null) existing.name = name
-            userRepository.save(existing)
-        } else {
-            if (!authTokenProperties.registration.enabled) {
-                throw IllegalStateException("Registration is currently disabled")
-            }
-            // New user
-            val newUser = User(email = email)
-            newUser.linkProvider(AuthProvider.LOCAL)
-            newUser.name = name
-            newUser.passwordHash = passwordEncoder.encode(rawPassword)
-            if (authTokenProperties.emailVerification.enabled) {
-                // Soft gate: user is issued tokens but must verify email before accessing protected APIs.
-                // Enforcement is via the VERIFY_EMAIL required action (RequiredActionFilter).
-                newUser.emailVerified = false
-                newUser.requiredActions.add(RequiredAction.VERIFY_EMAIL)
-            }
-            userRepository.save(newUser)
+        if (!authTokenProperties.registration.enabled) {
+            throw IllegalStateException("Registration is currently disabled")
         }
+        val newUser = User(email = email)
+        newUser.linkProvider(AuthProvider.LOCAL)
+        newUser.name = name
+        newUser.passwordHash = passwordEncoder.encode(rawPassword)
+        if (authTokenProperties.emailVerification.enabled) {
+            // The required action gates protected APIs until email ownership is verified.
+            newUser.emailVerified = false
+            newUser.requiredActions.add(RequiredAction.VERIFY_EMAIL)
+        }
+        val user = userRepository.save(newUser)
 
-        // Send the verification code only for genuinely new LOCAL registrations.
         var verificationId: java.util.UUID? = null
-        if (isNewUser && authTokenProperties.emailVerification.enabled) {
+        if (authTokenProperties.emailVerification.enabled) {
             val (id, code) = verificationCodeService.createCode(email, VerificationPurpose.VERIFY_EMAIL)
             verificationId = id
-            emailService.sendCode(email, code, "VERIFY_EMAIL")
+            afterCommitRunner.run { emailService.sendCode(email, code, "VERIFY_EMAIL") }
         }
 
         return authTokenIssuer.issue(user).copy(verificationId = verificationId)

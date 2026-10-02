@@ -134,6 +134,7 @@ The starter auto-registers these endpoints:
 | Endpoint | Description |
 |----------|-------------|
 | `POST /api/v1/auth/local/register` | Register with email + password |
+| `GET /api/v1/auth/csrf` | Issue CSRF token for cookie-authenticated writes |
 | `POST /api/v1/auth/local/login` | Login with email + password |
 | `POST /api/v1/auth/google` | Google ID token auth |
 | `POST /api/v1/auth/apple` | Apple ID token auth |
@@ -322,11 +323,11 @@ Optional. **Off by default — registration behavior is unchanged.** When `enabl
 2. `POST /api/v1/auth/verify-email` `{email, verificationId, code}` → sets `emailVerified=true`, clears the action. After re-login (or refresh) the JWT is clean → full access.
 3. `POST /api/v1/auth/verify-email/resend` `{email}` → new code (rate-limited 1/60s, anti-enumeration: `verificationId` returned only for a real unverified user).
 
-Linking LOCAL to an existing social account does **not** re-verify (email already owned by the provider). `emailVerified` is exposed on `GET /api/v1/users/me`. The verify-email paths are in the default `required-action.allowed-paths`.
+Registration rejects an existing email, including an account created through a social provider. Adding a password to an existing account requires a separate authenticated, owner-verified flow. `emailVerified` is exposed on `GET /api/v1/users/me`. The verify-email paths are in the default `required-action.allowed-paths`.
 
 ### httpOnly Cookie Auth (`app.auth.cookie`)
 
-Optional mode — access + refresh tokens delivered as `httpOnly`+`Secure`+`SameSite` cookies so a SPA never touches `localStorage` (XSS-safe). **Disabled by default; fully backward compatible.** When on, every auth endpoint (`login`, `register`, `google`, `apple`, `phone/verify`, `telegram/verify`, `refresh`) also sets cookies; the backend reads the access token from the cookie automatically (the `Authorization` header always wins for bearer/API-key clients).
+Optional mode — access + refresh tokens delivered as `httpOnly`+`Secure`+`SameSite` cookies. **Disabled by default.** When on, every auth endpoint (`login`, `register`, `google`, `apple`, `phone/verify`, `telegram/verify`, `refresh`) also sets cookies; the backend reads the access token from the cookie automatically (the `Authorization` header always wins for bearer/API-key clients). Set `suppress-body-tokens=true` if browser JavaScript must never receive token values in JSON responses.
 
 | Property | Default | Description |
 |----------|---------|-------------|
@@ -343,7 +344,7 @@ Optional mode — access + refresh tokens delivered as `httpOnly`+`Secure`+`Same
 
 **Refresh / revoke / logout:** `POST /refresh` and `/revoke` accept the refresh token from the body *or* the refresh cookie (body wins). `POST /logout` revokes the refresh cookie and clears both cookies (`Max-Age=0`); idempotent (no cookie → `204`).
 
-**CSRF:** with `SameSite=Strict` (or `Lax`) no extra CSRF token is needed for same-origin SPAs. Only if you must use `SameSite=None` (cross-site) should you add double-submit / `CookieCsrfTokenRepository` protection — not enabled by default.
+**CSRF:** in cookie mode, call `GET /api/v1/auth/csrf` to receive a token and an `XSRF-TOKEN` cookie. Send the returned token in the `X-XSRF-TOKEN` header for requests that carry access or refresh cookies and change state, including refresh and logout. The CSRF cookie must accompany the request. Bearer-only requests without auth cookies continue to work without a CSRF token. `SameSite` adds defense but does not replace this check.
 
 ```yaml
 app:
@@ -367,9 +368,11 @@ app:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `JWT_KEYSTORE_LOCATION` | Yes | Path to PKCS12 keystore |
+| `JWT_KEYSTORE_LOCATION` | Yes | Classpath resource or `file:/absolute/path/to/keystore.p12` |
 | `JWT_KEYSTORE_PASSWORD` | Yes | Keystore password |
 | `JWT_KEY_ALIAS` | No (`jwt`) | Key alias |
+| `JWT_ISSUER` | Yes | Issuer identifier, unique to this environment |
+| `JWT_AUDIENCE` | Yes | Identifier of the API accepting this access token |
 
 Generate a keystore:
 
@@ -449,7 +452,7 @@ Migrations location: `classpath:db/migration/auth` (V1 through V4).
 | Refresh | Opaque (32 bytes, base64url) | 30 days | SHA-256 hash in DB |
 | Verification | 6-digit code | 15 min (email) / 5 min (SMS) | BCrypt hash in DB |
 
-**JWT claims:** `iss`, `sub` (user UUID), `roles`, `exp`, `iat`
+**JWT claims:** `iss`, `aud`, `sub` (user UUID), `roles`, `exp`, `iat`. The resource server validates both `iss` and `aud` from `app.security.jwt.issuer` and `app.security.jwt.audience`. Configure distinct values per environment/API. Existing access tokens without `aud` are rejected after upgrade; clients must sign in again. Refresh tokens remain valid unless revoked separately.
 
 **Refresh token rotation:** used tokens within 10s grace window return 409; reuse after grace revokes all user tokens.
 
@@ -457,7 +460,7 @@ Migrations location: `classpath:db/migration/auth` (V1 through V4).
 
 ## Account Linking
 
-One email = one user across all providers. Google, Apple, local, and phone auth with the same email are linked to a single account. `GET /users/me` returns `"providers": ["GOOGLE", "LOCAL", "APPLE"]`.
+Google and Apple returning users are identified by their provider subject. A new provider identity whose email matches an existing account receives 409; email matching alone never links credentials. Local registration also returns 409 for an existing email. Implement an explicit owner-verified linking flow if the product needs multi-provider accounts. Existing linked accounts remain usable by their saved provider IDs.
 
 Phone-only users have `email = ""` with a partial unique index.
 

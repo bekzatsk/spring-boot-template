@@ -210,9 +210,12 @@ class AccountManagementService(
     fun verifyPhoneChange(userId: UUID, verificationId: UUID, phone: String, code: String) {
         val phoneE164 = normalizeToE164(phone)
 
-        verificationCodeService.verifyCode(
+        val verified = verificationCodeService.verifyCode(
             verificationId, userId.toString(), VerificationPurpose.CHANGE_PHONE, code
         )
+        val requestedPhone = verified.newValue
+            ?: throw IllegalArgumentException("Phone verification request has no number")
+        require(phoneE164 == requestedPhone) { "Phone does not match verification request" }
 
         // Race condition protection: re-check uniqueness at verify time
         if (userRepository.findByPhone(phoneE164) != null) {
@@ -222,7 +225,7 @@ class AccountManagementService(
         val user = userRepository.findById(userId).orElseThrow {
             ResourceNotFoundException("User not found")
         }
-        user.phone = phoneE164
+        user.phone = requestedPhone
         user.linkProvider(AuthProvider.LOCAL) // Idempotent — ensures LOCAL provider is present
         userRepository.save(user)
     }

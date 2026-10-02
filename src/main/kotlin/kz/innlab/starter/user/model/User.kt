@@ -73,7 +73,10 @@ class User(
         name = "user_provider_ids",
         schema = "auth",
         joinColumns = [JoinColumn(name = "user_id")],
-        uniqueConstraints = [UniqueConstraint(columnNames = ["user_id", "provider"])]
+        uniqueConstraints = [
+            UniqueConstraint(columnNames = ["user_id", "provider"]),
+            UniqueConstraint(columnNames = ["provider", "provider_id"])
+        ]
     )
     @MapKeyEnumerated(EnumType.STRING)
     @MapKeyColumn(name = "provider")

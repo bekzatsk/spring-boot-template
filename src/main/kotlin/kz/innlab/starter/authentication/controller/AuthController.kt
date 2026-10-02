@@ -13,6 +13,9 @@ import org.springframework.beans.factory.ObjectProvider
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseEntity
 import org.springframework.security.authentication.BadCredentialsException
+import org.springframework.security.web.csrf.CsrfToken
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RequestAttribute
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -26,6 +29,12 @@ class AuthController(
     private val tokenService: TokenService,
     private val cookieWriter: ObjectProvider<AuthCookieWriter>
 ) {
+
+    /** Browser clients obtain this token before sending a cookie-authenticated write request. */
+    @GetMapping("/csrf")
+    fun csrf(@RequestAttribute(name = "_csrf", required = false) token: CsrfToken?): ResponseEntity<Map<String, String>> =
+        if (token == null) ResponseEntity.notFound().build()
+        else ResponseEntity.ok(mapOf("token" to token.token, "headerName" to token.headerName))
 
     @Operation(summary = "Refresh access token using refresh token", security = [])
     @PostMapping("/refresh")

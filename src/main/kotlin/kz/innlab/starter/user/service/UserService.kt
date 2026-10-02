@@ -58,14 +58,12 @@ class UserService(
         name: String?,
         picture: String?
     ): User {
-        val existing = userRepository.findByEmail(email)
-        if (existing != null) {
-            // Link GOOGLE provider to existing account (idempotent)
-            existing.linkProvider(AuthProvider.GOOGLE, providerId)
-            // Only update name/picture if currently null on existing user
-            if (existing.name == null && name != null) existing.name = name
-            if (existing.picture == null && picture != null) existing.picture = picture
-            return userRepository.save(existing)
+        val byGoogleSub = userRepository.findByGoogleProviderId(providerId)
+        if (byGoogleSub != null) {
+            return byGoogleSub
+        }
+        if (userRepository.findByEmailIgnoreCase(email) != null) {
+            throw IllegalStateException("Account already exists; sign in to link a provider")
         }
         if (!authTokenProperties.registration.enabled) {
             throw IllegalStateException("Registration is currently disabled")
@@ -97,12 +95,9 @@ class UserService(
                 "Email not present in Apple identity token on first sign-in"
             )
 
-        // Step 3: Check if email already exists — link APPLE to existing account
-        val byEmail = userRepository.findByEmail(resolvedEmail)
-        if (byEmail != null) {
-            byEmail.linkProvider(AuthProvider.APPLE, providerId)
-            if (byEmail.name == null && name != null) byEmail.name = name
-            return userRepository.save(byEmail)
+        // A matching email alone does not prove ownership of an existing local account.
+        if (userRepository.findByEmailIgnoreCase(resolvedEmail) != null) {
+            throw IllegalStateException("Account already exists; sign in to link a provider")
         }
 
         // Step 4: Create new user

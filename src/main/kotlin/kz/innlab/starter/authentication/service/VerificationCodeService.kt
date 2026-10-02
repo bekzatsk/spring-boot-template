@@ -112,7 +112,9 @@ class VerificationCodeService(
         // Count the attempt before checking the code, in its own transaction: throwing below
         // rolls the caller's transaction back, and an increment made here would go with it —
         // which is exactly why the limit never bit before.
-        attemptRecorder.recordAttempt(record.id)
+        if (!attemptRecorder.recordAttempt(record.id, MAX_ATTEMPTS)) {
+            throw BadCredentialsException("Invalid verification code")
+        }
 
         if (!passwordEncoder.matches(code, record.codeHash)) {
             throw BadCredentialsException("Invalid verification code")
@@ -120,7 +122,9 @@ class VerificationCodeService(
 
         // Burn the code independently too: if the caller's transaction later rolls back, a
         // one-time code must not become reusable.
-        attemptRecorder.markUsed(record.id)
+        if (!attemptRecorder.markUsed(record.id, MAX_ATTEMPTS)) {
+            throw BadCredentialsException("Invalid verification code")
+        }
 
         return record
     }

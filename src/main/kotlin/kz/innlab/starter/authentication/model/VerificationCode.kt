@@ -5,13 +5,18 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 import kz.innlab.starter.shared.model.BaseEntity
 import org.hibernate.annotations.CreationTimestamp
 import java.time.Instant
 import java.util.UUID
 
 @Entity
-@Table(name = "verification_codes", schema = "auth")
+@Table(
+    name = "verification_codes",
+    schema = "auth",
+    uniqueConstraints = [UniqueConstraint(columnNames = ["identifier", "purpose"])]
+)
 class VerificationCode(
     @Column(name = "identifier", nullable = false)
     val identifier: String,
