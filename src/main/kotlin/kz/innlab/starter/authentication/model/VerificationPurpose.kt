@@ -10,5 +10,8 @@ enum class VerificationPurpose {
     EMAIL_LOGIN,
 
     /** Phone OTP login. Previously lived in its own sms_verifications table. */
-    PHONE_LOGIN
+    PHONE_LOGIN,
+
+    /** Re-authentication before an identity change, for accounts without a password. */
+    REAUTH
 }

@@ -34,6 +34,15 @@
   with `429` and `Retry-After`; a correct code clears the count. Anyone who knows an address can
   spend that budget, which blocks code login for that address for the window — lower the window if
   that trade-off does not suit you.
+- **Changing email or phone requires proof of ownership.** A stolen access token was enough to
+  move an account to the thief's address and then take it over through password reset or code
+  login. `/users/me/change-email/request` and `/change-phone/request` now take `currentPassword`,
+  or `reauthVerificationId` + `reauthCode` from the new `POST /users/me/reauth/request` (a code
+  sent to the current email, or phone if there is no email). An account with no password, email or
+  phone (Telegram-only) can add one only within 5 minutes of logging in. Completing either change
+  revokes all refresh tokens.
+- **Access tokens carry `auth_time`**, the time of the login they descend from. Refresh keeps it:
+  migration `V15` adds `refresh_tokens.authenticated_at`, copied on every rotation.
 - **Changing a user's roles revokes their refresh tokens**, so a demoted admin cannot keep minting
   tokens that carry the old roles.
 
@@ -49,6 +58,13 @@
 - Exceptions thrown by the consumer's own controllers are no longer turned into the starter's
   `ErrorResponse`; declare your own `@RestControllerAdvice` if you relied on it.
 - Migration `V14` deletes all but the most recent registration of each duplicated FCM token.
+- `/users/me/change-email/request` and `/change-phone/request` answer `403` without `currentPassword`
+  or a re-authentication code. Clients must collect one before starting the change.
+- `RefreshTokenService.rotate` returns `RotatedRefreshToken` instead of `Pair<User, String>`. It still
+  destructures as `(user, rawToken)`.
+- `AccountManagementService.requestEmailChange`/`requestPhoneChange` take a `ReauthProof`.
+- Re-authentication codes reach `EmailService.sendCode` with purpose `"REAUTH"`; custom
+  implementations that pick a template by purpose need one for it.
 
 ### Fixed
 

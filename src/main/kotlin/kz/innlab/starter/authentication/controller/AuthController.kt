@@ -44,8 +44,10 @@ class AuthController(
     ): ResponseEntity<AuthResponse> {
         val rawToken = resolveRefreshToken(request, httpRequest)
             ?: throw BadCredentialsException("Refresh token is required")
-        val (user, newRawToken) = refreshTokenService.rotate(rawToken)
-        val accessToken = tokenService.generateAccessToken(user.id, user.roles, user.requiredActions)
+        val (user, newRawToken, authenticatedAt) = refreshTokenService.rotate(rawToken)
+        val accessToken = tokenService.generateAccessToken(
+            user.id, user.roles, user.requiredActions, authTime = authenticatedAt
+        )
         // Cookies (access + rotated refresh) are set centrally by AuthResponseCookieAdvice.
         return ResponseEntity.ok(AuthResponse(
             accessToken = accessToken,

@@ -22,7 +22,8 @@ class TokenService(
     fun generateAccessToken(
         userId: UUID,
         roles: Set<Role>,
-        requiredActions: Set<RequiredAction> = emptySet()
+        requiredActions: Set<RequiredAction> = emptySet(),
+        authTime: Instant = Instant.now()
     ): String {
         val now = Instant.now()
         val claims = JwtClaimsSet.builder()
@@ -33,6 +34,8 @@ class TokenService(
             .subject(userId.toString())
             .claim("roles", roles.map { it.name })
             .claim("required_actions", requiredActions.map { it.name })
+            // When the user logged in, not when this token was minted: refresh keeps it.
+            .claim("auth_time", authTime.epochSecond)
             .build()
         return jwtEncoder.encode(JwtEncoderParameters.from(claims)).tokenValue
     }

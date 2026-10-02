@@ -50,7 +50,7 @@ class RefreshTokenService(
      * Triggers reuse detection and full revocation if token is replayed outside grace window (TOKN-03).
      */
     @Transactional
-    fun rotate(rawToken: String): Pair<User, String> {
+    fun rotate(rawToken: String): RotatedRefreshToken {
         val hash = hashToken(rawToken)
         val stored = refreshTokenRepository.findByTokenHash(hash)
             ?: throw BadCredentialsException("Invalid refresh token")
@@ -84,7 +84,8 @@ class RefreshTokenService(
             RefreshToken(
                 user = stored.user,
                 tokenHash = newHash,
-                expiresAt = Instant.now().plus(authTokenProperties.refreshToken.expiryDays, ChronoUnit.DAYS)
+                expiresAt = Instant.now().plus(authTokenProperties.refreshToken.expiryDays, ChronoUnit.DAYS),
+                authenticatedAt = stored.authenticatedAt
             )
         )
         stored.revoked = true
@@ -92,7 +93,7 @@ class RefreshTokenService(
         stored.replacedByTokenHash = newHash
         refreshTokenRepository.save(stored)
 
-        return Pair(stored.user, newRawToken)
+        return RotatedRefreshToken(stored.user, newRawToken, stored.authenticatedAt)
     }
 
     /** Revoke a refresh token (logout). Idempotent — silently succeeds if token not found. */
@@ -117,3 +118,13 @@ class RefreshTokenService(
         )
     }
 }
+
+/**
+ * Result of [RefreshTokenService.rotate]. Destructures as `(user, rawToken)` like the pair it
+ * replaced; [authenticatedAt] is when the user last logged in, for the new access token.
+ */
+data class RotatedRefreshToken(
+    val user: User,
+    val rawToken: String,
+    val authenticatedAt: Instant
+)

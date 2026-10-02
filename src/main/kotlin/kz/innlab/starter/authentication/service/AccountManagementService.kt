@@ -1,19 +1,23 @@
 package kz.innlab.starter.authentication.service
 
+import kz.innlab.starter.authentication.dto.ReauthCodeResponse
 import kz.innlab.starter.authentication.model.VerificationPurpose
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
 import kz.innlab.starter.config.RateLimitProperties
+import kz.innlab.starter.shared.error.ForbiddenOperationException
 import kz.innlab.starter.shared.error.ResourceNotFoundException
 import kz.innlab.starter.shared.ratelimit.RateLimitExceededException
 import kz.innlab.starter.shared.ratelimit.RateLimiter
 import kz.innlab.starter.shared.util.normalizeToE164
 import kz.innlab.starter.user.model.AuthProvider
 import kz.innlab.starter.user.model.RequiredAction
+import kz.innlab.starter.user.model.User
 import kz.innlab.starter.user.repository.UserRepository
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 import java.util.UUID
 
 @Service
@@ -112,18 +116,7 @@ class AccountManagementService(
             throw IllegalStateException("No password credentials to change")
         }
 
-        // A stolen access token must not be enough to guess the current password and take the
-        // account over permanently.
-        val rule = rateLimitProperties.changePassword
-        val key = "change-password:$userId"
-        if (rateLimitProperties.enabled && !rateLimiter.tryAcquire(key, rule.maxAttempts, rule.windowSeconds)) {
-            throw RateLimitExceededException("Too many attempts. Try again later.", rule.windowSeconds)
-        }
-
-        if (!passwordEncoder.matches(currentPassword, user.passwordHash)) {
-            throw BadCredentialsException("Current password is incorrect")
-        }
-        rateLimiter.reset(key)
+        checkCurrentPassword(user, currentPassword)
 
         user.passwordHash = passwordEncoder.encode(newPassword)
         user.passwordTemporary = false
@@ -137,10 +130,11 @@ class AccountManagementService(
      * Sends verification code to NEW email (proves ownership).
      * Uses userId as identifier for rate limiting (email changes during flow).
      */
-    fun requestEmailChange(userId: UUID, newEmail: String): UUID {
+    fun requestEmailChange(userId: UUID, newEmail: String, proof: ReauthProof): UUID {
         val user = userRepository.findById(userId).orElseThrow {
             ResourceNotFoundException("User not found")
         }
+        requireReauthentication(user, proof)
 
         if (userRepository.findByEmail(newEmail) != null) {
             throw IllegalStateException("Email already in use")
@@ -176,6 +170,8 @@ class AccountManagementService(
         }
         user.email = newEmail
         userRepository.save(user)
+        // Whoever else holds a session must log in again — with the new address now in charge.
+        refreshTokenRepository.deleteAllByUser(user)
     }
 
     /**
@@ -183,12 +179,13 @@ class AccountManagementService(
      * Normalizes to E.164, checks uniqueness, sends OTP via SMS.
      * Uses userId as identifier for rate limiting.
      */
-    fun requestPhoneChange(userId: UUID, phone: String): UUID {
+    fun requestPhoneChange(userId: UUID, phone: String, proof: ReauthProof): UUID {
         val phoneE164 = normalizeToE164(phone)
 
         val user = userRepository.findById(userId).orElseThrow {
             ResourceNotFoundException("User not found")
         }
+        requireReauthentication(user, proof)
 
         if (userRepository.findByPhone(phoneE164) != null) {
             throw IllegalStateException("Phone number already in use")
@@ -228,5 +225,85 @@ class AccountManagementService(
         user.phone = requestedPhone
         user.linkProvider(AuthProvider.LOCAL) // Idempotent — ensures LOCAL provider is present
         userRepository.save(user)
+        refreshTokenRepository.deleteAllByUser(user)
+    }
+
+    /**
+     * Sends a re-authentication code to the account's current email, or its phone if it has none.
+     * Lets an account without a password prove ownership before changing its email or phone.
+     */
+    fun requestReauthCode(userId: UUID): ReauthCodeResponse {
+        val user = userRepository.findById(userId).orElseThrow {
+            ResourceNotFoundException("User not found")
+        }
+        val phone = user.phone
+        val channel = when {
+            user.email.isNotBlank() -> "EMAIL"
+            !phone.isNullOrBlank() -> "PHONE"
+            else -> throw IllegalStateException("Account has no email or phone to send a code to")
+        }
+        val (verificationId, code) = verificationCodeService.createCode(
+            userId.toString(), VerificationPurpose.REAUTH, userId = userId
+        )
+        if (channel == "EMAIL") emailService.sendCode(user.email, code, "REAUTH")
+        else otpDeliveryService.sendCode(phone!!, code)
+        return ReauthCodeResponse(verificationId, channel)
+    }
+
+    /**
+     * A stolen access token must not be enough to move the account to an address the thief
+     * controls. The caller proves ownership with the current password or a re-authentication code.
+     * An account with neither a password nor an address to send a code to (Telegram-only) can
+     * only add one right after logging in.
+     */
+    private fun requireReauthentication(user: User, proof: ReauthProof) {
+        val password = proof.currentPassword
+        val verificationId = proof.reauthVerificationId
+        val code = proof.reauthCode
+        when {
+            password != null -> checkCurrentPassword(user, password)
+            verificationId != null && code != null -> verificationCodeService.verifyCode(
+                verificationId, user.id.toString(), VerificationPurpose.REAUTH, code
+            )
+            user.passwordHash == null && user.email.isBlank() && user.phone.isNullOrBlank() -> {
+                val authTime = proof.authTime
+                if (authTime == null || authTime.isBefore(Instant.now().minusSeconds(FRESH_LOGIN_SECONDS))) {
+                    throw ForbiddenOperationException("Log in again to add an email or phone")
+                }
+            }
+            else -> throw ForbiddenOperationException(
+                "Reauthentication required: send currentPassword, or a code from /users/me/reauth/request"
+            )
+        }
+    }
+
+    // Shares the change-password counter: both guess the same secret.
+    private fun checkCurrentPassword(user: User, currentPassword: String) {
+        val hash = user.passwordHash
+        if (AuthProvider.LOCAL !in user.providers || hash == null) {
+            throw IllegalStateException("No password credentials to change")
+        }
+        val rule = rateLimitProperties.changePassword
+        val key = "change-password:${user.id}"
+        if (rateLimitProperties.enabled && !rateLimiter.tryAcquire(key, rule.maxAttempts, rule.windowSeconds)) {
+            throw RateLimitExceededException("Too many attempts. Try again later.", rule.windowSeconds)
+        }
+        if (!passwordEncoder.matches(currentPassword, hash)) {
+            throw BadCredentialsException("Current password is incorrect")
+        }
+        rateLimiter.reset(key)
+    }
+
+    companion object {
+        private const val FRESH_LOGIN_SECONDS = 300L
     }
 }
+
+/** What the caller offered as proof of account ownership; see [AccountManagementService.requestEmailChange]. */
+data class ReauthProof(
+    val currentPassword: String? = null,
+    val reauthVerificationId: UUID? = null,
+    val reauthCode: String? = null,
+    /** The access token's auth_time: when the caller last logged in. */
+    val authTime: Instant? = null
+)

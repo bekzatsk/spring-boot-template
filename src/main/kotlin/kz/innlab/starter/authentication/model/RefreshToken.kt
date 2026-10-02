@@ -22,7 +22,11 @@ class RefreshToken(
     val tokenHash: String,
 
     @Column(name = "expires_at", nullable = false)
-    val expiresAt: Instant
+    val expiresAt: Instant,
+
+    /** When the user last logged in; carried across rotations. Feeds the access token's auth_time. */
+    @Column(name = "authenticated_at", nullable = false, updatable = false)
+    val authenticatedAt: Instant = Instant.now()
 ) : BaseEntity() {
 
     @Column(nullable = false)
