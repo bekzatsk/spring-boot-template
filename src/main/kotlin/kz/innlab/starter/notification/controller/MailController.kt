@@ -1,5 +1,6 @@
 package kz.innlab.starter.notification.controller
 
+import org.springframework.security.access.prepost.PreAuthorize
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -41,6 +42,7 @@ class MailController(
 
     // --- Send email ---
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/send")
     fun sendEmail(
         @Valid @RequestBody request: SendEmailRequest,
@@ -58,6 +60,7 @@ class MailController(
         return ResponseEntity.accepted().body(MailSendResponse(mailId))
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/send/with-attachments")
     fun sendEmailWithAttachments(
         @Valid @RequestPart("email") request: SendEmailRequest,
@@ -87,6 +90,7 @@ class MailController(
 
     // --- IMAP inbox ---
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/inbox")
     fun listInbox(
         @RequestParam(defaultValue = "0") offset: Int,
@@ -98,6 +102,7 @@ class MailController(
         return ResponseEntity.ok(InboxPageResponse.from(page))
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/inbox/{messageNumber}")
     fun getMessage(
         @PathVariable messageNumber: Int,
@@ -107,6 +112,7 @@ class MailController(
         return ResponseEntity.ok(EmailMessageResponse.from(msg))
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/inbox/{messageNumber}/read")
     fun markRead(
         @PathVariable messageNumber: Int,
@@ -116,6 +122,7 @@ class MailController(
         return ResponseEntity.ok().build()
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/inbox/{messageNumber}/read")
     fun markUnread(
         @PathVariable messageNumber: Int,

@@ -22,6 +22,7 @@ import kz.innlab.starter.config.MailProperties
 import kz.innlab.starter.config.RateLimitProperties
 import kz.innlab.starter.config.NotificationConfig
 import kz.innlab.starter.config.OpenApiConfig
+import kz.innlab.starter.config.MethodSecurityConfig
 import kz.innlab.starter.config.ProductionSafetyConfig
 import kz.innlab.starter.config.RsaKeyConfig
 import kz.innlab.starter.config.SecurityConfig
@@ -76,6 +77,7 @@ import org.springframework.context.annotation.Import
     AuthFlywayConfig::class,
     OpenApiConfig::class,
     ProductionSafetyConfig::class,
+    MethodSecurityConfig::class,
     SmsSchedulerConfig::class,
     NotificationConfig::class,
     MailConfig::class,

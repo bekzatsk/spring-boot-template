@@ -1,5 +1,6 @@
 package kz.innlab.starter.authentication.controller
 
+import kz.innlab.starter.shared.util.authTime
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -19,7 +20,6 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import java.time.Instant
 import java.util.UUID
 
 @RestController
@@ -53,7 +53,7 @@ class AccountManagementController(
     ): ResponseEntity<VerificationIdResponse> {
         val verificationId = accountManagementService.requestEmailChange(
             UUID.fromString(jwt.subject), request.newEmail,
-            ReauthProof(request.currentPassword, request.reauthVerificationId, request.reauthCode, authTime(jwt))
+            ReauthProof(request.currentPassword, request.reauthVerificationId, request.reauthCode, jwt.authTime())
         )
         return ResponseEntity.ok(VerificationIdResponse(verificationId))
     }
@@ -76,7 +76,7 @@ class AccountManagementController(
     ): ResponseEntity<VerificationIdResponse> {
         val verificationId = accountManagementService.requestPhoneChange(
             UUID.fromString(jwt.subject), request.phone,
-            ReauthProof(request.currentPassword, request.reauthVerificationId, request.reauthCode, authTime(jwt))
+            ReauthProof(request.currentPassword, request.reauthVerificationId, request.reauthCode, jwt.authTime())
         )
         return ResponseEntity.ok(VerificationIdResponse(verificationId))
     }
@@ -92,10 +92,4 @@ class AccountManagementController(
         return ResponseEntity.ok().build()
     }
 
-    // Tokens minted before auth_time existed carry none: treated as not fresh.
-    private fun authTime(jwt: Jwt): Instant? = when (val claim = jwt.claims["auth_time"]) {
-        is Instant -> claim
-        is Number -> Instant.ofEpochSecond(claim.toLong())
-        else -> null
-    }
 }

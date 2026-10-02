@@ -4,6 +4,28 @@
 
 ### Security
 
+- **The starter jar no longer ships `application*.yaml`.** They configure this repository's
+  runnable app, but packaged they loaded into every consumer without a file of the same name. A
+  consumer running with the `dev` profile and no `application-dev.yaml` of its own got every
+  `dev-code` override, so anyone could log in with `123456`. **This affects 0.1.3 and earlier:**
+  upgrade, or ship your own `application-dev.yaml`. CI now fails if the files reappear.
+- **Email code identifiers ignore letter case.** Reset, verify and resend keyed codes on the raw
+  input, so every case variant of an address had its own code and guessing budget — unlimited
+  guessing, and a way around the email-OTP takeover fix.
+- **An unverified account cannot change its email or phone**, and when email-code login claims an
+  unverified account it also clears the phone and drops push devices (new
+  `DeviceRegistrationRevoker` port). Completing an email change marks the address verified.
+- **Admin-only handlers are enforced with `@PreAuthorize`**, not only by URL rules, so they stay
+  closed when `app.auth.security.enabled=false` or the consumer defines its own chain.
+  `AccessDeniedException` answers `403`. The starter's `jwtDecoder` is `@Primary`, which also fixes
+  startup with the starter's chain disabled (two `JwtDecoder` candidates).
+- **Account-handover admin actions need a recent login**: password, email, phone and role changes,
+  deletion and creation of a user require the token's `auth_time` within
+  `app.auth.security.admin-fresh-login-seconds` (default 900). An admin email change ends the
+  target's sessions.
+- **Last-admin check counts admins in a separate statement after locking them**; on PostgreSQL the
+  locking query's own result still counted an admin demoted by a concurrent transaction.
+- **Actuator endpoints other than health are admin-only.**
 - **The in-memory rate limiter no longer locks newcomers out when full.** At capacity it refused
   every key it was not already tracking, so filling it with fresh emails answered `429` to every
   other user. It now evicts expired entries, then the lowest-count ones; a flood of fresh keys
@@ -47,6 +69,13 @@
   drop that reference, or add the dependency itself if it really runs an authorization server.
 - The admin user list answers `400` for sort properties outside the allowlist.
 - New dependency: `org.jsoup:jsoup`.
+- `application*.yaml` are no longer in the jar. Settings you relied on from them (for example
+  `app.auth.email-verification.enabled: true`, `spring.threads.virtual.enabled`, springdoc paths)
+  now fall back to the code defaults unless your application sets them.
+- Accounts with an unverified email get `403` on `change-email` / `change-phone` until they verify.
+- Admin password, email, phone, role, delete and create calls answer `403` when the admin's login is
+  older than 15 minutes; clients must send the admin through login again.
+- Signed-in non-admins get `403` on `/actuator/**` other than health.
 
 ## 0.1.4 — 2026-10-02
 

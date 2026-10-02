@@ -81,4 +81,25 @@ class OtpVerifyBudgetIntegrationTest {
         val third = freshCode()
         verificationCodeService.verifyCode(third.verificationId, email, purpose, third.code)
     }
+
+    @Test
+    fun `case variants of an email share one code and one budget`() {
+        val reset = VerificationPurpose.FORGOT_PASSWORD
+        rateLimiter.reset("otp-verify:$reset:case@example.com")
+        val issued = verificationCodeService.createCode("Case@Example.com", reset)
+
+        // A second variant within the minute hits the same cooldown instead of a fresh code.
+        assertThatThrownBy { verificationCodeService.createCode("CASE@EXAMPLE.COM", reset) }
+            .isInstanceOf(IllegalStateException::class.java)
+
+        // Guesses through different variants all count against the one budget of 4.
+        listOf("CASE@example.com", "case@EXAMPLE.com", "Case@example.COM").forEach { variant ->
+            assertThatThrownBy { verificationCodeService.verifyCode(issued.verificationId, variant, reset, wrong(issued.code)) }
+                .isInstanceOf(BadCredentialsException::class.java)
+        }
+        assertThatThrownBy { verificationCodeService.verifyCode(issued.verificationId, "cAsE@example.com", reset, wrong(issued.code)) }
+            .isInstanceOf(BadCredentialsException::class.java)
+        assertThatThrownBy { verificationCodeService.verifyCode(issued.verificationId, "case@example.com", reset, issued.code) }
+            .isInstanceOf(RateLimitExceededException::class.java)
+    }
 }

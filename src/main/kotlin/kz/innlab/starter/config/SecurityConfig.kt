@@ -102,10 +102,13 @@ class SecurityConfig(
                     authorize(path, permitAll)
                 }
                 authorize("/api/**", authenticated)
-                // Health stays open for container healthchecks; every other actuator endpoint
-                // (env, beans, mappings, …) requires authentication.
+                // Health stays open for container healthchecks. Every other actuator endpoint is
+                // admin-only: a self-registered user must not reach heapdump (signing key in
+                // memory), env or loggers if a consumer exposes them. A consumer can still open a
+                // specific one (e.g. a metrics scrape) through public-paths, which match earlier.
                 authorize("/actuator/health", permitAll)
                 authorize("/actuator/health/**", permitAll)
+                authorize("/actuator/**", hasRole("ADMIN"))
                 // Fail secure: anything a consumer adds outside /api/** is protected by default
                 // and must be opted into via app.auth.security.public-paths.
                 authorize(anyRequest, authenticated)

@@ -1,5 +1,8 @@
 package kz.innlab.starter
 
+import kz.innlab.starter.notification.repository.DeviceTokenRepository
+import kz.innlab.starter.notification.model.Platform
+import kz.innlab.starter.notification.model.DeviceToken
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
 import kz.innlab.starter.authentication.repository.VerificationCodeRepository
 import kz.innlab.starter.authentication.service.EmailService
@@ -42,12 +45,16 @@ class EmailOtpIntegrationTest {
     @Autowired
     private lateinit var verificationCodeRepository: VerificationCodeRepository
 
+    @Autowired
+    private lateinit var deviceTokenRepository: DeviceTokenRepository
+
     private val email = "otp@example.com"
 
     @BeforeEach
     fun cleanUp() {
         refreshTokenRepository.deleteAll()
         verificationCodeRepository.deleteAll()
+        deviceTokenRepository.deleteAll()
         userRepository.deleteAll()
     }
 
@@ -133,8 +140,20 @@ class EmailOtpIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"email":"$email","password":"AttackerPassword123"}""")
         ).andExpect(status().isCreated).andReturn()
-        val attackerRefreshToken = JsonMapper.builder().build()
-            .readTree(registerResult.response.contentAsString).get("refreshToken").asText()
+        val registered = JsonMapper.builder().build().readTree(registerResult.response.contentAsString)
+        val attackerRefreshToken = registered.get("refreshToken").asText()
+        val attackerAccess = registered.get("accessToken").asText()
+
+        // The registrant cannot attach a phone before the address is verified...
+        mockMvc.perform(
+            post("/api/v1/users/me/change-phone/request")
+                .header("Authorization", "Bearer $attackerAccess")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"currentPassword":"AttackerPassword123","phone":"+77005550000"}""")
+        ).andExpect(status().isForbidden)
+        // ...and a push device registered now does not survive the owner's claim.
+        val attackerId = requireNotNull(userRepository.findByEmail(email)).id
+        deviceTokenRepository.save(DeviceToken(attackerId, Platform.ANDROID, "attacker-device", "attacker-phone"))
 
         // The real owner signs in with a code sent to the address.
         val requestResult = mockMvc.perform(
@@ -151,6 +170,7 @@ class EmailOtpIntegrationTest {
         val user = requireNotNull(userRepository.findByEmail(email))
         assert(user.emailVerified)
         assert(user.passwordHash == null) { "registrant's password must not survive ownership proof" }
+        assert(deviceTokenRepository.findByUserId(user.id).isEmpty()) { "registrant's devices must be dropped" }
 
         mockMvc.perform(
             post("/api/v1/auth/refresh")

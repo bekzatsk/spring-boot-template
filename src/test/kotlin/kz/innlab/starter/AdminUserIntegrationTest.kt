@@ -1,5 +1,7 @@
 package kz.innlab.starter
 
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
+import java.time.Instant
 import kz.innlab.starter.user.repository.AdminAuditLogRepository
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
@@ -174,5 +176,28 @@ class AdminUserIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"name": "M", "picture": "javascript:alert(1)"}""")
         ).andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `account-handover changes need a recent admin login`() {
+        val admin = userRepository.findByEmail("admin@example.com")!!
+        val member = userRepository.findByEmail("member@example.com")!!
+        val staleAdmin = tokenService.generateAccessToken(
+            admin.id, setOf(Role.USER, Role.ADMIN), authTime = Instant.now().minusSeconds(3600)
+        )
+        val requests = listOf(
+            patch("/api/v1/admin/users/${member.id}/password").contentType(MediaType.APPLICATION_JSON)
+                .content("""{"newPassword": "AnotherPass123"}"""),
+            patch("/api/v1/admin/users/${admin.id}/email").contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email": "thief@example.com"}"""),
+            post("/api/v1/admin/users").contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email": "backdoor@example.com", "password": "SecurePass123", "roles": ["ADMIN"]}"""),
+            delete("/api/v1/admin/users/${member.id}")
+        )
+        requests.forEach { request ->
+            mockMvc.perform(request.header("Authorization", "Bearer $staleAdmin")).andExpect(status().isForbidden)
+        }
+        assert(userRepository.findByEmail("backdoor@example.com") == null)
+        assert(userRepository.findByEmail("admin@example.com") != null)
     }
 }

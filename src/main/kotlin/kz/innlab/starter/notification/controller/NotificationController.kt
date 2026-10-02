@@ -1,5 +1,6 @@
 package kz.innlab.starter.notification.controller
 
+import org.springframework.security.access.prepost.PreAuthorize
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -104,6 +105,7 @@ class NotificationController(
         return ResponseEntity.accepted().body(NotificationSendResponse.queued(historyId))
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/send/topic")
     fun sendToTopic(
         @Valid @RequestBody request: SendToTopicRequest,

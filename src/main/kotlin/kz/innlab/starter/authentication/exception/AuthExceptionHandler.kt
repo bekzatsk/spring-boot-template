@@ -1,5 +1,6 @@
 package kz.innlab.starter.authentication.exception
 
+import org.springframework.security.access.AccessDeniedException
 import kz.innlab.starter.shared.error.ErrorResponse
 import kz.innlab.starter.shared.error.ForbiddenOperationException
 import kz.innlab.starter.shared.error.ResourceNotFoundException
@@ -87,6 +88,14 @@ class AuthExceptionHandler {
                     status = 429
                 )
             )
+
+    // @PreAuthorize refusals reach the controller advice, not the security filter's access-denied
+    // handler; without this the catch-all below turned them into 500.
+    @ExceptionHandler(AccessDeniedException::class)
+    fun handleAccessDenied(ex: AccessDeniedException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+            ErrorResponse(error = "Forbidden", message = "Access denied", status = 403)
+        )
 
     @ExceptionHandler(ForbiddenOperationException::class)
     fun handleForbidden(ex: ForbiddenOperationException): ResponseEntity<ErrorResponse> =

@@ -200,6 +200,9 @@ class AccountManagementService(
             ResourceNotFoundException("User not found")
         }
         user.email = newEmail
+        // The code just went to the new address, so it is proven.
+        user.emailVerified = true
+        user.requiredActions.remove(RequiredAction.VERIFY_EMAIL)
         userRepository.save(user)
         // Whoever else holds a session must log in again — with the new address now in charge.
         refreshTokenRepository.deleteAllByUser(user)
@@ -288,6 +291,12 @@ class AccountManagementService(
      * only add one right after logging in.
      */
     private fun requireReauthentication(user: User, proof: ReauthProof) {
+        // An unverified address may belong to someone else, who has not signed in yet. Letting
+        // the registrant attach a phone or swap the address first gives them a way back in after
+        // the owner claims the account through email-code login.
+        if (!user.emailVerified && user.email.isNotBlank()) {
+            throw ForbiddenOperationException("Verify your email address before changing your email or phone")
+        }
         val password = proof.currentPassword
         val verificationId = proof.reauthVerificationId
         val code = proof.reauthCode
