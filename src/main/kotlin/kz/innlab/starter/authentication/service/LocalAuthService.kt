@@ -49,9 +49,11 @@ class LocalAuthService(
         newUser.linkProvider(AuthProvider.LOCAL)
         newUser.name = name
         newUser.passwordHash = passwordEncoder.encode(rawPassword)
+        // Registration proves nothing about the address, whether or not verification is enforced.
+        // Email-OTP login relies on this flag to tell a pre-registered account from a proven one.
+        newUser.emailVerified = false
         if (authTokenProperties.emailVerification.enabled) {
             // The required action gates protected APIs until email ownership is verified.
-            newUser.emailVerified = false
             newUser.requiredActions.add(RequiredAction.VERIFY_EMAIL)
         }
         val user = userRepository.save(newUser)

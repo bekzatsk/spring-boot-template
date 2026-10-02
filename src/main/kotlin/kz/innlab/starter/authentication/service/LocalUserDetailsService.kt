@@ -3,7 +3,6 @@ package kz.innlab.starter.authentication.service
 import kz.innlab.starter.user.model.AuthProvider
 import kz.innlab.starter.user.repository.UserRepository
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
@@ -29,7 +28,7 @@ class LocalUserDetailsService(
         }
 
         val passwordHash = user.passwordHash
-            ?: throw BadCredentialsException("No password set")
+            ?: throw UsernameNotFoundException("No password set for email: $email")
 
         return org.springframework.security.core.userdetails.User
             .withUsername(email)

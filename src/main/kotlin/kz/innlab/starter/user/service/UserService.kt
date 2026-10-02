@@ -17,7 +17,8 @@ import java.util.UUID
 class UserService(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
-    private val authTokenProperties: AuthTokenProperties
+    private val authTokenProperties: AuthTokenProperties,
+    private val refreshTokenRevoker: RefreshTokenRevoker
 ) {
 
     /**
@@ -138,6 +139,13 @@ class UserService(
     fun findOrCreateEmailOtpUser(email: String): User {
         val existing = userRepository.findByEmailIgnoreCase(email)
         if (existing != null) {
+            if (!existing.emailVerified) {
+                // Whoever registered this unverified account never proved they own the address,
+                // and the code just proved someone else does. Drop the registrant's password and
+                // sessions, or they keep access to the account the real owner is now using.
+                existing.passwordHash = null
+                refreshTokenRevoker.revokeAllFor(existing)
+            }
             existing.linkProvider(AuthProvider.LOCAL)
             existing.emailVerified = true
             existing.requiredActions.remove(RequiredAction.VERIFY_EMAIL)

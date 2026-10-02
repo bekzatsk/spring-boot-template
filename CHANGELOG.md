@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+### Security
+
+- **Account takeover through email-OTP login.** Anyone could register a victim's address with
+  their own password; when the owner later signed in with an email code, that account was adopted
+  with the registrant's password and refresh tokens intact. Email-OTP login now clears the password
+  and revokes all refresh tokens of an account whose address was never verified.
+- **Mail send is admin-only.** `POST /api/v1/mail/send` and `/send/with-attachments` were open to
+  every authenticated user — a phishing relay from the application's domain that the per-user
+  quota could not stop across accounts. They now require `ROLE_ADMIN`, like the inbox.
+  `to` must be a single valid address; subject and bodies are size-limited.
+
+### Changed (breaking)
+
+- Password registrations start with `emailVerified = false` even when
+  `app.auth.email-verification.enabled=false`. The account is not gated, but the profile no
+  longer claims an address nobody proved. Users created before this release keep their value.
+- `UserService` takes a `RefreshTokenRevoker` constructor argument. Applications that construct
+  or subclass it must pass one.
+- Login with a password for an account that has none now answers `401` instead of `500`.
+
 ## 0.1.2
 
 ### Changed
