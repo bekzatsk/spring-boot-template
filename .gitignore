@@ -47,3 +47,4 @@ jwt-keystore.*
 # Claude Code
 .claude/
 .claude-flow/
+secrets/

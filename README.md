@@ -384,9 +384,11 @@ Generate a keystore:
 keytool -genkey -alias jwt -keyalg RSA -keysize 2048 \
   -keystore jwt.p12 -storetype PKCS12
 
-# Or use the included script:
+# Or use the included script (writes secrets/jwt-keystore.p12 with a generated password):
 ./scripts/generate-keystore.sh
 ```
+
+Never put the keystore under `src/main/resources`: it would be packaged into the jar.
 
 Dev profile uses in-memory RSA keys — no keystore needed.
 
