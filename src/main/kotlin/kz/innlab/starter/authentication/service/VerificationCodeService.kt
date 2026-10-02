@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.ServletRequestAttributes
 import java.time.Instant
+import java.util.Locale
 import java.util.UUID
 
 /**
@@ -43,15 +44,23 @@ class VerificationCodeService(
 
         private const val RATE_LIMIT_SECONDS = 60L
         private const val MAX_ATTEMPTS = 3
+
+        /** Purposes whose identifier is an email address. */
+        private val EMAIL_PURPOSES = setOf(
+            VerificationPurpose.FORGOT_PASSWORD,
+            VerificationPurpose.VERIFY_EMAIL,
+            VerificationPurpose.EMAIL_LOGIN
+        )
     }
 
     @Transactional
     fun createCode(
-        identifier: String,
+        rawIdentifier: String,
         purpose: VerificationPurpose,
         newValue: String? = null,
         userId: UUID? = null
     ): IssuedCode {
+        val identifier = normalizeIdentifier(rawIdentifier, purpose)
         val now = Instant.now()
 
         // Rate limit: at most one code per identifier+purpose per minute
@@ -91,10 +100,11 @@ class VerificationCodeService(
     @Transactional
     fun verifyCode(
         verificationId: UUID,
-        identifier: String,
+        rawIdentifier: String,
         purpose: VerificationPurpose,
         code: String
     ): VerificationCode {
+        val identifier = normalizeIdentifier(rawIdentifier, purpose)
         // Budget across codes: requesting a new code resets the per-code attempt counter below,
         // so on its own that counter allows unlimited guessing at one code request a minute.
         val budgetKey = "otp-verify:$purpose:$identifier"
@@ -170,6 +180,15 @@ class VerificationCodeService(
     // Null outside an HTTP request (a scheduled job, a test calling the service directly).
     private fun currentClientAddress(): String? =
         (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)?.request?.remoteAddr
+
+    /**
+     * Email identifiers are compared without case: the cooldown, the guessing budget and the code
+     * row are all keyed on the identifier, and keying them on the raw input gave every case
+     * variant of an address (VICTIM@x, Victim@x, ...) its own code and its own budget — unlimited
+     * guessing at one request a minute. Other identifiers (E.164 phones, user ids) are exact.
+     */
+    private fun normalizeIdentifier(identifier: String, purpose: VerificationPurpose): String =
+        if (purpose in EMAIL_PURPOSES) identifier.trim().lowercase(Locale.ROOT) else identifier
 
     private fun expiryMinutesFor(purpose: VerificationPurpose): Long =
         if (purpose == VerificationPurpose.PHONE_LOGIN || purpose == VerificationPurpose.EMAIL_LOGIN) {
