@@ -136,14 +136,32 @@ class EmailVerificationIntegrationTest {
     }
 
     @Test
-    fun `resend for unknown email returns 202 with null verificationId (anti-enumeration)`() {
+    fun `verify-email for an already verified address fails like a wrong code`() {
+        val getCode = captureEmailCodeOnSend()
+        register("twice@example.com")
+        val code = getCode()
+        val verificationId = verificationCodeRepository.findAll().first { it.identifier == "twice@example.com" }.id
+        val verify = {
+            mockMvc.perform(
+                post("/api/v1/auth/verify-email")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"email": "twice@example.com", "verificationId": "$verificationId", "code": "$code"}""")
+            )
+        }
+        verify().andExpect(status().isOk)
+        // Used to answer 200 without checking the code, which marked the address as a verified account.
+        verify().andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `resend for unknown email answers like a known one`() {
         mockMvc.perform(
             post("/api/v1/auth/verify-email/resend")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"email": "ghost@example.com"}""")
         )
             .andExpect(status().isAccepted)
-            .andExpect(jsonPath("$.verificationId").doesNotExist())
+            .andExpect(jsonPath("$.verificationId").exists())
 
         verify(emailService, never()).sendCode(anyString(), anyString(), anyString())
     }

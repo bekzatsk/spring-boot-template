@@ -11,6 +11,7 @@ import kz.innlab.starter.authentication.controller.TelegramAuthController
 import kz.innlab.starter.authentication.controller.TelegramWebhookController
 import kz.innlab.starter.authentication.cookie.AuthResponseCookieAdvice
 import kz.innlab.starter.authentication.exception.AuthExceptionHandler
+import kz.innlab.starter.authentication.exception.NotFoundExceptionHandler
 import kz.innlab.starter.authentication.filter.ApiAccessDeniedHandler
 import kz.innlab.starter.authentication.filter.ApiAuthenticationEntryPoint
 import kz.innlab.starter.authentication.filter.RequiredActionFilter
@@ -83,6 +84,7 @@ class AutoConfigurationContractTest {
         AuthController::class,
         AuthResponseCookieAdvice::class,
         AuthExceptionHandler::class,
+        NotFoundExceptionHandler::class,
         ApiAccessDeniedHandler::class,
         ApiAuthenticationEntryPoint::class,
         RequiredActionFilter::class,

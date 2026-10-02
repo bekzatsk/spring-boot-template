@@ -16,7 +16,14 @@ data class RateLimitProperties(
     /** Password check on /auth/local/login, keyed by email and by client address. */
     @field:Valid val login: Rule = Rule(maxAttempts = 10, windowSeconds = 300),
     /** Current-password check on /users/me/change-password, keyed by user id. */
-    @field:Valid val changePassword: Rule = Rule(maxAttempts = 5, windowSeconds = 300)
+    @field:Valid val changePassword: Rule = Rule(maxAttempts = 5, windowSeconds = 300),
+    /**
+     * Code checks per identifier and purpose, across codes. The per-code limit alone resets with
+     * every new code, which leaves three guesses a minute for as long as the attacker likes.
+     * The window is long on purpose: anyone who knows the address can use up the budget, so
+     * this trades a day of code login for the target against an open-ended guessing run.
+     */
+    @field:Valid val otpVerify: Rule = Rule(maxAttempts = 10, windowSeconds = 86_400)
 ) {
     data class Rule(
         @field:Positive val maxAttempts: Int = 10,

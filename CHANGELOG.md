@@ -13,6 +13,46 @@
   quota could not stop across accounts. They now require `ROLE_ADMIN`, like the inbox.
   `to` must be a single valid address; subject and bodies are size-limited.
 
+- **Production guards cover more than the literal `prod` profile.** `ProductionSafetyConfig` and the
+  JWT keystore check now run under any profile in `app.security.production-profiles`
+  (default `prod,production`). A deployment running as `production` used to start with an
+  in-memory signing key, accepted dev OTP overrides, and skipped every other check.
+- **Swagger UI and the OpenAPI spec are no longer public.** Set
+  `app.auth.security.public-api-docs=true` to serve them without authentication (the dev profile does).
+- **Admin rules are evaluated before `public-paths`**, so an entry such as `/api/**` can no longer
+  open `/api/v1/admin/**`, the shared inbox, topic broadcast or mail send.
+- **The starter's exception handler is scoped to its own controllers.** It used to answer for the
+  whole application and return the message of any `IllegalStateException`/`IllegalArgumentException`
+  the consumer's code threw.
+- **An FCM token belongs to one user.** Registering a token another user holds removes their
+  registration, so the previous owner of a device can no longer push to whoever signs in on it next.
+  Migration `V14` keeps the most recent registration of each duplicated token and adds a unique index.
+- **One-time codes have a guessing budget across codes.** Each code allowed 3 attempts, but a new
+  code (one a minute) started a fresh count, so an attacker could keep guessing indefinitely —
+  about 28 hours on average to hit a 4-digit phone code. Code checks are now limited per identifier
+  and purpose across codes: `app.auth.rate-limit.otp-verify` (default 10 per 24 hours), answered
+  with `429` and `Retry-After`; a correct code clears the count. Anyone who knows an address can
+  spend that budget, which blocks code login for that address for the window — lower the window if
+  that trade-off does not suit you.
+- **Changing email or phone requires proof of ownership.** A stolen access token was enough to
+  move an account to the thief's address and then take it over through password reset or code
+  login. `/users/me/change-email/request` and `/change-phone/request` now take `currentPassword`,
+  or `reauthVerificationId` + `reauthCode` from the new `POST /users/me/reauth/request` (a code
+  sent to the current email, or phone if there is no email). An account with no password, email or
+  phone (Telegram-only) can add one only within 5 minutes of logging in. Completing either change
+  revokes all refresh tokens.
+- **Access tokens carry `auth_time`**, the time of the login they descend from. Refresh keeps it:
+  migration `V15` adds `refresh_tokens.authenticated_at`, copied on every rotation.
+- **Password reset, verification resend and email verification no longer reveal which addresses
+  have accounts.** `forgot-password` and `verify-email/resend` answered `{"verificationId": null}`
+  for unknown addresses and a UUID for real ones, took longer for real ones (synchronous mail
+  send), and only real ones hit the once-a-minute cooldown. They now return a verificationId either
+  way (a random one when nothing is sent), apply the cooldown to every address, hash a throwaway
+  code when there is nothing to send, and send mail on the starter's executor. `verify-email` used
+  to answer `200` for any already-verified address without checking the code.
+- **Changing a user's roles revokes their refresh tokens**, so a demoted admin cannot keep minting
+  tokens that carry the old roles.
+
 ### Changed (breaking)
 
 - Password registrations start with `emailVerified = false` even when
@@ -21,6 +61,27 @@
 - `UserService` takes a `RefreshTokenRevoker` constructor argument. Applications that construct
   or subclass it must pass one.
 - Login with a password for an account that has none now answers `401` instead of `500`.
+- Swagger UI and `/v3/api-docs` require authentication unless `app.auth.security.public-api-docs=true`.
+- Exceptions thrown by the consumer's own controllers are no longer turned into the starter's
+  `ErrorResponse`; declare your own `@RestControllerAdvice` if you relied on it.
+- Migration `V14` deletes all but the most recent registration of each duplicated FCM token.
+- `/users/me/change-email/request` and `/change-phone/request` answer `403` without `currentPassword`
+  or a re-authentication code. Clients must collect one before starting the change.
+- `RefreshTokenService.rotate` returns `RotatedRefreshToken` instead of `Pair<User, String>`. It still
+  destructures as `(user, rawToken)`.
+- `AccountManagementService.requestEmailChange`/`requestPhoneChange` take a `ReauthProof`.
+- Re-authentication codes reach `EmailService.sendCode` with purpose `"REAUTH"`; custom
+  implementations that pick a template by purpose need one for it.
+- `forgot-password` and `verify-email/resend` always return a `verificationId`; clients can no
+  longer use `null` to say "no such account". `AccountManagementService.requestPasswordReset` and
+  `resendEmailVerification` return `UUID` instead of `UUID?`.
+- `verify-email` is no longer idempotent: repeating it after success answers `401`, as a spent code.
+- Reset and resend codes are sent asynchronously on `authStarterTaskExecutor`; a failure to send
+  no longer fails the request.
+
+### Fixed
+
+- The "maximum device tokens" error printed the properties object instead of the limit.
 
 ## 0.1.2
 

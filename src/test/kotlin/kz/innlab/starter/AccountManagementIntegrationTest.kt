@@ -1,5 +1,10 @@
 package kz.innlab.starter
 
+import kz.innlab.starter.shared.ratelimit.RateLimiter
+import java.time.Duration
+import org.awaitility.Awaitility.await
+import java.time.Instant
+import org.springframework.security.oauth2.jwt.JwtDecoder
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
 import kz.innlab.starter.authentication.repository.VerificationCodeRepository
 import kz.innlab.starter.authentication.service.EmailService
@@ -60,11 +65,21 @@ class AccountManagementIntegrationTest {
     @Autowired
     private lateinit var refreshTokenService: RefreshTokenService
 
+    @Autowired
+    private lateinit var jwtDecoder: JwtDecoder
+
+    @Autowired
+    private lateinit var rateLimiter: RateLimiter
+
     @BeforeEach
     fun cleanUp() {
         refreshTokenRepository.deleteAll()
         verificationCodeRepository.deleteAll()
         userRepository.deleteAll()
+        // The request cooldown lives in the shared in-memory limiter, not in the wiped tables.
+        listOf("test@example.com", "unknown@example.com", "rate-test@example.com").forEach { email ->
+            rateLimiter.reset("code-request:FORGOT_PASSWORD:$email")
+        }
     }
 
     // --- Helpers ---
@@ -87,7 +102,11 @@ class AccountManagementIntegrationTest {
             capturedCode = invocation.arguments[1] as String
             null
         }.`when`(emailService).sendCode(anyString(), anyString(), anyString())
-        return { capturedCode ?: error("emailService.sendCode was not called") }
+        // Reset and resend codes are sent off the request thread.
+        return {
+            await().atMost(Duration.ofSeconds(5)).until { capturedCode != null }
+            capturedCode!!
+        }
     }
 
     private fun capturePhoneCodeOnSend(): () -> String {
@@ -143,7 +162,7 @@ class AccountManagementIntegrationTest {
     }
 
     @Test
-    fun `forgot password unknown email returns 202 with null verificationId`() {
+    fun `forgot password unknown email answers like a known one`() {
         doNothing().`when`(emailService).sendCode(anyString(), anyString(), anyString())
 
         mockMvc.perform(
@@ -152,7 +171,15 @@ class AccountManagementIntegrationTest {
                 .content("""{"email": "unknown@example.com"}""")
         )
             .andExpect(status().isAccepted)
-            .andExpect(jsonPath("$.verificationId").doesNotExist())
+            .andExpect(jsonPath("$.verificationId").exists())
+
+        // Same cooldown as a real account, or a second request would tell them apart.
+        mockMvc.perform(
+            post("/api/v1/auth/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email": "unknown@example.com"}""")
+        )
+            .andExpect(status().isConflict)
 
         // EmailService should NOT have been called
         verify(emailService, never()).sendCode(anyString(), anyString(), anyString())
@@ -334,7 +361,7 @@ class AccountManagementIntegrationTest {
             post("/api/v1/users/me/change-email/request")
                 .header("Authorization", "Bearer $accessToken")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"newEmail": "new@example.com"}""")
+                .content("""{"currentPassword": "OldPassword123", "newEmail": "new@example.com"}""")
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.verificationId").exists())
@@ -367,7 +394,7 @@ class AccountManagementIntegrationTest {
             post("/api/v1/users/me/change-email/request")
                 .header("Authorization", "Bearer $accessToken")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"newEmail": "user2@example.com"}""")
+                .content("""{"currentPassword": "OldPassword123", "newEmail": "user2@example.com"}""")
         )
             .andExpect(status().isConflict)
     }
@@ -383,7 +410,7 @@ class AccountManagementIntegrationTest {
             post("/api/v1/users/me/change-email/request")
                 .header("Authorization", "Bearer $accessToken")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"newEmail": "contested@example.com"}""")
+                .content("""{"currentPassword": "OldPassword123", "newEmail": "contested@example.com"}""")
         )
             .andExpect(status().isOk)
             .andReturn()
@@ -418,7 +445,7 @@ class AccountManagementIntegrationTest {
             post("/api/v1/users/me/change-phone/request")
                 .header("Authorization", "Bearer $accessToken")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"phone": "+77009876543"}""")
+                .content("""{"currentPassword": "OldPassword123", "phone": "+77009876543"}""")
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.verificationId").exists())
@@ -449,7 +476,7 @@ class AccountManagementIntegrationTest {
             post("/api/v1/users/me/change-phone/request")
                 .header("Authorization", "Bearer $accessToken")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"phone":"+77009876543"}""")
+                .content("""{"currentPassword": "OldPassword123", "phone":"+77009876543"}""")
         ).andExpect(status().isOk).andReturn()
 
         val verificationId = extractVerificationId(requestResult)
@@ -481,7 +508,7 @@ class AccountManagementIntegrationTest {
             post("/api/v1/users/me/change-phone/request")
                 .header("Authorization", "Bearer $accessToken")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"phone": "+77001111111"}""")
+                .content("""{"currentPassword": "OldPassword123", "phone": "+77001111111"}""")
         )
             .andExpect(status().isConflict)
     }
@@ -495,7 +522,7 @@ class AccountManagementIntegrationTest {
             post("/api/v1/users/me/change-phone/request")
                 .header("Authorization", "Bearer $accessToken")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"phone": "not-a-number"}""")
+                .content("""{"currentPassword": "OldPassword123", "phone": "not-a-number"}""")
         )
             .andExpect(status().isBadRequest)
     }
@@ -522,6 +549,119 @@ class AccountManagementIntegrationTest {
                 .content("""{"email": "rate-test@example.com"}""")
         )
             .andExpect(status().isConflict)
+    }
+
+    // --- Re-authentication before identity changes ---
+
+    @Test
+    fun `change email without proof of ownership returns 403`() {
+        val user = createLocalUser(email = "victim@example.com")
+        mockMvc.perform(
+            post("/api/v1/users/me/change-email/request")
+                .header("Authorization", "Bearer ${generateAccessToken(user)}")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"newEmail": "attacker@example.com"}""")
+        ).andExpect(status().isForbidden)
+        verify(emailService, never()).sendCode(anyString(), anyString(), anyString())
+    }
+
+    @Test
+    fun `change phone with a wrong password returns 401`() {
+        val user = createLocalUser(email = "victim-phone@example.com")
+        mockMvc.perform(
+            post("/api/v1/users/me/change-phone/request")
+                .header("Authorization", "Bearer ${generateAccessToken(user)}")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"currentPassword": "guess", "phone": "+77009876543"}""")
+        ).andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `passwordless account proves ownership with a code sent to its current email`() {
+        val user = userRepository.save(User(email = "otp-only@example.com").also {
+            it.linkProvider(AuthProvider.LOCAL)
+        })
+        val accessToken = generateAccessToken(user)
+        val getCode = captureEmailCodeOnSend()
+
+        val reauth = mockMvc.perform(
+            post("/api/v1/users/me/reauth/request").header("Authorization", "Bearer $accessToken")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.channel").value("EMAIL"))
+            .andReturn()
+        verify(emailService).sendCode("otp-only@example.com", getCode(), "REAUTH")
+
+        mockMvc.perform(
+            post("/api/v1/users/me/change-email/request")
+                .header("Authorization", "Bearer $accessToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"newEmail": "moved@example.com", "reauthVerificationId": "${extractVerificationId(reauth)}", "reauthCode": "${getCode()}"}""")
+        ).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `account with no password, email or phone may add one only right after logging in`() {
+        val user = userRepository.save(User(email = "").also { it.telegramUserId = 4242L })
+        val stale = tokenService.generateAccessToken(user.id, user.roles, authTime = Instant.now().minusSeconds(3600))
+        val fresh = tokenService.generateAccessToken(user.id, user.roles)
+        doNothing().`when`(emailService).sendCode(anyString(), anyString(), anyString())
+
+        val request = { token: String ->
+            mockMvc.perform(
+                post("/api/v1/users/me/change-email/request")
+                    .header("Authorization", "Bearer $token")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"newEmail": "first@example.com"}""")
+            )
+        }
+        request(stale).andExpect(status().isForbidden)
+        request(fresh).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `changing email ends every session`() {
+        val user = createLocalUser(email = "sessions@example.com")
+        val refreshToken = refreshTokenService.createToken(user)
+        val accessToken = generateAccessToken(user)
+        val getCode = captureEmailCodeOnSend()
+
+        val requestResult = mockMvc.perform(
+            post("/api/v1/users/me/change-email/request")
+                .header("Authorization", "Bearer $accessToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"currentPassword": "OldPassword123", "newEmail": "sessions-new@example.com"}""")
+        ).andExpect(status().isOk).andReturn()
+        mockMvc.perform(
+            post("/api/v1/users/me/change-email/verify")
+                .header("Authorization", "Bearer $accessToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"verificationId": "${extractVerificationId(requestResult)}", "code": "${getCode()}"}""")
+        ).andExpect(status().isOk)
+
+        mockMvc.perform(
+            post("/api/v1/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"refreshToken": "$refreshToken"}""")
+        ).andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `refreshed access token keeps the original login time`() {
+        val user = createLocalUser(email = "auth-time@example.com")
+        val refreshToken = refreshTokenService.createToken(user)
+        val loggedInAt = refreshTokenRepository.findAll().single().authenticatedAt
+
+        val result = mockMvc.perform(
+            post("/api/v1/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"refreshToken": "$refreshToken"}""")
+        ).andExpect(status().isOk).andReturn()
+        val accessToken = JsonMapper.builder().build()
+            .readTree(result.response.contentAsString).get("accessToken").asText()
+
+        val authTime = jwtDecoder.decode(accessToken).claims["auth_time"] as Number
+        assert(authTime.toLong() == loggedInAt.epochSecond)
     }
 
     // --- Endpoint Protection Test ---

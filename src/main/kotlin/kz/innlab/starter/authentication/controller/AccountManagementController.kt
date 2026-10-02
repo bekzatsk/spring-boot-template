@@ -9,7 +9,9 @@ import kz.innlab.starter.authentication.dto.ChangePasswordRequest
 import kz.innlab.starter.authentication.dto.ChangePhoneRequest
 import kz.innlab.starter.authentication.dto.VerifyChangeEmailRequest
 import kz.innlab.starter.authentication.dto.VerifyChangePhoneRequest
+import kz.innlab.starter.authentication.dto.ReauthCodeResponse
 import kz.innlab.starter.authentication.service.AccountManagementService
+import kz.innlab.starter.authentication.service.ReauthProof
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.time.Instant
 import java.util.UUID
 
 @RestController
@@ -37,13 +40,20 @@ class AccountManagementController(
         return ResponseEntity.ok().build()
     }
 
+    @PostMapping("/reauth/request")
+    fun requestReauthCode(
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt
+    ): ResponseEntity<ReauthCodeResponse> =
+        ResponseEntity.ok(accountManagementService.requestReauthCode(UUID.fromString(jwt.subject)))
+
     @PostMapping("/change-email/request")
     fun requestChangeEmail(
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: ChangeEmailRequest
     ): ResponseEntity<VerificationIdResponse> {
         val verificationId = accountManagementService.requestEmailChange(
-            UUID.fromString(jwt.subject), request.newEmail
+            UUID.fromString(jwt.subject), request.newEmail,
+            ReauthProof(request.currentPassword, request.reauthVerificationId, request.reauthCode, authTime(jwt))
         )
         return ResponseEntity.ok(VerificationIdResponse(verificationId))
     }
@@ -65,7 +75,8 @@ class AccountManagementController(
         @Valid @RequestBody request: ChangePhoneRequest
     ): ResponseEntity<VerificationIdResponse> {
         val verificationId = accountManagementService.requestPhoneChange(
-            UUID.fromString(jwt.subject), request.phone
+            UUID.fromString(jwt.subject), request.phone,
+            ReauthProof(request.currentPassword, request.reauthVerificationId, request.reauthCode, authTime(jwt))
         )
         return ResponseEntity.ok(VerificationIdResponse(verificationId))
     }
@@ -79,5 +90,12 @@ class AccountManagementController(
             UUID.fromString(jwt.subject), request.verificationId, request.phone, request.code
         )
         return ResponseEntity.ok().build()
+    }
+
+    // Tokens minted before auth_time existed carry none: treated as not fresh.
+    private fun authTime(jwt: Jwt): Instant? = when (val claim = jwt.claims["auth_time"]) {
+        is Instant -> claim
+        is Number -> Instant.ofEpochSecond(claim.toLong())
+        else -> null
     }
 }

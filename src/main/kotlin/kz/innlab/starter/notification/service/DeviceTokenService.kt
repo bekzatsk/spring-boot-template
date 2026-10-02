@@ -23,6 +23,16 @@ class DeviceTokenService(
     @Transactional
     fun register(userId: UUID, platform: Platform, fcmToken: String, deviceId: String): DeviceToken {
         val existing = deviceTokenRepository.findByUserIdAndDeviceId(userId, deviceId)
+
+        // A token is one app install; whoever registers it last owns it. Leaving the previous
+        // registration in place would let its user keep pushing to this device.
+        val previousHolder = deviceTokenRepository.findByFcmToken(fcmToken)
+        if (previousHolder != null && previousHolder.id != existing?.id) {
+            deviceTokenRepository.delete(previousHolder)
+            // Hibernate flushes inserts before deletes; without this the unique index rejects the save.
+            deviceTokenRepository.flush()
+        }
+
         if (existing != null) {
             existing.fcmToken = fcmToken
             existing.platform = platform
@@ -32,7 +42,7 @@ class DeviceTokenService(
 
         val count = deviceTokenRepository.countByUserId(userId)
         if (count >= deviceTokenProperties.maxPerUser) {
-            throw IllegalStateException("Maximum device tokens ($deviceTokenProperties.maxPerUser) reached for user")
+            throw IllegalStateException("Maximum device tokens (${deviceTokenProperties.maxPerUser}) reached for user")
         }
 
         val token = DeviceToken(userId, platform, fcmToken, deviceId)

@@ -77,17 +77,8 @@ class SecurityConfig(
             }
             authorizeHttpRequests {
                 authorize(HttpMethod.OPTIONS, "/**", permitAll)
-                // Swagger UI and OpenAPI spec
-                authorize("/swagger-ui/**", permitAll)
-                authorize("/swagger-ui.html", permitAll)
-                authorize("/v3/api-docs/**", permitAll)
-                authorize("/v3/api-docs.yaml", permitAll)
-                authorize("/api/v1/auth/**", permitAll)
-                authorize("/telegram/webhook", permitAll)
-                // Consumer-defined public paths
-                authSecurityProperties.publicPaths.forEach { path ->
-                    authorize(path, permitAll)
-                }
+                // Admin rules come before every permitAll, so a broad consumer public path
+                // (e.g. "/api/**") cannot open them. First match wins.
                 authorize("/api/v1/admin/**", hasRole("ADMIN"))
                 // Topic broadcast reaches every subscriber; the shared IMAP inbox is org-wide mail.
                 // Neither is safe to expose to arbitrary authenticated users.
@@ -97,6 +88,19 @@ class SecurityConfig(
                 // user it is a phishing relay that a per-user quota cannot stop across accounts.
                 authorize("/api/v1/mail/send", hasRole("ADMIN"))
                 authorize("/api/v1/mail/send/**", hasRole("ADMIN"))
+                // Swagger UI and OpenAPI spec: the spec maps every endpoint, so it is public only on request.
+                if (authSecurityProperties.publicApiDocs) {
+                    authorize("/swagger-ui/**", permitAll)
+                    authorize("/swagger-ui.html", permitAll)
+                    authorize("/v3/api-docs/**", permitAll)
+                    authorize("/v3/api-docs.yaml", permitAll)
+                }
+                authorize("/api/v1/auth/**", permitAll)
+                authorize("/telegram/webhook", permitAll)
+                // Consumer-defined public paths
+                authSecurityProperties.publicPaths.forEach { path ->
+                    authorize(path, permitAll)
+                }
                 authorize("/api/**", authenticated)
                 // Health stays open for container healthchecks; every other actuator endpoint
                 // (env, beans, mappings, …) requires authentication.

@@ -1,10 +1,14 @@
 package kz.innlab.starter.autoconfigure
 
+import java.util.concurrent.Executor
+import kz.innlab.starter.config.AsyncConfig
+import org.springframework.beans.factory.annotation.Qualifier
 import tools.jackson.databind.ObjectMapper
 import kz.innlab.starter.authentication.controller.AccountManagementController
 import kz.innlab.starter.authentication.controller.AuthController
 import kz.innlab.starter.authentication.cookie.AuthCookieWriter
 import kz.innlab.starter.authentication.exception.AuthExceptionHandler
+import kz.innlab.starter.authentication.exception.NotFoundExceptionHandler
 import kz.innlab.starter.authentication.filter.ApiAccessDeniedHandler
 import kz.innlab.starter.authentication.filter.ApiAuthenticationEntryPoint
 import kz.innlab.starter.authentication.filter.RequiredActionFilter
@@ -106,9 +110,13 @@ class AuthCoreAutoConfiguration {
         verificationCodeRepository: VerificationCodeRepository,
         attemptRecorder: VerificationAttemptRecorder,
         passwordEncoder: PasswordEncoder,
-        verificationProperties: VerificationProperties
-    ): VerificationCodeService =
-        VerificationCodeService(verificationCodeRepository, attemptRecorder, passwordEncoder, verificationProperties)
+        verificationProperties: VerificationProperties,
+        rateLimiter: RateLimiter,
+        rateLimitProperties: RateLimitProperties
+    ): VerificationCodeService = VerificationCodeService(
+        verificationCodeRepository, attemptRecorder, passwordEncoder, verificationProperties,
+        rateLimiter, rateLimitProperties
+    )
 
     @Bean
     @ConditionalOnMissingBean
@@ -127,10 +135,11 @@ class AuthCoreAutoConfiguration {
         passwordEncoder: PasswordEncoder,
         refreshTokenRepository: RefreshTokenRepository,
         rateLimiter: RateLimiter,
-        rateLimitProperties: RateLimitProperties
+        rateLimitProperties: RateLimitProperties,
+        @Qualifier(AsyncConfig.STARTER_EXECUTOR) codeSendExecutor: Executor
     ): AccountManagementService = AccountManagementService(
         userRepository, verificationCodeService, emailService, otpDeliveryService,
-        passwordEncoder, refreshTokenRepository, rateLimiter, rateLimitProperties
+        passwordEncoder, refreshTokenRepository, rateLimiter, rateLimitProperties, codeSendExecutor
     )
 
     // --- web layer ---
@@ -138,6 +147,10 @@ class AuthCoreAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     fun authExceptionHandler(): AuthExceptionHandler = AuthExceptionHandler()
+
+    @Bean
+    @ConditionalOnMissingBean
+    fun notFoundExceptionHandler(): NotFoundExceptionHandler = NotFoundExceptionHandler()
 
     @Bean
     @ConditionalOnMissingBean

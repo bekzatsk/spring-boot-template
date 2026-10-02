@@ -4,7 +4,10 @@ import kz.innlab.starter.authentication.dto.IssuedCode
 import kz.innlab.starter.authentication.model.VerificationCode
 import kz.innlab.starter.authentication.model.VerificationPurpose
 import kz.innlab.starter.authentication.repository.VerificationCodeRepository
+import kz.innlab.starter.config.RateLimitProperties
 import kz.innlab.starter.config.VerificationProperties
+import kz.innlab.starter.shared.ratelimit.RateLimitExceededException
+import kz.innlab.starter.shared.ratelimit.RateLimiter
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -25,7 +28,9 @@ class VerificationCodeService(
     private val verificationCodeRepository: VerificationCodeRepository,
     private val attemptRecorder: VerificationAttemptRecorder,
     private val passwordEncoder: PasswordEncoder,
-    private val verificationProperties: VerificationProperties
+    private val verificationProperties: VerificationProperties,
+    private val rateLimiter: RateLimiter,
+    private val rateLimitProperties: RateLimitProperties
 ) {
 
     companion object {
@@ -87,6 +92,14 @@ class VerificationCodeService(
         purpose: VerificationPurpose,
         code: String
     ): VerificationCode {
+        // Budget across codes: requesting a new code resets the per-code attempt counter below,
+        // so on its own that counter allows unlimited guessing at one code request a minute.
+        val budgetKey = "otp-verify:$purpose:$identifier"
+        val rule = rateLimitProperties.otpVerify
+        if (rateLimitProperties.enabled && !rateLimiter.tryAcquire(budgetKey, rule.maxAttempts, rule.windowSeconds)) {
+            throw RateLimitExceededException("Too many attempts. Try again later.", rule.windowSeconds)
+        }
+
         val record = verificationCodeRepository.findById(verificationId).orElseThrow {
             BadCredentialsException("Invalid verification code")
         }
@@ -126,6 +139,7 @@ class VerificationCodeService(
             throw BadCredentialsException("Invalid verification code")
         }
 
+        rateLimiter.reset(budgetKey)
         return record
     }
 
