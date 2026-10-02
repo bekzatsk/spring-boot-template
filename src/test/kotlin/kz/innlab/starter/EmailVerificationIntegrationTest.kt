@@ -179,7 +179,10 @@ class EmailVerificationDisabledIntegrationTest {
             .andExpect(jsonPath("$.requiredActions").isEmpty)
 
         val user = userRepository.findByEmail("plain@example.com")!!
-        assert(user.emailVerified) { "verification disabled → user stays verified" }
+        // Not gated, but not marked verified either: registration proves nothing about the address,
+        // and email-OTP login relies on the flag to evict an unproven registrant.
+        assert(!user.emailVerified) { "registration must not mark the address verified" }
+        assert(RequiredAction.VERIFY_EMAIL !in user.requiredActions)
         verify(emailService, never()).sendCode(anyString(), anyString(), anyString())
     }
 }

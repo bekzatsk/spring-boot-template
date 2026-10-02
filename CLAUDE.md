@@ -43,6 +43,9 @@ Each module follows the same internal structure: `controller/`, `dto/`, `model/`
 Module dependency direction is one-way: `authentication` → `user`. The `user` module must never import
 from `authentication` — it talks back through the `RefreshTokenRevoker` port instead.
 
+Wiring:
+- **AuthAutoConfiguration.kt** + **autoconfigure/** - `AuthCoreAutoConfiguration`, `AuthProvidersAutoConfiguration`, `NotificationAutoConfiguration`, `UserAutoConfiguration` declare the module beans as `@Bean` methods. A new `@Service`/`@Component` is not registered until a `@Bean` method here declares it.
+
 Cross-cutting concerns:
 - **config/** - Security config, RSA key config, CORS, async executor, provider configs (Google, Apple, Firebase, email). All config properties are under the `app.*` namespace in `application.yaml`.
 - **shared/** - `BaseEntity` (UUID v7 + `Persistable` for JPA new-entity detection), error DTO/exceptions, `AfterCommitRunner`, phone normalization
@@ -73,7 +76,7 @@ Cross-cutting concerns:
 - **No default Spring profile.** `SPRING_PROFILES_ACTIVE` must be set explicitly; a `:dev` fallback would silently enable the fixed `123456` OTP override in production.
 - **`ProductionSafetyConfig` refuses to start under `prod`** when a `dev-code` override is set, Telegram is enabled without a webhook secret, or console SMS/mail fallbacks are serving real traffic. The fallback checks are waived **per channel** (`app.security.console-fallbacks.allow-sms|allow-email|allow-mail`) because most applications use some channels and not others; `app.security.allow-console-fallbacks=true` waives all three and stays only for compatibility. Which channels an application uses is not derivable from config — `change-phone` sends an OTP whether or not the phone provider is enabled — so the waiver is the operator's statement, not a guess.
 - **Authorization is fail-secure**: `anyRequest` is `authenticated`. Consumers open extra paths via `app.auth.security.public-paths`. Only `/actuator/health*` is public by default.
-- **Admin-only endpoints**: `/api/v1/admin/**`, `POST /api/v1/notifications/send/topic` (broadcast), `/api/v1/mail/inbox/**` (shared org mailbox).
+- **Admin-only endpoints**: `/api/v1/admin/**`, `POST /api/v1/notifications/send/topic` (broadcast), `/api/v1/mail/inbox/**` (shared org mailbox), `/api/v1/mail/send/**` (outbound mail from the app domain).
 - **Ownership checks**: push send/multicast and topic subscribe only accept FCM tokens registered to the caller.
 - **Rate limits**: Telegram resend has a server-side cooldown plus a per-session cap; mail send has a per-user hourly quota and attachment caps (`app.mail.limits.*`).
 - **`X-Forwarded-For` is ignored** unless `app.auth.telegram.trust-forwarded-headers=true` (set only behind a trusted proxy).
@@ -84,7 +87,19 @@ Tests use H2 in-memory DB with Flyway disabled and `create-drop` DDL. External d
 
 ## Database Migrations
 
-Flyway migrations in `src/main/resources/db/migration-auth/` (V1 through V10). Dev profile has `clean-on-validation-error: true`; prod uses strict validation.
+Flyway migrations in `src/main/resources/db/migration-auth/` (V1 through V13), applied to the `auth` schema by the starter's own Flyway bean (`AuthFlywayConfig`). Dev profile has `clean-on-validation-error: true`; prod uses strict validation.
+
+The test suite never executes migrations (H2 `create-drop`), so a broken migration passes `./mvnw test`. CI (`.github/workflows/ci.yml`) has a separate job that applies every migration to PostgreSQL 18 and fails if any entity table lacks a `version` column — when adding a new entity, add its table to that job's `entity_tables` list.
+
+## Releasing
+
+This is a library (`kz.innlab:auth-spring-boot-starter`) published to GitHub Packages, registered via `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`. `AuthStarterApplication` exists only for local running. CI runs `./mvnw verify`.
+
+```bash
+./scripts/publish.sh --release X.Y.Z   # bump pom, deploy, tag, push (needs GITHUB_TOKEN with write:packages)
+```
+
+Record user-facing and breaking changes in `CHANGELOG.md`; README pins the current release version.
 
 ## Renaming the Project
 

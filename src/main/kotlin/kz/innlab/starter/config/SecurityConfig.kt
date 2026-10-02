@@ -93,6 +93,10 @@ class SecurityConfig(
                 // Neither is safe to expose to arbitrary authenticated users.
                 authorize("/api/v1/notifications/send/topic", hasRole("ADMIN"))
                 authorize("/api/v1/mail/inbox/**", hasRole("ADMIN"))
+                // Sending goes out from the application's own domain to any address; open to every
+                // user it is a phishing relay that a per-user quota cannot stop across accounts.
+                authorize("/api/v1/mail/send", hasRole("ADMIN"))
+                authorize("/api/v1/mail/send/**", hasRole("ADMIN"))
                 authorize("/api/**", authenticated)
                 // Health stays open for container healthchecks; every other actuator endpoint
                 // (env, beans, mappings, …) requires authentication.

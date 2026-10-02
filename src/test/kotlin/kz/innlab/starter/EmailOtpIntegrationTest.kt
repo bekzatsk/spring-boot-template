@@ -124,6 +124,70 @@ class EmailOtpIntegrationTest {
     }
 
     @Test
+    fun `email OTP evicts whoever pre-registered the address without verifying it`() {
+        val getCode = captureCodeOnSend()
+
+        // Attacker registers the victim's address with their own password and keeps the tokens.
+        val registerResult = mockMvc.perform(
+            post("/api/v1/auth/local/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email":"$email","password":"AttackerPassword123"}""")
+        ).andExpect(status().isCreated).andReturn()
+        val attackerRefreshToken = JsonMapper.builder().build()
+            .readTree(registerResult.response.contentAsString).get("refreshToken").asText()
+
+        // The real owner signs in with a code sent to the address.
+        val requestResult = mockMvc.perform(
+            post("/api/v1/auth/email/request")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email":"$email"}""")
+        ).andExpect(status().isOk).andReturn()
+        mockMvc.perform(
+            post("/api/v1/auth/email/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"verificationId":"${verificationId(requestResult)}","email":"$email","code":"${getCode()}"}""")
+        ).andExpect(status().isOk)
+
+        val user = requireNotNull(userRepository.findByEmail(email))
+        assert(user.emailVerified)
+        assert(user.passwordHash == null) { "registrant's password must not survive ownership proof" }
+
+        mockMvc.perform(
+            post("/api/v1/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"refreshToken":"$attackerRefreshToken"}""")
+        ).andExpect(status().isUnauthorized)
+
+        mockMvc.perform(
+            post("/api/v1/auth/local/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email":"$email","password":"AttackerPassword123"}""")
+        ).andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `email OTP keeps the password of an already verified user`() {
+        userRepository.save(User(email).also {
+            it.linkProvider(AuthProvider.LOCAL)
+            it.passwordHash = "existing-hash"
+        })
+        val getCode = captureCodeOnSend()
+
+        val requestResult = mockMvc.perform(
+            post("/api/v1/auth/email/request")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email":"$email"}""")
+        ).andExpect(status().isOk).andReturn()
+        mockMvc.perform(
+            post("/api/v1/auth/email/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"verificationId":"${verificationId(requestResult)}","email":"$email","code":"${getCode()}"}""")
+        ).andExpect(status().isOk)
+
+        assert(requireNotNull(userRepository.findByEmail(email)).passwordHash == "existing-hash")
+    }
+
+    @Test
     fun `email OTP rejects wrong code`() {
         val getCode = captureCodeOnSend()
         val requestResult = mockMvc.perform(

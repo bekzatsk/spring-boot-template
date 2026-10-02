@@ -26,6 +26,8 @@ import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.mock.web.MockMultipartFile
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -123,7 +125,7 @@ class MailIntegrationTest {
     fun `sendEmail returns 202 with mailId`() {
         mockMvc.perform(
             post("/api/v1/mail/send")
-                .header("Authorization", authHeader())
+                .header("Authorization", "Bearer $adminToken")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"to": "recipient@example.com", "subject": "Test Subject", "textBody": "Hello"}""")
         )
@@ -132,10 +134,46 @@ class MailIntegrationTest {
     }
 
     @Test
-    fun `sendEmail delivers to SMTP server`() {
+    fun `sendEmail returns 403 for regular user`() {
         mockMvc.perform(
             post("/api/v1/mail/send")
                 .header("Authorization", authHeader())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"to": "recipient@example.com", "subject": "Phish", "htmlBody": "<a href=x>x</a>"}""")
+        )
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `sendEmail with attachments returns 403 for regular user`() {
+        mockMvc.perform(
+            multipart("/api/v1/mail/send/with-attachments")
+                .file(MockMultipartFile(
+                    "email", "", MediaType.APPLICATION_JSON_VALUE,
+                    """{"to": "recipient@example.com", "subject": "S", "textBody": "B"}""".toByteArray()
+                ))
+                .file(MockMultipartFile("files", "a.txt", "text/plain", ByteArray(8)))
+                .header("Authorization", authHeader())
+        )
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `sendEmail rejects a recipient list`() {
+        mockMvc.perform(
+            post("/api/v1/mail/send")
+                .header("Authorization", "Bearer $adminToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"to": "a@example.com, b@example.com", "subject": "S", "textBody": "B"}""")
+        )
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `sendEmail delivers to SMTP server`() {
+        mockMvc.perform(
+            post("/api/v1/mail/send")
+                .header("Authorization", "Bearer $adminToken")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"to": "recipient@example.com", "subject": "Delivery Test", "textBody": "Hello from test"}""")
         )
@@ -152,7 +190,7 @@ class MailIntegrationTest {
     fun `sendEmail with HTML body`() {
         mockMvc.perform(
             post("/api/v1/mail/send")
-                .header("Authorization", authHeader())
+                .header("Authorization", "Bearer $adminToken")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"to": "recipient@example.com", "subject": "HTML Test", "htmlBody": "<h1>Hello</h1>"}""")
         )
@@ -169,7 +207,7 @@ class MailIntegrationTest {
     fun `mailHistory tracks sent email`() {
         mockMvc.perform(
             post("/api/v1/mail/send")
-                .header("Authorization", authHeader())
+                .header("Authorization", "Bearer $adminToken")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"to": "recipient@example.com", "subject": "History Test", "textBody": "Track this"}""")
         )

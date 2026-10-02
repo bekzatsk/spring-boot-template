@@ -22,8 +22,9 @@ class UserAutoConfiguration {
     fun userService(
         userRepository: UserRepository,
         passwordEncoder: PasswordEncoder,
-        authTokenProperties: AuthTokenProperties
-    ): UserService = UserService(userRepository, passwordEncoder, authTokenProperties)
+        authTokenProperties: AuthTokenProperties,
+        refreshTokenRevoker: RefreshTokenRevoker
+    ): UserService = UserService(userRepository, passwordEncoder, authTokenProperties, refreshTokenRevoker)
 
     @Bean
     @ConditionalOnMissingBean

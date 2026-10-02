@@ -96,7 +96,7 @@ class MailSendLimitIntegrationTest {
         val user = userRepository.save(
             User(email = "sender@example.com").also { it.providers.add(AuthProvider.LOCAL) }
         )
-        accessToken = tokenService.generateAccessToken(user.id, setOf(Role.USER))
+        accessToken = tokenService.generateAccessToken(user.id, setOf(Role.USER, Role.ADMIN))
     }
 
     private fun sendMail() = mockMvc.perform(

@@ -6,7 +6,7 @@ Ready-to-use Spring Boot starter for JWT authentication with multi-provider logi
 
 ---
 
-Current release: **`0.1.2`**. **Do not use `0.1.0`** — cookie authentication is dead in it
+Current release: **`0.1.3`**. **Do not use `0.1.0`** — cookie authentication is dead in it
 (`Set-Cookie` is never sent, silently); see [CHANGELOG.md](CHANGELOG.md).
 
 Upgrading from `0.0.x`? The `0.1.x` line carries five breaking changes and three new migrations —
@@ -57,7 +57,7 @@ Lock down permissions: `chmod 600 ~/.m2/settings.xml`.
   <dependency>
     <groupId>kz.innlab</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>0.1.2</version>
+    <version>0.1.3</version>
   </dependency>
 </dependencies>
 ```
@@ -72,7 +72,7 @@ cd auth-starter
 ./mvnw clean install -DskipTests
 ```
 
-This publishes `kz.innlab:auth-spring-boot-starter:0.1.2` to `~/.m2/repository`.
+This publishes `kz.innlab:auth-spring-boot-starter:0.1.3` to `~/.m2/repository`.
 
 ### 4. Configure `application.yaml`
 
@@ -522,7 +522,7 @@ Phone-only users have `email = ""` with a partial unique index.
         <dependency>
             <groupId>kz.innlab</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>0.1.2</version>
+            <version>0.1.3</version>
         </dependency>
     </dependencies>
 
@@ -638,7 +638,7 @@ The starter publishes to **GitHub Packages** via `scripts/publish.sh`.
 ### Publish commands
 
 ```bash
-# Publish current pom version (e.g. 0.1.2)
+# Publish current pom version (e.g. 0.1.3)
 ./scripts/publish.sh --skip-tests
 
 # Bump to next snapshot
