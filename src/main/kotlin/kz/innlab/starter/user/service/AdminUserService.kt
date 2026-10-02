@@ -182,7 +182,12 @@ class AdminUserService(
     }
 
     private fun ensureNotLastAdmin(targetId: UUID) {
-        val adminCount = userRepository.lockAdmins().size
+        // Lock first, then count in a separate statement. The locking query's own result is not
+        // enough on PostgreSQL: after waiting for a concurrent demotion to commit it re-checks the
+        // users rows but keeps the old snapshot of user_roles, so the just-demoted admin still
+        // counted. A new statement reads the committed roles.
+        userRepository.lockAdmins()
+        val adminCount = userRepository.countAdmins()
         val target = userRepository.findById(targetId).orElse(null)
         val targetIsAdmin = target != null && Role.ADMIN in target.roles
         if (targetIsAdmin && adminCount <= 1) {
