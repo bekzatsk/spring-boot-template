@@ -1,5 +1,9 @@
 package kz.innlab.starter.authentication.exception
 
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
+import org.springframework.web.bind.MissingServletRequestParameterException
+import org.springframework.dao.OptimisticLockingFailureException
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.security.access.AccessDeniedException
 import kz.innlab.starter.shared.error.ErrorResponse
 import kz.innlab.starter.shared.error.ForbiddenOperationException
@@ -22,6 +26,7 @@ class AuthExceptionHandler {
 
     companion object {
         private val logger = LoggerFactory.getLogger(AuthExceptionHandler::class.java)
+        private const val STARTER_PACKAGE = "kz.innlab.starter."
     }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
@@ -68,13 +73,29 @@ class AuthExceptionHandler {
     @ExceptionHandler(IllegalStateException::class)
     fun handleConflict(ex: IllegalStateException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.CONFLICT).body(
-            ErrorResponse(error = "Conflict", message = ex.message ?: "Resource conflict", status = 409)
+            ErrorResponse(error = "Conflict", message = clientMessage(ex, "Resource conflict"), status = 409)
         )
 
     @ExceptionHandler(IllegalArgumentException::class)
     fun handleBadRequest(ex: IllegalArgumentException): ResponseEntity<ErrorResponse> =
         ResponseEntity.badRequest().body(
-            ErrorResponse(error = "Bad Request", message = ex.message ?: "Invalid request", status = 400)
+            ErrorResponse(error = "Bad Request", message = clientMessage(ex, "Invalid request"), status = 400)
+        )
+
+    // Malformed path variables (/users/not-a-uuid) and missing query parameters are client errors;
+    // the catch-all below answered them with 500 and an ERROR log.
+    @ExceptionHandler(MethodArgumentTypeMismatchException::class, MissingServletRequestParameterException::class)
+    fun handleBadParameter(ex: Exception): ResponseEntity<ErrorResponse> =
+        ResponseEntity.badRequest().body(
+            ErrorResponse(error = "Bad Request", message = "Invalid or missing request parameter", status = 400)
+        )
+
+    // A concurrent update (optimistic lock) or a unique-constraint race is a conflict the client
+    // can retry, not a server failure.
+    @ExceptionHandler(OptimisticLockingFailureException::class, DataIntegrityViolationException::class)
+    fun handleConcurrentConflict(ex: Exception): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.CONFLICT).body(
+            ErrorResponse(error = "Conflict", message = "The resource changed concurrently; retry", status = 409)
         )
 
     @ExceptionHandler(RateLimitExceededException::class)
@@ -115,5 +136,16 @@ class AuthExceptionHandler {
         return ResponseEntity.internalServerError().body(
             ErrorResponse(error = "Internal Server Error", message = "An unexpected error occurred", status = 500)
         )
+    }
+
+    /**
+     * The message of an IllegalState/IllegalArgument exception is meant for the client only when
+     * the starter threw it (`require`, `check`, `throw` in starter code — all of which put a
+     * starter frame on top). Thrown inside a library (Firebase, mail, libphonenumber, Nimbus,
+     * Enum.valueOf) it can describe internals, so the client gets the generic text.
+     */
+    private fun clientMessage(ex: RuntimeException, fallback: String): String {
+        val thrownByStarter = ex.stackTrace.firstOrNull()?.className?.startsWith(STARTER_PACKAGE) == true
+        return ex.message?.takeIf { thrownByStarter } ?: fallback
     }
 }

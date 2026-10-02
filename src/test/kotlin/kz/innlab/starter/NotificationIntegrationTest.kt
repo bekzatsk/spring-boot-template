@@ -465,4 +465,16 @@ class NotificationIntegrationTest {
                 .content("""{"platform": "ANDROID", "fcmToken": "${"t".repeat(513)}", "deviceId": "d"}""")
         ).andExpect(status().isBadRequest)
     }
+
+    @Test
+    fun `a library exception message is not echoed to the client`() {
+        mockMvc.perform(
+            post("/api/v1/notifications/tokens")
+                .header("Authorization", authHeader())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"platform": "NOKIA", "fcmToken": "t", "deviceId": "d"}""")
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("Invalid request"))
+    }
 }
