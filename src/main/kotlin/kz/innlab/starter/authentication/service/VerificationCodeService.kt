@@ -12,6 +12,8 @@ import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.context.request.ServletRequestAttributes
 import java.time.Instant
 import java.util.UUID
 
@@ -59,6 +61,7 @@ class VerificationCodeService(
         ) {
             throw IllegalStateException("Please wait before requesting a new code")
         }
+        checkSendAllowed(purpose)
 
         val code = OneTimeCodes.generate(devCodeFor(purpose), codeLengthFor(purpose))
         val hash = requireNotNull(passwordEncoder.encode(code)) { "PasswordEncoder returned null hash" }
@@ -142,6 +145,31 @@ class VerificationCodeService(
         rateLimiter.reset(budgetKey)
         return record
     }
+
+    /**
+     * Counts one outgoing code against the per-client and per-purpose send limits; throws 429 once
+     * either is spent. [createCode] calls it; a flow that answers as if it sent a code without
+     * sending one (to hide whether an account exists) must call it too, or the limit itself
+     * would tell the two cases apart.
+     */
+    fun checkSendAllowed(purpose: VerificationPurpose) {
+        if (!rateLimitProperties.enabled) return
+        val perClient = rateLimitProperties.codeSendPerClient
+        val client = currentClientAddress()
+        if (client != null &&
+            !rateLimiter.tryAcquire("code-send:client:$client", perClient.maxAttempts, perClient.windowSeconds)
+        ) {
+            throw RateLimitExceededException("Too many codes requested. Try again later.", perClient.windowSeconds)
+        }
+        val perPurpose = rateLimitProperties.codeSendPerPurpose
+        if (!rateLimiter.tryAcquire("code-send:purpose:$purpose", perPurpose.maxAttempts, perPurpose.windowSeconds)) {
+            throw RateLimitExceededException("Too many codes requested. Try again later.", perPurpose.windowSeconds)
+        }
+    }
+
+    // Null outside an HTTP request (a scheduled job, a test calling the service directly).
+    private fun currentClientAddress(): String? =
+        (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)?.request?.remoteAddr
 
     private fun expiryMinutesFor(purpose: VerificationPurpose): Long =
         if (purpose == VerificationPurpose.PHONE_LOGIN || purpose == VerificationPurpose.EMAIL_LOGIN) {

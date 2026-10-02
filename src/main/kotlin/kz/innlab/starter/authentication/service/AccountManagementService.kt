@@ -51,7 +51,7 @@ class AccountManagementService(
 
         // Social-only users have no password to reset
         if (user == null || AuthProvider.LOCAL !in user.providers || user.passwordHash == null) {
-            return decoyVerificationId()
+            return decoyVerificationId(VerificationPurpose.FORGOT_PASSWORD)
         }
 
         val (verificationId, code) = verificationCodeService.createCode(email, VerificationPurpose.FORGOT_PASSWORD)
@@ -104,7 +104,7 @@ class AccountManagementService(
     fun resendEmailVerification(email: String): UUID {
         enforceCodeRequestCooldown(email, VerificationPurpose.VERIFY_EMAIL)
         val user = userRepository.findByEmail(email)
-        if (user == null || user.emailVerified) return decoyVerificationId()
+        if (user == null || user.emailVerified) return decoyVerificationId(VerificationPurpose.VERIFY_EMAIL)
 
         val (verificationId, code) = verificationCodeService.createCode(email, VerificationPurpose.VERIFY_EMAIL)
         codeSendExecutor.execute { emailService.sendCode(email, code, "VERIFY_EMAIL") }
@@ -123,10 +123,12 @@ class AccountManagementService(
     }
 
     /**
-     * Stands in for a real verificationId. Hashes a throwaway code as createCode would, so the
-     * response takes about as long; redeeming the id fails like a wrong code.
+     * Stands in for a real verificationId. Counts against the send limits and hashes a throwaway
+     * code as createCode would, so neither the limits nor the response time give it away;
+     * redeeming the id fails like a wrong code.
      */
-    private fun decoyVerificationId(): UUID {
+    private fun decoyVerificationId(purpose: VerificationPurpose): UUID {
+        verificationCodeService.checkSendAllowed(purpose)
         passwordEncoder.encode(UUID.randomUUID().toString())
         return UUID.randomUUID()
     }
