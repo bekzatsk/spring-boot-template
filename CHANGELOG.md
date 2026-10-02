@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.1.5 — 2026-10-02
+
+Second security release, from a re-audit of 0.1.4. **0.1.4 and earlier ship
+`application-dev.yaml` inside the jar** (fixed `123456` login codes for any application running
+with the `dev` profile and no file of its own) — upgrade. Also fixes SMS toll fraud, a rate
+limiter that could be filled to lock everyone out, admin endpoints that relied on URL rules alone,
+gaps in the email-OTP takeover fix, and a set of smaller issues. Contains **breaking changes** (listed below) and
+migration `V16`.
 
 ### Security
 

@@ -1,6 +1,6 @@
 # Installation Guide
 
-> ## ⛔ Do not use 0.1.0 — use 0.1.4
+> ## ⛔ Do not use 0.1.0 — use 0.1.5
 >
 > **0.1.0 ships with cookie authentication dead.** `AuthCookieWriter` is not registered by the
 > auto-configuration, and every component injects it optionally, so the application starts clean,
@@ -8,10 +8,11 @@
 > effect in that release, whatever you set it through (yaml, env, `SPRING_APPLICATION_JSON`).
 >
 > 0.1.0 stays on Maven Central because Central is immutable; treat it as withdrawn. Version 0.1.1
-> fixed cookie authentication; current **0.1.4** contains that fix plus Spring Boot 4.1.1,
-> Java 25, Kotlin 2.3.21 and configurable email/phone OTP. 0.1.4 is a security release with breaking
-> changes and migrations V14–V15; read its entry in CHANGELOG.md before upgrading. The 0.0.x upgrade
-> steps below still apply.
+> fixed cookie authentication; current **0.1.5** contains that fix plus Spring Boot 4.1.1,
+> Java 25, Kotlin 2.3.21 and configurable email/phone OTP. 0.1.4 and 0.1.5 are security releases
+> with breaking changes and migrations V14–V16; read their CHANGELOG.md entries before upgrading.
+> **0.1.4 and earlier carry `application-dev.yaml` (fixed `123456` codes) inside the jar** — use 0.1.5.
+> The 0.0.x upgrade steps below still apply.
 >
 > Check your deployment with:
 >
@@ -127,7 +128,7 @@
         <dependency>
             <groupId>kz.innlab</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>0.1.4</version>
+            <version>0.1.5</version>
         </dependency>
 
         <dependency>
@@ -386,7 +387,7 @@ cd /path/to/{projectName}/backend && ./mvnw spring-boot:run
 
 ## 1. Publish Starter
 
-> **Текущая версия starter:** `kz.innlab:auth-spring-boot-starter:0.1.4`.
+> **Текущая версия starter:** `kz.innlab:auth-spring-boot-starter:0.1.5`.
 > Если ты **используешь** starter — переходи к §2. Эта секция нужна только если ты **форкнул** его и публикуешь свой вариант.
 
 ### Option A: Maven Central (canonical, no extra config for consumers)
@@ -541,7 +542,7 @@ Artifact goes to `~/.m2/repository`. Works only on your machine.
 <dependency>
     <groupId>kz.innlab</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>0.1.4</version>
+    <version>0.1.5</version>
 </dependency>
 ```
 
@@ -581,7 +582,7 @@ repositories {
 }
 
 dependencies {
-    implementation("kz.innlab:auth-spring-boot-starter:0.1.4")
+    implementation("kz.innlab:auth-spring-boot-starter:0.1.5")
 }
 ```
 
@@ -604,7 +605,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'kz.innlab:auth-spring-boot-starter:0.1.4'
+    implementation 'kz.innlab:auth-spring-boot-starter:0.1.5'
 }
 ```
 
