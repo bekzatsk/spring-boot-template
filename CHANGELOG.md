@@ -7,7 +7,7 @@
 - **The starter jar no longer ships `application*.yaml`.** They configure this repository's
   runnable app, but packaged they loaded into every consumer without a file of the same name. A
   consumer running with the `dev` profile and no `application-dev.yaml` of its own got every
-  `dev-code` override, so anyone could log in with `123456`. **This affects 0.1.3 and earlier:**
+  `dev-code` override, so anyone could log in with `123456`. **This affects 0.1.4 and earlier:**
   upgrade, or ship your own `application-dev.yaml`. CI now fails if the files reappear.
 - **Email code identifiers ignore letter case.** Reset, verify and resend keyed codes on the raw
   input, so every case variant of an address had its own code and guessing budget — unlimited
@@ -40,9 +40,9 @@
 - **Key material**: `generate-keystore.sh` writes to `secrets/` with a generated password and refuses
   paths under `src/`; the jar excludes `*.p12`, `*.jks`, `*.pem`, `*.key`. `publish.sh` no longer
   puts the GitHub token on the command line.
-- **`V15` no longer rewrites `refresh_tokens`**: the column is added with a constant default
-  (metadata-only), existing sessions count as "logged in at the epoch", and instances on the
-  previous version keep working during a rolling deploy.
+- **`V16` gives `refresh_tokens.authenticated_at` a default** (`1970-01-01`, metadata-only), so
+  instances still on an older version keep creating refresh tokens during a rolling deploy; those
+  tokens count as "logged in at the epoch". `V15` itself is unchanged — it shipped in 0.1.4.
 - **The in-memory rate limiter no longer locks newcomers out when full.** At capacity it refused
   every key it was not already tracking, so filling it with fresh emails answered `429` to every
   other user. It now evicts expired entries, then the lowest-count ones; a flood of fresh keys
