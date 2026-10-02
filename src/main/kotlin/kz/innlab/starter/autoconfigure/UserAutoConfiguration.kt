@@ -6,6 +6,7 @@ import kz.innlab.starter.user.controller.UserController
 import kz.innlab.starter.user.repository.AdminAuditLogRepository
 import kz.innlab.starter.user.repository.UserRepository
 import kz.innlab.starter.user.service.AdminUserService
+import kz.innlab.starter.user.service.DeviceRegistrationRevoker
 import kz.innlab.starter.user.service.RefreshTokenRevoker
 import kz.innlab.starter.user.service.UserService
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
@@ -23,8 +24,11 @@ class UserAutoConfiguration {
         userRepository: UserRepository,
         passwordEncoder: PasswordEncoder,
         authTokenProperties: AuthTokenProperties,
-        refreshTokenRevoker: RefreshTokenRevoker
-    ): UserService = UserService(userRepository, passwordEncoder, authTokenProperties, refreshTokenRevoker)
+        refreshTokenRevoker: RefreshTokenRevoker,
+        deviceRegistrationRevoker: DeviceRegistrationRevoker
+    ): UserService = UserService(
+        userRepository, passwordEncoder, authTokenProperties, refreshTokenRevoker, deviceRegistrationRevoker
+    )
 
     @Bean
     @ConditionalOnMissingBean

@@ -18,7 +18,8 @@ class UserService(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
     private val authTokenProperties: AuthTokenProperties,
-    private val refreshTokenRevoker: RefreshTokenRevoker
+    private val refreshTokenRevoker: RefreshTokenRevoker,
+    private val deviceRegistrationRevoker: DeviceRegistrationRevoker
 ) {
 
     /**
@@ -141,10 +142,13 @@ class UserService(
         if (existing != null) {
             if (!existing.emailVerified) {
                 // Whoever registered this unverified account never proved they own the address,
-                // and the code just proved someone else does. Drop the registrant's password and
-                // sessions, or they keep access to the account the real owner is now using.
+                // and the code just proved someone else does. Drop everything the registrant could
+                // have attached — password, sessions, phone, push devices — or they keep a way back
+                // into the account the real owner is now using.
                 existing.passwordHash = null
+                existing.phone = null
                 refreshTokenRevoker.revokeAllFor(existing)
+                deviceRegistrationRevoker.revokeAllFor(existing.id)
             }
             existing.linkProvider(AuthProvider.LOCAL)
             existing.emailVerified = true

@@ -1,5 +1,6 @@
 package kz.innlab.starter.notification.service
 
+import kz.innlab.starter.user.service.DeviceRegistrationRevoker
 import kz.innlab.starter.notification.model.DeviceToken
 import kz.innlab.starter.notification.model.Platform
 import kz.innlab.starter.notification.repository.DeviceTokenRepository
@@ -14,7 +15,7 @@ import java.util.UUID
 class DeviceTokenService(
     private val deviceTokenRepository: DeviceTokenRepository,
     private val deviceTokenProperties: DeviceTokenProperties
-) {
+) : DeviceRegistrationRevoker {
 
     companion object {
         private val logger = LoggerFactory.getLogger(DeviceTokenService::class.java)
@@ -47,6 +48,12 @@ class DeviceTokenService(
 
         val token = DeviceToken(userId, platform, fcmToken, deviceId)
         return deviceTokenRepository.save(token)
+    }
+
+    /** Drops every device of [userId]; see [DeviceRegistrationRevoker]. */
+    @Transactional
+    override fun revokeAllFor(userId: UUID) {
+        deviceTokenRepository.deleteByUserId(userId)
     }
 
     @Transactional
