@@ -1,5 +1,6 @@
 package kz.innlab.starter.user.controller
 
+import org.springframework.security.access.prepost.PreAuthorize
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -33,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 @RestController
+@PreAuthorize("hasRole('ADMIN')")
 @Tag(name = "Admin Users", description = "Admin-only user management")
 @RequestMapping("/api/v1/admin/users")
 class AdminUserController(

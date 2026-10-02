@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
 import org.springframework.core.env.Environment
 import org.springframework.core.io.DefaultResourceLoader
 import org.springframework.security.oauth2.jwt.JwtDecoder
@@ -87,7 +88,11 @@ class RsaKeyConfig(
     fun jwtEncoder(jwkSource: JWKSource<SecurityContext>): JwtEncoder =
         NimbusJwtEncoder(jwkSource)
 
+    // Primary: the Apple id-token decoder is a JwtDecoder too. Anything injecting one by type —
+    // Boot's resource-server fallback chain when app.auth.security.enabled=false, among others —
+    // must get the decoder for the starter's own tokens, or startup fails on two candidates.
     @Bean
+    @Primary
     @ConditionalOnMissingBean(name = ["jwtDecoder"])
     fun jwtDecoder(jwkSource: JWKSource<SecurityContext>): JwtDecoder {
         val decoder = NimbusJwtDecoder.withJwkSource(jwkSource).build()

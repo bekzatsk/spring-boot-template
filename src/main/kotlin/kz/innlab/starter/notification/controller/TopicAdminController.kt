@@ -1,5 +1,6 @@
 package kz.innlab.starter.notification.controller
 
+import org.springframework.security.access.prepost.PreAuthorize
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import kz.innlab.starter.notification.dto.CreateTopicRequest
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
+@PreAuthorize("hasRole('ADMIN')")
 @Tag(name = "Admin - Topics", description = "Topic management (requires ADMIN role)")
 @RequestMapping("/api/v1/admin/topics")
 class TopicAdminController(
