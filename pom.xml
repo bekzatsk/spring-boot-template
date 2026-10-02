@@ -224,6 +224,11 @@
 						<exclude>application*.yaml</exclude>
 						<exclude>application*.yml</exclude>
 						<exclude>application*.properties</exclude>
+						<!-- Key material must never ship, whatever ends up in resources. -->
+						<exclude>**/*.p12</exclude>
+						<exclude>**/*.jks</exclude>
+						<exclude>**/*.pem</exclude>
+						<exclude>**/*.key</exclude>
 					</excludes>
 				</configuration>
 			</plugin>

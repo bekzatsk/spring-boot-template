@@ -101,7 +101,7 @@ class ProductionSafetyConfig {
         }
 
         check(problems.isEmpty()) {
-            "Refusing to start with the 'prod' profile due to unsafe configuration:\n" +
+            "Refusing to start under a production profile (${ProductionProfiles.PROPERTY}) due to unsafe configuration:\n" +
                 problems.joinToString("\n") { " - $it" }
         }
     }

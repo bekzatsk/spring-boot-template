@@ -200,4 +200,11 @@ class AdminUserIntegrationTest {
         assert(userRepository.findByEmail("backdoor@example.com") == null)
         assert(userRepository.findByEmail("admin@example.com") != null)
     }
+
+    @Test
+    fun `a malformed id is a 400, not a 500`() {
+        mockMvc.perform(
+            get("/api/v1/admin/users/not-a-uuid").header("Authorization", "Bearer $adminToken")
+        ).andExpect(status().isBadRequest)
+    }
 }

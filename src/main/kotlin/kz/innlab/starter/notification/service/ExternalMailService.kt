@@ -1,5 +1,9 @@
 package kz.innlab.starter.notification.service
 
+import java.time.Duration
+import org.springframework.http.client.SimpleClientHttpRequestFactory
+import kz.innlab.starter.shared.transaction.AfterCommitRunner
+import kz.innlab.starter.shared.util.maskEmail
 import kz.innlab.starter.authentication.service.EmailService
 import kz.innlab.starter.config.MailProperties
 import kz.innlab.starter.notification.model.MailHistory
@@ -13,12 +17,19 @@ import java.util.UUID
 
 class ExternalMailService(
     private val mailProperties: MailProperties,
-    private val mailHistoryRepository: MailHistoryRepository
+    private val mailHistoryRepository: MailHistoryRepository,
+    private val afterCommitRunner: AfterCommitRunner = AfterCommitRunner()
 ) : MailService, EmailService {
 
     private val logger = LoggerFactory.getLogger(ExternalMailService::class.java)
 
+    // Bounded: without timeouts a stalled provider held the request thread (and, for codes, the
+    // caller's database transaction) indefinitely.
     private val restClient = RestClient.builder()
+        .requestFactory(SimpleClientHttpRequestFactory().apply {
+            setConnectTimeout(Duration.ofSeconds(5))
+            setReadTimeout(Duration.ofSeconds(15))
+        })
         .baseUrl(mailProperties.external.baseUrl)
         .defaultHeader("X-Api-Key", mailProperties.external.masterKey)
         .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -38,9 +49,9 @@ class ExternalMailService(
                 .body(body)
                 .retrieve()
                 .toBodilessEntity()
-            logger.debug("Email sent via external service to {}", to)
+            logger.debug("Email sent via external service to {}", maskEmail(to))
         } catch (e: Exception) {
-            logger.error("External mail service error for {}: {}", to, e.message)
+            logger.error("External mail service error for {}: {}", maskEmail(to), e.message)
             throw e
         }
     }
@@ -72,7 +83,17 @@ class ExternalMailService(
     }
 
     override fun sendCode(to: String, code: String, purpose: String) {
-        send(to, "$purpose Verification Code", "Your $purpose code is: $code", null)
+        // Callers issue codes inside their transaction. The HTTP call waits for the commit — it
+        // must not hold a connection open, and a provider failure must not roll back the
+        // registration or re-authentication that produced the code. Failures are logged; the user
+        // can request a new code.
+        afterCommitRunner.run {
+            try {
+                send(to, "$purpose Verification Code", "Your $purpose code is: $code", null)
+            } catch (e: Exception) {
+                logger.error("Failed to send {} code email to {}: {}", purpose, maskEmail(to), e.message)
+            }
+        }
     }
 
     private fun buildRequestBody(

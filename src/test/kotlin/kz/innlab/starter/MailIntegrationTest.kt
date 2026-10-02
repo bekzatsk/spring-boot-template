@@ -291,7 +291,7 @@ class MailIntegrationTest {
             setFrom("outsider@test.com")
             setRecipients(Message.RecipientType.TO, "inbox@example.com")
             subject = "Hostile"
-            setContent("""<p onclick="steal()">Hi</p><script>steal()</script><a href="javascript:steal()">x</a>""", "text/html")
+            setContent("""<p onclick="steal()">Hi</p><script>steal()</script><a href="javascript:steal()">x</a><img src="https://tracker.example/p.gif">""", "text/html")
         }
         GreenMailUtil.sendMimeMessage(message)
 
@@ -301,12 +301,23 @@ class MailIntegrationTest {
 
         assert("Hi" in body)
         assert("<script" !in body && "onclick" !in body && "javascript:" !in body) { body }
+        assert("tracker.example" !in body) { "remote images are tracking pixels: $body" }
     }
 
     @Test
     fun `listInbox rejects a negative offset`() {
         mockMvc.perform(
             get("/api/v1/mail/inbox").param("offset", "-5").header("Authorization", "Bearer $adminToken")
+        ).andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `subject longer than the history column is rejected`() {
+        mockMvc.perform(
+            post("/api/v1/mail/send")
+                .header("Authorization", "Bearer $adminToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"to": "recipient@example.com", "subject": "${"s".repeat(256)}", "textBody": "B"}""")
         ).andExpect(status().isBadRequest)
     }
 }

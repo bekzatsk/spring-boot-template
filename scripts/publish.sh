@@ -63,9 +63,10 @@ fi
 MVN_AUTH_ARGS=()
 if [ -n "${GITHUB_TOKEN:-}" ]; then
   GITHUB_USER="${GITHUB_USER:-bekzatsk}"
+  # Credentials are read from the environment inside the settings file. Passed as -D arguments
+  # they showed up in the process list for every local user to read.
+  export GITHUB_USER
   MVN_AUTH_ARGS=(
-    "-Dgithub.username=$GITHUB_USER"
-    "-Dgithub.token=$GITHUB_TOKEN"
     "--settings" "$SCRIPT_DIR/maven-settings-github.xml"
   )
   # Write a local settings file that pulls credentials from system properties.
@@ -78,8 +79,8 @@ if [ -n "${GITHUB_TOKEN:-}" ]; then
   <servers>
     <server>
       <id>github</id>
-      <username>${github.username}</username>
-      <password>${github.token}</password>
+      <username>${env.GITHUB_USER}</username>
+      <password>${env.GITHUB_TOKEN}</password>
     </server>
   </servers>
 </settings>

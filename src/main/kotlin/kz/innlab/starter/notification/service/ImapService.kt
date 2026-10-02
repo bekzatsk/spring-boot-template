@@ -81,8 +81,10 @@ class ImapService(private val mailProperties: MailProperties) {
                 textBody = textParts.joinToString("\n").ifEmpty { null },
                 // Mail from outside senders: scripts, event handlers and javascript: links are
                 // stripped so an admin client that renders it cannot be attacked through it.
+                // Images go too — a remote <img> is a tracking pixel that reports the admin's
+                // address and when the message was read.
                 htmlBody = htmlParts.joinToString("\n").ifEmpty { null }
-                    ?.let { Jsoup.clean(it, Safelist.relaxed()) },
+                    ?.let { Jsoup.clean(it, Safelist.relaxed().removeTags("img")) },
                 attachments = attachments,
                 isRead = msg.flags.contains(Flags.Flag.SEEN)
             )

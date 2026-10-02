@@ -32,10 +32,10 @@ jobs:
 
       # The starter's application*.yaml configure this repo's runnable app only. Shipped in the
       # jar they load into consumers, dev-code overrides included.
-      - name: Fail if the jar ships application configuration
+      - name: Fail if the jar ships application configuration or key material
         run: |
-          if unzip -l target/auth-spring-boot-starter-*[0-9].jar | grep -E 'application[^/]*\.(ya?ml|properties)$'; then
-            echo "::error::application configuration found in the starter jar"
+          if unzip -l target/auth-spring-boot-starter-*[0-9].jar | grep -E 'application[^/]*\.(ya?ml|properties)$|\.(p12|jks|pem|key)$'; then
+            echo "::error::application configuration or key material found in the starter jar"
             exit 1
           fi
 

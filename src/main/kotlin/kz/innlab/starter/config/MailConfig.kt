@@ -1,5 +1,6 @@
 package kz.innlab.starter.config
 
+import kz.innlab.starter.shared.transaction.AfterCommitRunner
 import kz.innlab.starter.authentication.service.EmailService
 import kz.innlab.starter.notification.repository.MailHistoryRepository
 import kz.innlab.starter.notification.service.ConsoleEmailService
@@ -26,8 +27,9 @@ class MailConfig {
     @ConditionalOnProperty(name = ["app.mail.external.base-url"], matchIfMissing = false)
     fun externalMailService(
         mailProperties: MailProperties,
-        mailHistoryRepository: MailHistoryRepository
-    ): ExternalMailService = ExternalMailService(mailProperties, mailHistoryRepository)
+        mailHistoryRepository: MailHistoryRepository,
+        afterCommitRunner: AfterCommitRunner
+    ): ExternalMailService = ExternalMailService(mailProperties, mailHistoryRepository, afterCommitRunner)
 
     // --- Direct SMTP (only when external is not configured) ---
 
