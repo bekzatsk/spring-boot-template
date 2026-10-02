@@ -61,16 +61,26 @@ class InMemoryRateLimiterTest {
     }
 
     @Test
-    fun `at capacity existing keys remain limited and new keys are rejected`() {
-        val tiny = InMemoryRateLimiter(maxEntries = 2)
+    fun `at capacity a new key still gets a counter`() {
+        val tiny = InMemoryRateLimiter(maxEntries = 10)
         // Long window so nothing can be purged as expired.
-        tiny.tryAcquire("a", limit = 1, windowSeconds = 3600)
-        tiny.tryAcquire("b", limit = 1, windowSeconds = 3600)
+        repeat(10) { tiny.tryAcquire("flood-$it", limit = 1, windowSeconds = 3600) }
 
-        assertThat(tiny.tryAcquire("a", limit = 1, windowSeconds = 3600)).isFalse()
-        assertThat(tiny.tryAcquire("c", limit = 1, windowSeconds = 3600)).isFalse()
-        tiny.reset("b")
-        assertThat(tiny.tryAcquire("c", limit = 1, windowSeconds = 3600)).isTrue()
+        // Refusing here would lock out every user the flood did not already cover.
+        assertThat(tiny.tryAcquire("newcomer", limit = 1, windowSeconds = 3600)).isTrue()
+        assertThat(tiny.tryAcquire("newcomer", limit = 1, windowSeconds = 3600)).isFalse()
+    }
+
+    @Test
+    fun `a flood of fresh keys does not evict a key with accumulated failures`() {
+        val tiny = InMemoryRateLimiter(maxEntries = 10)
+        repeat(3) { tiny.tryAcquire("victim", limit = 3, windowSeconds = 3600) }
+
+        repeat(1_000) { tiny.tryAcquire("flood-$it", limit = 3, windowSeconds = 3600) }
+
+        assertThat(tiny.tryAcquire("victim", limit = 3, windowSeconds = 3600))
+            .describedAs("the victim's spent budget must survive the flood")
+            .isFalse()
     }
 
     @Test
