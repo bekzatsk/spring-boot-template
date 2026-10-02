@@ -1,5 +1,7 @@
 package kz.innlab.starter.notification.service
 
+import org.jsoup.Jsoup
+import org.jsoup.safety.Safelist
 import jakarta.mail.Flags
 import jakarta.mail.Folder
 import jakarta.mail.FetchProfile
@@ -20,9 +22,11 @@ class ImapService(private val mailProperties: MailProperties) {
 
     companion object {
         private val logger = LoggerFactory.getLogger(ImapService::class.java)
+        private const val IMAP_TIMEOUT_MS = "10000"
     }
 
     fun listInbox(offset: Int, size: Int, unreadOnly: Boolean): InboxPage {
+        require(offset >= 0) { "offset must not be negative" }
         return withInbox(readWrite = false) { folder ->
             val messages = if (unreadOnly) {
                 folder.search(FlagTerm(Flags(Flags.Flag.SEEN), false))
@@ -32,15 +36,13 @@ class ImapService(private val mailProperties: MailProperties) {
 
             val total = messages.size
 
-            // Fetch envelopes and flags for performance
+            // Newest first. Only the requested page is fetched: fetching envelopes for the whole
+            // mailbox on every call made each listing as slow as the inbox was large.
+            val page = messages.reversed().drop(offset).take(size)
             val fp = FetchProfile()
             fp.add(FetchProfile.Item.ENVELOPE)
             fp.add(FetchProfile.Item.FLAGS)
-            folder.fetch(messages, fp)
-
-            // Newest first: reverse the array and apply offset/size
-            val sorted = messages.reversed()
-            val page = sorted.drop(offset).take(size)
+            folder.fetch(page.toTypedArray(), fp)
 
             val items = page.map { msg ->
                 InboxMessage(
@@ -77,7 +79,10 @@ class ImapService(private val mailProperties: MailProperties) {
                 to = toAddresses,
                 date = msg.sentDate?.toInstant(),
                 textBody = textParts.joinToString("\n").ifEmpty { null },
-                htmlBody = htmlParts.joinToString("\n").ifEmpty { null },
+                // Mail from outside senders: scripts, event handlers and javascript: links are
+                // stripped so an admin client that renders it cannot be attacked through it.
+                htmlBody = htmlParts.joinToString("\n").ifEmpty { null }
+                    ?.let { Jsoup.clean(it, Safelist.relaxed()) },
                 attachments = attachments,
                 isRead = msg.flags.contains(Flags.Flag.SEEN)
             )
@@ -103,6 +108,9 @@ class ImapService(private val mailProperties: MailProperties) {
         val props = Properties().apply {
             setProperty("mail.$protocol.host", mailProperties.imap.host)
             setProperty("mail.$protocol.port", mailProperties.imap.port.toString())
+            // Without timeouts a stalled IMAP server pins a request thread indefinitely.
+            setProperty("mail.$protocol.connectiontimeout", IMAP_TIMEOUT_MS)
+            setProperty("mail.$protocol.timeout", IMAP_TIMEOUT_MS)
         }
 
         val session = Session.getInstance(props)

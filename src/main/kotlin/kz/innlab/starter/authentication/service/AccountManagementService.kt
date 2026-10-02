@@ -47,7 +47,7 @@ class AccountManagementService(
      */
     fun requestPasswordReset(email: String): UUID {
         enforceCodeRequestCooldown(email, VerificationPurpose.FORGOT_PASSWORD)
-        val user = userRepository.findByEmail(email)
+        val user = userRepository.findByEmailIgnoreCase(email)
 
         // Social-only users have no password to reset
         if (user == null || AuthProvider.LOCAL !in user.providers || user.passwordHash == null) {
@@ -67,7 +67,7 @@ class AccountManagementService(
     fun resetPassword(verificationId: UUID, email: String, code: String, newPassword: String) {
         verificationCodeService.verifyCode(verificationId, email, VerificationPurpose.FORGOT_PASSWORD, code)
 
-        val user = userRepository.findByEmail(email)
+        val user = userRepository.findByEmailIgnoreCase(email)
             ?: throw BadCredentialsException("Invalid verification code")
 
         user.passwordHash = passwordEncoder.encode(newPassword)
@@ -89,7 +89,7 @@ class AccountManagementService(
     fun verifyEmail(email: String, verificationId: UUID, code: String) {
         verificationCodeService.verifyCode(verificationId, email, VerificationPurpose.VERIFY_EMAIL, code)
 
-        val user = userRepository.findByEmail(email)
+        val user = userRepository.findByEmailIgnoreCase(email)
             ?: throw BadCredentialsException("Invalid verification code")
 
         user.emailVerified = true
@@ -103,7 +103,7 @@ class AccountManagementService(
      */
     fun resendEmailVerification(email: String): UUID {
         enforceCodeRequestCooldown(email, VerificationPurpose.VERIFY_EMAIL)
-        val user = userRepository.findByEmail(email)
+        val user = userRepository.findByEmailIgnoreCase(email)
         if (user == null || user.emailVerified) return decoyVerificationId(VerificationPurpose.VERIFY_EMAIL)
 
         val (verificationId, code) = verificationCodeService.createCode(email, VerificationPurpose.VERIFY_EMAIL)
@@ -167,7 +167,7 @@ class AccountManagementService(
         }
         requireReauthentication(user, proof)
 
-        if (userRepository.findByEmail(newEmail) != null) {
+        if (userRepository.findByEmailIgnoreCase(newEmail) != null) {
             throw IllegalStateException("Email already in use")
         }
 
@@ -192,7 +192,7 @@ class AccountManagementService(
             ?: throw IllegalStateException("Missing new email value")
 
         // Race condition protection: re-check uniqueness at verify time
-        if (userRepository.findByEmail(newEmail) != null) {
+        if (userRepository.findByEmailIgnoreCase(newEmail) != null) {
             throw IllegalStateException("Email already in use")
         }
 

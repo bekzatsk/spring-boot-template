@@ -33,7 +33,7 @@ class UserService(
         roles: Set<Role>?,
         temporary: Boolean = false
     ): User {
-        if (userRepository.findByEmail(email) != null) {
+        if (userRepository.findByEmailIgnoreCase(email) != null) {
             throw IllegalStateException("Email already registered")
         }
         val user = User(email = email).apply {

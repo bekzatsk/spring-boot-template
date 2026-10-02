@@ -59,8 +59,12 @@ class AdminUserController(
 
     @Operation(summary = "Create a user (admin). Bypasses registration.enabled flag.")
     @PostMapping
-    fun createUser(@Valid @RequestBody request: AdminCreateUserRequest): ResponseEntity<UserProfileResponse> {
-        val user = userService.createUserByAdmin(
+    fun createUser(
+        @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
+        @Valid @RequestBody request: AdminCreateUserRequest
+    ): ResponseEntity<UserProfileResponse> {
+        val user = adminUserService.createUser(
+            adminId = UUID.fromString(jwt.subject),
             email = request.email,
             rawPassword = request.password,
             name = request.name,
@@ -111,7 +115,7 @@ class AdminUserController(
     fun updateProfile(
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @PathVariable id: UUID,
-        @RequestBody request: AdminUpdateNameRequest
+        @Valid @RequestBody request: AdminUpdateNameRequest
     ): ResponseEntity<UserProfileResponse> {
         val adminId = UUID.fromString(jwt.subject)
         val user = adminUserService.updateProfile(adminId, id, request.name, request.picture)

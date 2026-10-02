@@ -1,5 +1,9 @@
 package kz.innlab.starter
 
+import kz.innlab.starter.user.repository.AdminAuditLogRepository
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.http.MediaType
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
 import kz.innlab.starter.authentication.service.TokenService
 import kz.innlab.starter.notification.service.PushService
@@ -37,6 +41,9 @@ class AdminUserIntegrationTest {
 
     @Autowired
     private lateinit var tokenService: TokenService
+
+    @Autowired
+    private lateinit var auditLogRepository: AdminAuditLogRepository
 
     private lateinit var adminToken: String
     private lateinit var userToken: String
@@ -116,5 +123,56 @@ class AdminUserIntegrationTest {
         )
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.status").value(404))
+    }
+
+    // --- Hardening ---
+
+    @Test
+    fun `list refuses to sort by a column outside the allowlist`() {
+        mockMvc.perform(
+            get("/api/v1/admin/users").param("sort", "passwordHash").header("Authorization", "Bearer $adminToken")
+        ).andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `list caps the page size`() {
+        mockMvc.perform(
+            get("/api/v1/admin/users").param("size", "5000").header("Authorization", "Bearer $adminToken")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.size").value(100))
+    }
+
+    @Test
+    fun `creating a user is audited`() {
+        mockMvc.perform(
+            post("/api/v1/admin/users")
+                .header("Authorization", "Bearer $adminToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email": "created@example.com", "password": "SecurePass123", "roles": ["USER", "ADMIN"]}""")
+        ).andExpect(status().isCreated)
+
+        assert(auditLogRepository.findAll().any { it.action == "CREATE_USER" })
+    }
+
+    @Test
+    fun `creating a user whose email differs only in case answers 409`() {
+        mockMvc.perform(
+            post("/api/v1/admin/users")
+                .header("Authorization", "Bearer $adminToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email": "Member@Example.com", "password": "SecurePass123"}""")
+        ).andExpect(status().isConflict)
+    }
+
+    @Test
+    fun `profile picture must be an http URL`() {
+        val memberId = userRepository.findByEmail("member@example.com")!!.id
+        mockMvc.perform(
+            patch("/api/v1/admin/users/$memberId/profile")
+                .header("Authorization", "Bearer $adminToken")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"name": "M", "picture": "javascript:alert(1)"}""")
+        ).andExpect(status().isBadRequest)
     }
 }

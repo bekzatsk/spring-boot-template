@@ -17,7 +17,7 @@ class ConsoleMailService : MailService {
         htmlBody: String?,
         attachments: List<EmailAttachment>
     ) {
-        logger.info("[MAIL] Sending email to {}, subject: {}, hasAttachments: {}", to, subject, attachments.isNotEmpty())
+        logger.info("[MAIL] Sending email to {}, subject: {}, hasAttachments: {}", maskEmail(to), subject, attachments.isNotEmpty())
     }
 
     override fun sendEmail(
@@ -28,7 +28,13 @@ class ConsoleMailService : MailService {
         htmlBody: String?,
         attachments: List<EmailAttachment>
     ): UUID {
-        logger.info("[MAIL] Sending tracked email to {}, subject: {}, hasAttachments: {}", to, subject, attachments.isNotEmpty())
+        logger.info("[MAIL] Sending tracked email to {}, subject: {}, hasAttachments: {}", maskEmail(to), subject, attachments.isNotEmpty())
         return UuidCreator.getTimeOrderedEpoch()
+    }
+
+    // Enough to tell messages apart in a dev log without writing the address out.
+    private fun maskEmail(address: String): String {
+        val at = address.indexOf('@')
+        return if (at <= 0) "***" else "${address.first()}***${address.substring(at)}"
     }
 }
