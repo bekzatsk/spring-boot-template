@@ -1,5 +1,6 @@
 package kz.innlab.starter.notification.service
 
+import kz.innlab.starter.shared.util.maskEmail
 import com.github.f4b6a3.uuid.UuidCreator
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -32,9 +33,4 @@ class ConsoleMailService : MailService {
         return UuidCreator.getTimeOrderedEpoch()
     }
 
-    // Enough to tell messages apart in a dev log without writing the address out.
-    private fun maskEmail(address: String): String {
-        val at = address.indexOf('@')
-        return if (at <= 0) "***" else "${address.first()}***${address.substring(at)}"
-    }
 }

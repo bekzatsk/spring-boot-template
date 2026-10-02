@@ -1,5 +1,6 @@
 package kz.innlab.starter.notification.service
 
+import kz.innlab.starter.shared.util.maskEmail
 import kz.innlab.starter.authentication.service.EmailService
 import kz.innlab.starter.config.MailProperties
 import kz.innlab.starter.notification.model.MailHistory
@@ -57,7 +58,7 @@ class SmtpMailService(
             try {
                 mailDispatcher.sendDirect(to, "$purpose Verification Code", "Your $purpose code is: $code")
             } catch (e: Exception) {
-                logger.error("Failed to send {} code email to {}: {}", purpose, to, e.message, e)
+                logger.error("Failed to send {} code email to {}: {}", purpose, maskEmail(to), e.message, e)
             }
         }
     }

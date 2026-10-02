@@ -291,7 +291,7 @@ class MailIntegrationTest {
             setFrom("outsider@test.com")
             setRecipients(Message.RecipientType.TO, "inbox@example.com")
             subject = "Hostile"
-            setContent("""<p onclick="steal()">Hi</p><script>steal()</script><a href="javascript:steal()">x</a>""", "text/html")
+            setContent("""<p onclick="steal()">Hi</p><script>steal()</script><a href="javascript:steal()">x</a><img src="https://tracker.example/p.gif">""", "text/html")
         }
         GreenMailUtil.sendMimeMessage(message)
 
@@ -301,6 +301,7 @@ class MailIntegrationTest {
 
         assert("Hi" in body)
         assert("<script" !in body && "onclick" !in body && "javascript:" !in body) { body }
+        assert("tracker.example" !in body) { "remote images are tracking pixels: $body" }
     }
 
     @Test

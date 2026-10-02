@@ -1,5 +1,6 @@
 package kz.innlab.starter.notification.service
 
+import kz.innlab.starter.shared.util.maskEmail
 import kz.innlab.starter.authentication.service.EmailService
 import org.slf4j.LoggerFactory
 
@@ -22,7 +23,7 @@ class ConsoleEmailService : EmailService {
         logger.info(
             "[EMAIL] Sending {} code to {} (code hidden; set app.auth.verification.dev-code for local dev)",
             purpose,
-            to
+            maskEmail(to)
         )
     }
 }
