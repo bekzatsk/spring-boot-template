@@ -96,13 +96,15 @@ The test suite never executes migrations (H2 `create-drop`), so a broken migrati
 
 ## Releasing
 
-This is a library (`kz.innlab:auth-spring-boot-starter`) published to GitHub Packages, registered via `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`. `AuthStarterApplication` exists only for local running. CI runs `./mvnw verify`.
+This is a library (`kz.innlab:auth-spring-boot-starter`) published to **Maven Central**, registered via `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`. `AuthStarterApplication` exists only for local running. CI runs `./mvnw verify`. Full steps: `DEPLOY_MVN.md`.
 
 ```bash
-./scripts/publish.sh --release X.Y.Z   # bump pom, deploy, tag, push (needs GITHUB_TOKEN with write:packages)
+JAVA_HOME="$(/usr/libexec/java_home -v 25)" ./mvnw clean deploy -P release -DskipTests
 ```
 
-Record user-facing and breaking changes in `CHANGELOG.md`; README pins the current release version.
+The `release` profile signs with GPG and uploads to Sonatype with `autoPublish=false`: the deployment stops at VALIDATED and must be published by hand at central.sonatype.com/publishing/deployments. Central is immutable — a published version can never be replaced. Bump the version in `pom.xml`, README, `INSTALL_INSTRUCTION.md`, and give it a `CHANGELOG.md` entry first.
+
+`scripts/publish.sh` targets GitHub Packages, which `pom.xml` has no `distributionManagement` for; it fails at deploy and is not the release path.
 
 ## Renaming the Project
 
