@@ -6,11 +6,15 @@ Ready-to-use Spring Boot starter for JWT authentication with multi-provider logi
 
 ---
 
-Current release: **`0.1.3`**. **Do not use `0.1.0`** — cookie authentication is dead in it
+Current release: **`0.1.4`**. **Do not use `0.1.0`** — cookie authentication is dead in it
 (`Set-Cookie` is never sent, silently); see [CHANGELOG.md](CHANGELOG.md).
 
 Upgrading from `0.0.x`? The `0.1.x` line carries five breaking changes and three new migrations —
 [CHANGELOG.md](CHANGELOG.md) has the steps.
+
+Upgrading to `0.1.4`? It is a security release with breaking changes — mail send is admin-only,
+email/phone changes need the current password or a re-authentication code, Swagger is no longer
+public, and two new migrations run — see [CHANGELOG.md](CHANGELOG.md#014--2026-10-02).
 
 ## Usage in Another Project
 
@@ -57,7 +61,7 @@ Lock down permissions: `chmod 600 ~/.m2/settings.xml`.
   <dependency>
     <groupId>kz.innlab</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>0.1.3</version>
+    <version>0.1.4</version>
   </dependency>
 </dependencies>
 ```
@@ -72,7 +76,7 @@ cd auth-starter
 ./mvnw clean install -DskipTests
 ```
 
-This publishes `kz.innlab:auth-spring-boot-starter:0.1.3` to `~/.m2/repository`.
+This publishes `kz.innlab:auth-spring-boot-starter:0.1.4` to `~/.m2/repository`.
 
 ### 4. Configure `application.yaml`
 
@@ -522,7 +526,7 @@ Phone-only users have `email = ""` with a partial unique index.
         <dependency>
             <groupId>kz.innlab</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>0.1.3</version>
+            <version>0.1.4</version>
         </dependency>
     </dependencies>
 
@@ -638,7 +642,7 @@ The starter publishes to **GitHub Packages** via `scripts/publish.sh`.
 ### Publish commands
 
 ```bash
-# Publish current pom version (e.g. 0.1.3)
+# Publish current pom version (e.g. 0.1.4)
 ./scripts/publish.sh --skip-tests
 
 # Bump to next snapshot
