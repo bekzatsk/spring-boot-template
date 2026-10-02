@@ -89,7 +89,9 @@ class MailSendLimitIntegrationTest {
 
     @BeforeEach
     fun setUp() {
-        mailHistoryRepository.deleteAll()
+        // Bulk delete: an async send from the previous test may still be updating its row, and
+        // deleteAll() would fail the version check on it.
+        mailHistoryRepository.deleteAllInBatch()
         refreshTokenRepository.deleteAll()
         userRepository.deleteAll()
 

@@ -7,8 +7,9 @@ services:
       POSTGRES_USER: ${DB_USERNAME:-template}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-template}
       PGDATA: /var/lib/postgresql/data
+    # Loopback only: the dev credentials above are defaults anyone could guess.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

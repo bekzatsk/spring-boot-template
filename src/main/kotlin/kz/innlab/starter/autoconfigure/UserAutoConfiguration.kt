@@ -32,8 +32,11 @@ class UserAutoConfiguration {
         userRepository: UserRepository,
         passwordEncoder: PasswordEncoder,
         refreshTokenRevoker: RefreshTokenRevoker,
-        auditLogRepository: AdminAuditLogRepository
-    ): AdminUserService = AdminUserService(userRepository, passwordEncoder, refreshTokenRevoker, auditLogRepository)
+        auditLogRepository: AdminAuditLogRepository,
+        userService: UserService
+    ): AdminUserService = AdminUserService(
+        userRepository, passwordEncoder, refreshTokenRevoker, auditLogRepository, userService
+    )
 
     @Bean
     @ConditionalOnMissingBean

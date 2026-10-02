@@ -20,7 +20,7 @@ class LocalUserDetailsService(
      * Prevents Google/Apple-only users from authenticating via local credentials.
      */
     override fun loadUserByUsername(email: String): UserDetails {
-        val user = userRepository.findByEmail(email)
+        val user = userRepository.findByEmailIgnoreCase(email)
             ?: throw UsernameNotFoundException("No account for email: $email")
 
         if (AuthProvider.LOCAL !in user.providers) {

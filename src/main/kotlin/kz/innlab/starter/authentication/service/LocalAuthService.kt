@@ -92,7 +92,7 @@ class LocalAuthService(
         // someone else guessing against their address.
         rateLimiter.reset(key)
 
-        val user = userRepository.findByEmail(email)
+        val user = userRepository.findByEmailIgnoreCase(email)
             ?: throw BadCredentialsException("User not found")
 
         return authTokenIssuer.issue(user)

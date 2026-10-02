@@ -18,6 +18,35 @@
 - **The console Telegram bot no longer logs message text**, which carried the login code.
   `ProductionSafetyConfig` refuses to start with Telegram enabled and no bot token.
 - **The Telegram webhook secret is compared in constant time.**
+- **Admin user list**: sorting is limited to `email`, `name`, `phone`, `createdAt` (sorting by
+  `passwordHash` was accepted) and pages are capped at 100 rows (Spring's default ceiling is 2000).
+- **Last-admin race**: removing the admin role or deleting an admin locks the admin rows before
+  counting, so two admins demoting each other at once can no longer leave none.
+- **Admin user creation is audited** (`CREATE_USER`), through the new `AdminUserService.createUser`.
+- **Admin profile updates are validated**: `name` up to 255 characters, `picture` an http(s) URL.
+- **Shared inbox HTML is sanitized** with jsoup (`Safelist.relaxed()`) before it is returned:
+  scripts, event handlers and `javascript:` links from outside senders are stripped. The inbox
+  listing fetches only the requested page, rejects a negative offset, and IMAP calls time out
+  after 10 seconds.
+- **Email lookups ignore letter case everywhere** — login, password reset, verification, email
+  changes and admin checks. Mixed-case input used to fail login and answer 500 on duplicates.
+- **Push payloads are bounded**: `body` up to 2,000 characters, `data` up to 20 entries.
+- **Less personal data in logs**: the admin audit log line no longer carries before/after values
+  (they stay in the audit table); the console push and mail fallbacks no longer log device tokens,
+  message content or full addresses.
+- **`ProductionSafetyConfig` refuses auth cookies without `Secure`.**
+- **The unused OAuth2 authorization server is gone**: the starter depends on
+  `spring-boot-starter-oauth2-resource-server` instead, so consumers no longer get authorization
+  server auto-configuration and its endpoints.
+- `docker-compose.yml` binds PostgreSQL to `127.0.0.1`; CI runs with read-only `contents` permission.
+
+### Changed (breaking)
+
+- `spring-boot-starter-oauth2-authorization-server` is no longer a transitive dependency. A consumer
+  that references `OAuth2AuthorizationServerAutoConfiguration` (for example to exclude it) must
+  drop that reference, or add the dependency itself if it really runs an authorization server.
+- The admin user list answers `400` for sort properties outside the allowlist.
+- New dependency: `org.jsoup:jsoup`.
 
 ## 0.1.4 — 2026-10-02
 

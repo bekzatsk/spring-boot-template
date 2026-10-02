@@ -5,6 +5,10 @@ on:
     branches: [master]
   pull_request:
 
+# Build and test need to read the repository and nothing else.
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true

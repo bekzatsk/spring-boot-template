@@ -1,5 +1,7 @@
 package kz.innlab.starter.user.repository
 
+import jakarta.persistence.LockModeType
+import org.springframework.data.jpa.repository.Lock
 import kz.innlab.starter.user.dto.UserSummaryResponse
 import kz.innlab.starter.user.model.User
 import org.springframework.data.domain.Page
@@ -55,4 +57,13 @@ interface UserRepository : JpaRepository<User, UUID> {
 
     @Query("SELECT COUNT(u) FROM User u JOIN u.roles r WHERE r = kz.innlab.starter.user.model.Role.ADMIN")
     fun countAdmins(): Long
+
+    /**
+     * Admins, row-locked until the transaction ends. Two admins demoting each other at once both
+     * counted two admins and both went ahead, leaving none; with the lock the second one waits
+     * and counts again.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u JOIN u.roles r WHERE r = kz.innlab.starter.user.model.Role.ADMIN")
+    fun lockAdmins(): List<User>
 }

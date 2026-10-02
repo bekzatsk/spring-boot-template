@@ -127,6 +127,14 @@ class ProductionSafetyConfigTest {
     }
 
     @Test
+    fun `refuses to start with auth cookies that are not Secure`() {
+        runner("app.auth.cookie.enabled=true", "app.auth.cookie.secure=false").run { context ->
+            assertThat(context).hasFailed()
+            assertThat(context.startupFailure).hasStackTraceContaining("cookie.secure")
+        }
+    }
+
+    @Test
     fun `refuses to start when Telegram is enabled without a webhook secret`() {
         runner("app.auth.telegram.enabled=true").run { context ->
             assertThat(context).hasFailed()

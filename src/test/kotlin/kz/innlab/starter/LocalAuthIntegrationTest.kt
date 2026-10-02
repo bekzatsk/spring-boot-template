@@ -197,4 +197,19 @@ class LocalAuthIntegrationTest {
             .andExpect(jsonPath("$.error").value("Bad Request"))
             .andExpect(jsonPath("$.status").value(400))
     }
+
+    @Test
+    fun `login ignores the letter case of the email`() {
+        mockMvc.perform(
+            post("/api/v1/auth/local/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email": "case@example.com", "password": "SecurePass123"}""")
+        ).andExpect(status().isCreated)
+
+        mockMvc.perform(
+            post("/api/v1/auth/local/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"email": "Case@Example.COM", "password": "SecurePass123"}""")
+        ).andExpect(status().isOk)
+    }
 }

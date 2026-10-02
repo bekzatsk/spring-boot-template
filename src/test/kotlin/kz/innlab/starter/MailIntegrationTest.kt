@@ -1,5 +1,7 @@
 package kz.innlab.starter
 
+import jakarta.mail.internet.MimeMessage
+import jakarta.mail.Message
 import com.icegreen.greenmail.util.GreenMail
 import com.icegreen.greenmail.util.GreenMailUtil
 import com.icegreen.greenmail.util.ServerSetupTest
@@ -99,7 +101,9 @@ class MailIntegrationTest {
 
     @BeforeEach
     fun setUp() {
-        mailHistoryRepository.deleteAll()
+        // Bulk delete: an async send from the previous test may still be updating its row, and
+        // deleteAll() would fail the version check on it.
+        mailHistoryRepository.deleteAllInBatch()
         notificationPreferenceRepository.deleteAll()
         refreshTokenRepository.deleteAll()
         userRepository.deleteAll()
@@ -278,5 +282,31 @@ class MailIntegrationTest {
                 .content("""{"to": "a@b.com", "subject": "X", "textBody": "Y"}""")
         )
             .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `inbox HTML is sanitized before it reaches the admin`() {
+        val session = greenMail.smtp.createSession()
+        val message = MimeMessage(session).apply {
+            setFrom("outsider@test.com")
+            setRecipients(Message.RecipientType.TO, "inbox@example.com")
+            subject = "Hostile"
+            setContent("""<p onclick="steal()">Hi</p><script>steal()</script><a href="javascript:steal()">x</a>""", "text/html")
+        }
+        GreenMailUtil.sendMimeMessage(message)
+
+        val body = mockMvc.perform(
+            get("/api/v1/mail/inbox/1").header("Authorization", "Bearer $adminToken")
+        ).andExpect(status().isOk).andReturn().response.contentAsString
+
+        assert("Hi" in body)
+        assert("<script" !in body && "onclick" !in body && "javascript:" !in body) { body }
+    }
+
+    @Test
+    fun `listInbox rejects a negative offset`() {
+        mockMvc.perform(
+            get("/api/v1/mail/inbox").param("offset", "-5").header("Authorization", "Bearer $adminToken")
+        ).andExpect(status().isBadRequest)
     }
 }

@@ -10,10 +10,5 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
  * Kept minimal on purpose. Anything added here that the starter should have provided would hide the
  * next regression the same way `AuthStarterApplication` hid this one.
  */
-@SpringBootApplication(
-    exclude = [
-        org.springframework.boot.security.oauth2.server.authorization.autoconfigure.servlet
-            .OAuth2AuthorizationServerAutoConfiguration::class
-    ]
-)
+@SpringBootApplication
 class ConsumerApplication

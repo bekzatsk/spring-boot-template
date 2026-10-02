@@ -54,6 +54,8 @@ class ProductionSafetyConfig {
         @Value("\${app.auth.email-otp.dev-code:}") emailOtpDevCode: String,
         @Value("\${app.auth.telegram.dev-code:}") telegramDevCode: String,
         @Value("\${app.auth.telegram.enabled:false}") telegramEnabled: Boolean,
+        @Value("\${app.auth.cookie.enabled:false}") cookieEnabled: Boolean,
+        @Value("\${app.auth.cookie.secure:true}") cookieSecure: Boolean,
         @Value("\${app.auth.telegram.webhook-secret:}") telegramWebhookSecret: String
     ): InitializingBean = InitializingBean {
         val problems = mutableListOf<String>()
@@ -67,6 +69,10 @@ class ProductionSafetyConfig {
         ) {
             problems += "a fixed OTP override (app.auth.*.dev-code) is set — this is an account-takeover " +
                 "backdoor and must never be enabled in production"
+        }
+        if (cookieEnabled && !cookieSecure) {
+            problems += "app.auth.cookie.enabled=true with app.auth.cookie.secure=false — auth cookies " +
+                "would also travel over plain HTTP, where anyone on the path can read them"
         }
         if (telegramEnabled && telegramBotService.ifAvailable is ConsoleTelegramBotService) {
             problems += "app.auth.telegram.enabled=true but no bot token is configured — Telegram " +

@@ -433,4 +433,15 @@ class NotificationIntegrationTest {
         mockMvc.perform(get("/api/v1/notifications/tokens"))
             .andExpect(status().isUnauthorized)
     }
+
+    @Test
+    fun `push body over the size limit is rejected`() {
+        registerDeviceToken("big-token", "device-big")
+        mockMvc.perform(
+            post("/api/v1/notifications/send/token")
+                .header("Authorization", authHeader())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"token": "big-token", "title": "T", "body": "${"x".repeat(2001)}"}""")
+        ).andExpect(status().isBadRequest)
+    }
 }

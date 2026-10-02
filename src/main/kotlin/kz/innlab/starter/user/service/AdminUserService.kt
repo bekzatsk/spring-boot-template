@@ -12,6 +12,7 @@ import kz.innlab.starter.user.repository.AdminAuditLogRepository
 import kz.innlab.starter.user.repository.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -23,16 +24,43 @@ class AdminUserService(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
     private val refreshTokenRevoker: RefreshTokenRevoker,
-    private val auditLogRepository: AdminAuditLogRepository
+    private val auditLogRepository: AdminAuditLogRepository,
+    private val userService: UserService
 ) {
 
     companion object {
         private val log = LoggerFactory.getLogger(AdminUserService::class.java)
+        private const val MAX_PAGE_SIZE = 100
+
+        /** Sortable columns. Anything else — passwordHash included — is refused. */
+        private val SORTABLE = setOf("email", "name", "phone", "createdAt")
     }
 
     @Transactional(readOnly = true)
-    fun list(query: String?, pageable: Pageable): Page<UserSummaryResponse> =
-        userRepository.searchSummaries(escapeLikeWildcards(query), pageable)
+    fun list(query: String?, pageable: Pageable): Page<UserSummaryResponse> {
+        // Sorting by an arbitrary property let a caller order users by passwordHash, and Spring's
+        // default ceiling of 2000 rows a page made the listing an easy way to dump the table.
+        pageable.sort.forEach {
+            require(it.property in SORTABLE) { "Cannot sort by '${it.property}'; allowed: $SORTABLE" }
+        }
+        val bounded = PageRequest.of(pageable.pageNumber, pageable.pageSize.coerceAtMost(MAX_PAGE_SIZE), pageable.sort)
+        return userRepository.searchSummaries(escapeLikeWildcards(query), bounded)
+    }
+
+    /** Admin user creation, audited like every other admin change. */
+    @Transactional
+    fun createUser(
+        adminId: UUID,
+        email: String,
+        rawPassword: String,
+        name: String?,
+        roles: Set<Role>?,
+        temporary: Boolean
+    ): User {
+        val user = userService.createUserByAdmin(email, rawPassword, name, roles, temporary)
+        audit(adminId, "CREATE_USER", user.id, after = "roles=${user.roles.map { it.name }.sorted()}")
+        return user
+    }
 
     /**
      * `%` and `_` are LIKE metacharacters. Unescaped, a search for "%" matches every row and
@@ -69,7 +97,7 @@ class AdminUserService(
         val user = findById(targetId)
         if (user.email == newEmail) return user
 
-        val existing = userRepository.findByEmail(newEmail)
+        val existing = userRepository.findByEmailIgnoreCase(newEmail)
         if (existing != null && existing.id != targetId) {
             throw IllegalStateException("Email already in use")
         }
@@ -152,7 +180,7 @@ class AdminUserService(
     }
 
     private fun ensureNotLastAdmin(targetId: UUID) {
-        val adminCount = userRepository.countAdmins()
+        val adminCount = userRepository.lockAdmins().size
         val target = userRepository.findById(targetId).orElse(null)
         val targetIsAdmin = target != null && Role.ADMIN in target.roles
         if (targetIsAdmin && adminCount <= 1) {
@@ -168,7 +196,8 @@ class AdminUserService(
             before = before,
             after = after
         ))
-        log.info("ADMIN_AUDIT admin={} action={} target={} before={} after={}",
-            adminId, action, targetId, before, after)
+        // Values stay in the audit table: before/after carry emails and phone numbers, which do
+        // not belong in application logs.
+        log.info("ADMIN_AUDIT admin={} action={} target={}", adminId, action, targetId)
     }
 }
