@@ -1,6 +1,8 @@
 package kz.innlab.starter.config
 
 import kz.innlab.starter.authentication.service.ConsoleSmsService
+import kz.innlab.starter.authentication.service.ConsoleTelegramBotService
+import kz.innlab.starter.authentication.service.TelegramBotService
 import kz.innlab.starter.authentication.service.EmailService
 import kz.innlab.starter.authentication.service.SmsService
 import kz.innlab.starter.notification.service.ConsoleEmailService
@@ -43,6 +45,7 @@ class ProductionSafetyConfig {
         smsService: ObjectProvider<SmsService>,
         emailService: ObjectProvider<EmailService>,
         mailService: ObjectProvider<MailService>,
+        telegramBotService: ObjectProvider<TelegramBotService>,
         consoleFallbacks: ConsoleFallbackProperties,
         jwtIdentity: JwtIdentityProperties,
         @Value("\${app.security.allow-console-fallbacks:false}") allowConsoleFallbacks: Boolean,
@@ -64,6 +67,10 @@ class ProductionSafetyConfig {
         ) {
             problems += "a fixed OTP override (app.auth.*.dev-code) is set — this is an account-takeover " +
                 "backdoor and must never be enabled in production"
+        }
+        if (telegramEnabled && telegramBotService.ifAvailable is ConsoleTelegramBotService) {
+            problems += "app.auth.telegram.enabled=true but no bot token is configured — Telegram " +
+                "login codes would never reach users; set app.auth.telegram.bot-token"
         }
         if (telegramEnabled && telegramWebhookSecret.isBlank()) {
             problems += "app.auth.telegram.enabled=true but app.auth.telegram.webhook-secret is blank — " +

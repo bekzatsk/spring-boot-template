@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### Security
+
+- **The in-memory rate limiter no longer locks newcomers out when full.** At capacity it refused
+  every key it was not already tracking, so filling it with fresh emails answered `429` to every
+  other user. It now evicts expired entries, then the lowest-count ones; a flood of fresh keys
+  mostly evicts itself, and a key with accumulated failures survives it.
+- **Code sending is limited per client and per purpose.** The per-identifier cooldown let one
+  client send codes to an unbounded list of phone numbers (SMS toll fraud). New limits:
+  `app.auth.rate-limit.code-send-per-client` (default 20 per hour per client address) and
+  `app.auth.rate-limit.code-send-per-purpose` (default 1,000 per hour, a circuit breaker), both
+  answered with `429` and `Retry-After`. **Behind a reverse proxy, set
+  `server.forward-headers-strategy`**, or every request shares the proxy's address and the
+  per-client limit acts as a global one.
+- **The console Telegram bot no longer logs message text**, which carried the login code.
+  `ProductionSafetyConfig` refuses to start with Telegram enabled and no bot token.
+- **The Telegram webhook secret is compared in constant time.**
+
 ## 0.1.4 — 2026-10-02
 
 Security release. It closes an account takeover through email-OTP login, an open mail relay and
