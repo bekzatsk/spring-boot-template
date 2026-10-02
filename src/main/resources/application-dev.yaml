@@ -22,6 +22,8 @@ app:
       - http://localhost:5173
       - http://localhost:8082
   auth:
+    security:
+      public-api-docs: true
     sms:
       dev-code: "123456"
     verification:

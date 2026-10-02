@@ -12,12 +12,12 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Profile
+import org.springframework.context.annotation.Conditional
 
 /**
  * Fail-fast guard against silently degraded production deployments.
  *
- * Refuses to start under the `prod` profile when:
+ * Refuses to start under a production profile ([ProductionProfiles]: `prod` or `production` by default) when:
  * - any `app.auth.*.dev-code` fixed-OTP override is set (account-takeover backdoor),
  * - Telegram auth is enabled without a webhook secret (webhook would accept forged updates),
  * - a console fallback bean is serving a channel the application actually uses (verification codes
@@ -34,7 +34,7 @@ import org.springframework.context.annotation.Profile
  * directly — so the waiver is a statement by the operator, not a guess by the starter.
  */
 @Configuration
-@Profile("prod")
+@Conditional(OnProductionProfileCondition::class)
 @EnableConfigurationProperties(ConsoleFallbackProperties::class, JwtIdentityProperties::class)
 class ProductionSafetyConfig {
 

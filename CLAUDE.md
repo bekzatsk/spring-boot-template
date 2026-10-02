@@ -74,10 +74,12 @@ Cross-cutting concerns:
 ### Security Posture
 
 - **No default Spring profile.** `SPRING_PROFILES_ACTIVE` must be set explicitly; a `:dev` fallback would silently enable the fixed `123456` OTP override in production.
-- **`ProductionSafetyConfig` refuses to start under `prod`** when a `dev-code` override is set, Telegram is enabled without a webhook secret, or console SMS/mail fallbacks are serving real traffic. The fallback checks are waived **per channel** (`app.security.console-fallbacks.allow-sms|allow-email|allow-mail`) because most applications use some channels and not others; `app.security.allow-console-fallbacks=true` waives all three and stays only for compatibility. Which channels an application uses is not derivable from config — `change-phone` sends an OTP whether or not the phone provider is enabled — so the waiver is the operator's statement, not a guess.
+- **`ProductionSafetyConfig` refuses to start under a production profile** (`prod`/`production` by default, `app.security.production-profiles` to change; `ProductionProfiles` is the one check, also used by `RsaKeyConfig`) when a `dev-code` override is set, Telegram is enabled without a webhook secret, or console SMS/mail fallbacks are serving real traffic. The fallback checks are waived **per channel** (`app.security.console-fallbacks.allow-sms|allow-email|allow-mail`) because most applications use some channels and not others; `app.security.allow-console-fallbacks=true` waives all three and stays only for compatibility. Which channels an application uses is not derivable from config — `change-phone` sends an OTP whether or not the phone provider is enabled — so the waiver is the operator's statement, not a guess.
 - **Authorization is fail-secure**: `anyRequest` is `authenticated`. Consumers open extra paths via `app.auth.security.public-paths`. Only `/actuator/health*` is public by default.
+- **Swagger/OpenAPI is not public** unless `app.auth.security.public-api-docs=true` (set in the dev profile). Admin rules are registered before every `permitAll`, so a broad `public-paths` entry cannot open them.
+- **`AuthExceptionHandler` is scoped to `kz.innlab.starter`** so it never echoes a consumer's exception messages; the JSON 404 for unmapped paths lives in the separate, lowest-precedence `NotFoundExceptionHandler`.
 - **Admin-only endpoints**: `/api/v1/admin/**`, `POST /api/v1/notifications/send/topic` (broadcast), `/api/v1/mail/inbox/**` (shared org mailbox), `/api/v1/mail/send/**` (outbound mail from the app domain).
-- **Ownership checks**: push send/multicast and topic subscribe only accept FCM tokens registered to the caller.
+- **Ownership checks**: push send/multicast and topic subscribe only accept FCM tokens registered to the caller. An FCM token is unique; registering one another user holds takes it over.
 - **Rate limits**: Telegram resend has a server-side cooldown plus a per-session cap; mail send has a per-user hourly quota and attachment caps (`app.mail.limits.*`).
 - **`X-Forwarded-For` is ignored** unless `app.auth.telegram.trust-forwarded-headers=true` (set only behind a trusted proxy).
 
@@ -87,7 +89,7 @@ Tests use H2 in-memory DB with Flyway disabled and `create-drop` DDL. External d
 
 ## Database Migrations
 
-Flyway migrations in `src/main/resources/db/migration-auth/` (V1 through V13), applied to the `auth` schema by the starter's own Flyway bean (`AuthFlywayConfig`). Dev profile has `clean-on-validation-error: true`; prod uses strict validation.
+Flyway migrations in `src/main/resources/db/migration-auth/` (V1 through V14), applied to the `auth` schema by the starter's own Flyway bean (`AuthFlywayConfig`). Dev profile has `clean-on-validation-error: true`; prod uses strict validation.
 
 The test suite never executes migrations (H2 `create-drop`), so a broken migration passes `./mvnw test`. CI (`.github/workflows/ci.yml`) has a separate job that applies every migration to PostgreSQL 18 and fails if any entity table lacks a `version` column — when adding a new entity, add its table to that job's `entity_tables` list.
 

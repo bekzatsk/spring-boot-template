@@ -5,6 +5,7 @@ import kz.innlab.starter.authentication.controller.AccountManagementController
 import kz.innlab.starter.authentication.controller.AuthController
 import kz.innlab.starter.authentication.cookie.AuthCookieWriter
 import kz.innlab.starter.authentication.exception.AuthExceptionHandler
+import kz.innlab.starter.authentication.exception.NotFoundExceptionHandler
 import kz.innlab.starter.authentication.filter.ApiAccessDeniedHandler
 import kz.innlab.starter.authentication.filter.ApiAuthenticationEntryPoint
 import kz.innlab.starter.authentication.filter.RequiredActionFilter
@@ -138,6 +139,10 @@ class AuthCoreAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     fun authExceptionHandler(): AuthExceptionHandler = AuthExceptionHandler()
+
+    @Bean
+    @ConditionalOnMissingBean
+    fun notFoundExceptionHandler(): NotFoundExceptionHandler = NotFoundExceptionHandler()
 
     @Bean
     @ConditionalOnMissingBean

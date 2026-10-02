@@ -50,8 +50,10 @@ class ProductionSafetyConfigTest {
         ): UUID = UUID.randomUUID()
     }
 
-    private fun runner(vararg properties: String) = ApplicationContextRunner()
-        .withInitializer { it.environment.setActiveProfiles("prod") }
+    private fun runner(vararg properties: String) = runnerFor("prod", *properties)
+
+    private fun runnerFor(profile: String, vararg properties: String) = ApplicationContextRunner()
+        .withInitializer { it.environment.setActiveProfiles(profile) }
         .withUserConfiguration(ProductionSafetyConfig::class.java)
         .withBean(SmsService::class.java, { RealSmsService() })
         .withBean(EmailService::class.java, { RealEmailService() })
@@ -67,6 +69,34 @@ class ProductionSafetyConfigTest {
         runner().run { context ->
             assertThat(context).hasNotFailed()
             assertThat(context).hasBean("productionSafetyGuard")
+        }
+    }
+
+    @Test
+    fun `guards the production profile, not only prod`() {
+        runnerFor("production", "app.auth.sms.dev-code=123456").run { context ->
+            assertThat(context).hasFailed()
+            assertThat(context.startupFailure).hasStackTraceContaining("fixed OTP override")
+        }
+    }
+
+    @Test
+    fun `guards a profile named in app security production-profiles`() {
+        runnerFor(
+            "live",
+            "app.security.production-profiles=live",
+            "app.auth.sms.dev-code=123456"
+        ).run { context ->
+            assertThat(context).hasFailed()
+            assertThat(context.startupFailure).hasStackTraceContaining("fixed OTP override")
+        }
+    }
+
+    @Test
+    fun `stays off outside production profiles`() {
+        runnerFor("staging", "app.auth.sms.dev-code=123456").run { context ->
+            assertThat(context).hasNotFailed()
+            assertThat(context).doesNotHaveBean("productionSafetyGuard")
         }
     }
 

@@ -6,6 +6,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class AuthSecurityProperties(
     val enabled: Boolean = true,
     val publicPaths: List<String> = emptyList(),
+    /** Serve Swagger UI and the OpenAPI spec without authentication. Off by default: the spec maps every endpoint. */
+    val publicApiDocs: Boolean = false,
     val requiredAction: RequiredActionEnforcement = RequiredActionEnforcement()
 )
 

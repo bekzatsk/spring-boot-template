@@ -61,7 +61,7 @@ class RsaKeyConfig(
             val publicKey = keyStore.getCertificate(keyAlias).publicKey as RSAPublicKey
             return KeyPair(publicKey, privateKey)
         }
-        check(!environment.acceptsProfiles("prod")) {
+        check(!ProductionProfiles.isActive(environment)) {
             "Production JWT signing key is required: configure app.security.jwt.keystore-location and keystore-password"
         }
         logger.warn("No keystore configured — generating in-memory RSA keypair (NOT suitable for production)")

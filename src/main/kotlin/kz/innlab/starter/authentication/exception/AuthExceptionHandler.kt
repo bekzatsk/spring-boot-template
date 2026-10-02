@@ -13,9 +13,10 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.HandlerMethodValidationException
-import org.springframework.web.servlet.resource.NoResourceFoundException
 
-@RestControllerAdvice
+// Scoped to the starter's controllers: unscoped, it would answer for the consumer application too
+// and echo the message of any IllegalStateException/IllegalArgumentException its code throws.
+@RestControllerAdvice(basePackages = ["kz.innlab.starter"])
 class AuthExceptionHandler {
 
     companion object {
@@ -91,12 +92,6 @@ class AuthExceptionHandler {
     fun handleForbidden(ex: ForbiddenOperationException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.FORBIDDEN).body(
             ErrorResponse(error = "Forbidden", message = ex.message ?: "Operation not allowed", status = 403)
-        )
-
-    @ExceptionHandler(NoResourceFoundException::class)
-    fun handleNotFound(ex: NoResourceFoundException): ResponseEntity<ErrorResponse> =
-        ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            ErrorResponse(error = "Not Found", message = "Endpoint not found", status = 404)
         )
 
     @ExceptionHandler(ResourceNotFoundException::class)

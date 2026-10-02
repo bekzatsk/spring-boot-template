@@ -13,6 +13,23 @@
   quota could not stop across accounts. They now require `ROLE_ADMIN`, like the inbox.
   `to` must be a single valid address; subject and bodies are size-limited.
 
+- **Production guards cover more than the literal `prod` profile.** `ProductionSafetyConfig` and the
+  JWT keystore check now run under any profile in `app.security.production-profiles`
+  (default `prod,production`). A deployment running as `production` used to start with an
+  in-memory signing key, accepted dev OTP overrides, and skipped every other check.
+- **Swagger UI and the OpenAPI spec are no longer public.** Set
+  `app.auth.security.public-api-docs=true` to serve them without authentication (the dev profile does).
+- **Admin rules are evaluated before `public-paths`**, so an entry such as `/api/**` can no longer
+  open `/api/v1/admin/**`, the shared inbox, topic broadcast or mail send.
+- **The starter's exception handler is scoped to its own controllers.** It used to answer for the
+  whole application and return the message of any `IllegalStateException`/`IllegalArgumentException`
+  the consumer's code threw.
+- **An FCM token belongs to one user.** Registering a token another user holds removes their
+  registration, so the previous owner of a device can no longer push to whoever signs in on it next.
+  Migration `V14` keeps the most recent registration of each duplicated token and adds a unique index.
+- **Changing a user's roles revokes their refresh tokens**, so a demoted admin cannot keep minting
+  tokens that carry the old roles.
+
 ### Changed (breaking)
 
 - Password registrations start with `emailVerified = false` even when
@@ -21,6 +38,14 @@
 - `UserService` takes a `RefreshTokenRevoker` constructor argument. Applications that construct
   or subclass it must pass one.
 - Login with a password for an account that has none now answers `401` instead of `500`.
+- Swagger UI and `/v3/api-docs` require authentication unless `app.auth.security.public-api-docs=true`.
+- Exceptions thrown by the consumer's own controllers are no longer turned into the starter's
+  `ErrorResponse`; declare your own `@RestControllerAdvice` if you relied on it.
+- Migration `V14` deletes all but the most recent registration of each duplicated FCM token.
+
+### Fixed
+
+- The "maximum device tokens" error printed the properties object instead of the limit.
 
 ## 0.1.2
 

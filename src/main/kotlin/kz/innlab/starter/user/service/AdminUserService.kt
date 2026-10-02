@@ -128,6 +128,9 @@ class AdminUserService(
         user.roles.clear()
         user.roles.addAll(roles)
         val saved = userRepository.save(user)
+        // Roles travel in the access token; without this a demoted admin keeps refreshing
+        // tokens that still carry the old roles.
+        refreshTokenRevoker.revokeAllFor(saved)
         audit(adminId, "UPDATE_ROLES", targetId,
             before = before,
             after = roles.map { it.name }.sorted().toString())

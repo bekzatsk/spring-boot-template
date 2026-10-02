@@ -19,7 +19,7 @@ class DeviceToken(
     @Column(nullable = false)
     var platform: Platform,
 
-    @Column(name = "fcm_token", nullable = false)
+    @Column(name = "fcm_token", nullable = false, unique = true)
     var fcmToken: String,
 
     @Column(name = "device_id", nullable = false)
