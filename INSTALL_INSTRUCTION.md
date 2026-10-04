@@ -854,7 +854,7 @@ Each rule has `max-attempts` and `window-seconds`; exceeded limits answer `429` 
 - `POST /api/v1/auth/refresh` и `/revoke` берут refresh-токен из body **или** из refresh-cookie (приоритет body → cookie).
 - `POST /api/v1/auth/logout` — читает refresh-cookie → `revoke()`, чистит обе cookie (`Max-Age=0`). Идемпотентно (нет cookie → `204`). Добавлен в дефолтный `required-action.allowed-paths`.
 
-**CSRF:** в cookie-режиме CSRF-защита включена для всех запросов, которые несут auth-cookie и меняют состояние (включая refresh и logout). Получи токен через `GET /api/v1/auth/csrf` (он же ставит cookie `XSRF-TOKEN`) и отправляй его в заголовке `X-XSRF-TOKEN`. Bearer-запросы без auth-cookie работают без CSRF-токена. `SameSite` — дополнительная защита, не замена. В prod starter откажется стартовать с `secure=false`.
+**CSRF:** в cookie-режиме CSRF-защита включена для всех запросов, которые несут auth-cookie и меняют состояние — на твоих эндпоинтах тоже, а не только на эндпоинтах starter-а (включая refresh и logout). До версии с этим исправлением запрос только с cookie `access_token` обходил проверку. Получи токен через `GET /api/v1/auth/csrf` (он же ставит cookie `XSRF-TOKEN`) и отправляй его в заголовке `X-XSRF-TOKEN`. Bearer-запросы без auth-cookie работают без CSRF-токена. `SameSite` — дополнительная защита, не замена. В prod starter откажется стартовать с `secure=false`.
 
 **Аутентификация по cookie** реализована кастомным `BearerTokenResolver` (`CookieBearerTokenResolver`), зарегистрированным в `oauth2ResourceServer` только при `enabled=true`. Downstream JWT-логика не меняется.
 
@@ -1282,6 +1282,8 @@ When `app.auth.registration.enabled=false`, public signup paths reject new users
 | `DELETE` | `/api/v1/admin/users/{id}` | ⏱ Delete user — revokes refresh tokens. |
 
 ⏱ — нужен свежий вход: `auth_time` токена не старше `app.auth.security.admin-fresh-login-seconds` (900 с), иначе `403 "Log in again to make this change"`. Украденный старый токен админа не может передать аккаунт.
+
+Проверка стоит **в самих сервисах** (`AdminUserService`, `UserService.createUserByAdmin`), а не только в контроллере starter-а — твои эндпоинты команды/ролей, которые вызывают эти сервисы напрямую, получают её автоматически. Для своих сценариев, выдающих доступ (например, приглашения), внедри `FreshLoginGuard` и вызови `requireFreshLogin()` перед изменением. Вызов без аутентификации в `SecurityContext` (cron, миграция) проходит; анонимный — нет.
 
 **Guardrails:**
 - Last-admin lockout blocked on role downgrade and delete (`countAdmins() <= 1` → 409). Admin rows are locked before counting, so two admins demoting each other at once cannot leave none.

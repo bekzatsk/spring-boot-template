@@ -213,7 +213,10 @@ Push sends accept only tokens registered to the caller; `body` up to 2,000 chara
 | `POST /admin/topics`, `DELETE /admin/topics/{name}` | Manage push topics |
 
 ⏱ Needs a recent login: the token's `auth_time` within `app.auth.security.admin-fresh-login-seconds`
-(default 900), otherwise `403 "Log in again to make this change"`. Admin endpoints are protected
+(default 900), otherwise `403 "Log in again to make this change"`. The rule is enforced in
+`AdminUserService` / `UserService.createUserByAdmin` themselves, so it also applies when your own
+endpoints call those services. For your own access-granting flows (e.g. invitations), inject
+`FreshLoginGuard` and call `requireFreshLogin()`. Admin endpoints are protected
 both by URL rules and by `@PreAuthorize`, so they stay closed if you disable or replace the
 starter's filter chain. Admin changes to users are recorded in `admin_audit_log`.
 
@@ -414,7 +417,8 @@ Optional mode — access + refresh tokens delivered as `httpOnly`+`Secure`+`Same
 
 **Refresh / revoke / logout:** `POST /refresh` and `/revoke` accept the refresh token from the body *or* the refresh cookie (body wins). `POST /logout` revokes the refresh cookie and clears both cookies (`Max-Age=0`); idempotent (no cookie → `204`).
 
-**CSRF:** in cookie mode, call `GET /api/v1/auth/csrf` to receive a token and an `XSRF-TOKEN` cookie. Send the returned token in the `X-XSRF-TOKEN` header for requests that carry access or refresh cookies and change state, including refresh and logout. The CSRF cookie must accompany the request. Bearer-only requests without auth cookies continue to work without a CSRF token. `SameSite` adds defense but does not replace this check.
+**CSRF:** in cookie mode, every state-changing request that carries an auth cookie needs a CSRF
+token — on your own endpoints as well as the starter's. Call `GET /api/v1/auth/csrf` to receive a token and an `XSRF-TOKEN` cookie. Send the returned token in the `X-XSRF-TOKEN` header for requests that carry access or refresh cookies and change state, including refresh and logout. The CSRF cookie must accompany the request. Bearer-only requests without auth cookies continue to work without a CSRF token. `SameSite` adds defense but does not replace this check.
 
 ```yaml
 app:

@@ -1,5 +1,6 @@
 package kz.innlab.starter.user.service
 
+import kz.innlab.starter.shared.security.FreshLoginGuard
 import kz.innlab.starter.shared.error.ResourceNotFoundException
 import kz.innlab.starter.user.model.AuthProvider
 import kz.innlab.starter.user.model.RequiredAction
@@ -19,7 +20,8 @@ class UserService(
     private val passwordEncoder: PasswordEncoder,
     private val authTokenProperties: AuthTokenProperties,
     private val refreshTokenRevoker: RefreshTokenRevoker,
-    private val deviceRegistrationRevoker: DeviceRegistrationRevoker
+    private val deviceRegistrationRevoker: DeviceRegistrationRevoker,
+    private val freshLoginGuard: FreshLoginGuard
 ) {
 
     /**
@@ -34,6 +36,8 @@ class UserService(
         roles: Set<Role>?,
         temporary: Boolean = false
     ): User {
+        // Called directly by consumers too, not only through AdminUserService.
+        freshLoginGuard.requireFreshLogin()
         if (userRepository.findByEmailIgnoreCase(email) != null) {
             throw IllegalStateException("Email already registered")
         }
