@@ -60,22 +60,45 @@
 > Rate limiting is in-memory, so limits apply **per instance**. Declare a `RateLimiter` bean
 > backed by a shared store for a clustered deployment.
 
+> ## ⚠ Upgrading to 0.1.4 / 0.1.5
+>
+> Security releases with breaking changes — [CHANGELOG.md](CHANGELOG.md) has the full list. The ones
+> that change behaviour for clients or operators:
+>
+> 1. **0.1.4 and earlier carry `application*.yaml` inside the jar.** From 0.1.5 the starter ships no
+>    configuration: settings you inherited from it (for example `email-verification.enabled: true`,
+>    the `${JWT_KEYSTORE_LOCATION}`-style env mappings, `server.port: 7070`) now come from your own
+>    files or the code defaults. Map the env vars you use in your own `application-prod.yml`.
+> 2. **Mail send and the shared inbox are ADMIN-only**, and admin password/email/phone/role/delete/
+>    create calls need a login younger than `app.auth.security.admin-fresh-login-seconds` (900 s).
+> 3. **`change-email` / `change-phone` need proof**: `currentPassword`, or a code from
+>    `POST /api/v1/users/me/reauth/request`. Accounts with an unverified email get `403`.
+> 4. **`forgot-password` and `verify-email/resend` always return a `verificationId`**; `verify-email`
+>    is no longer idempotent (a repeat call answers `401`).
+> 5. **Swagger/OpenAPI and actuator (except health) are no longer public.** Set
+>    `app.auth.security.public-api-docs=true` to open the docs.
+> 6. **Migrations V14–V16 run** (unique FCM token; `refresh_tokens.authenticated_at`).
+> 7. **Behind a reverse proxy, set `server.forward-headers-strategy`**, or the per-client code-send
+>    limit sees one address for everyone.
+>
+> | Property | Default | Purpose |
+> |---|---|---|
+> | `app.auth.rate-limit.otp-verify.*` | `10` / `86400` s | Code checks per identifier and purpose, across codes |
+> | `app.auth.rate-limit.code-send-per-client.*` | `20` / `3600` s | Codes sent per client address (IPv6 per /64) |
+> | `app.auth.rate-limit.code-send-per-purpose.*` | `1000` / `3600` s | Codes sent per purpose, all clients |
+> | `app.auth.security.public-api-docs` | `false` | Serve Swagger UI and `/v3/api-docs` without auth |
+> | `app.auth.security.admin-fresh-login-seconds` | `900` | Recent-login window for account-handover admin actions |
+> | `app.security.production-profiles` | `prod,production` | Profiles that trigger the production guards |
+
 > **TL;DR — почему новый проект не стартует.**
 > 1. Не добавляй `spring-boot-starter-security` явно — он приходит транзитивно через `auth-spring-boot-starter`. Явное добавление ломает autoconfig в Boot 4.
-> 2. Зарегистрируй **хотя бы один свой `@Bean SecurityFilterChain`** с узким `securityMatcher` (например, `/actuator/**`). Без этого `ServletWebSecurityAutoConfiguration` публикует default form-login chain → `UnreachableFilterChainException` на старте.
+> 2. Свой `SecurityFilterChain` **не обязателен**: цепочка starter-а покрывает приложение (проверено тестом с приложением без своей цепочки). Добавляй свою с узким `securityMatcher` только для путей с другими правилами.
 > 3. JVM **25** с Kotlin **2.3.21**.
-> 4. Auth-starter тянет свой `application-dev.yaml` внутри jar. Твои `application-*.yml` в `src/main/resources/` его перекрывают — они **обязательны**, иначе подхватится starter-овский DB (`template/postgres`).
-> 5. У starter-а свой Flyway на `db/migration/auth`. Твои миграции — отдельно в `db/migration/`. Не перемешивай.
-> 6. `spring-boot-starter-actuator` идёт транзитивно (starter ≥ 0.0.3-SNAPSHOT) → `/actuator/health` доступен из коробки. Явно подключать в свой `pom.xml` не нужно.
+> 4. Starter (≥ 0.1.5) не везёт `application*.yaml` — вся конфигурация твоя. Без своих файлов действуют дефолты из кода (порт 8080, БД не задана).
+> 5. У starter-а свой Flyway: схема `auth`, миграции `classpath:db/migration-auth`. Твои миграции — отдельно в `db/migration/`. Не перемешивай.
+> 6. `spring-boot-starter-actuator` идёт транзитивно → `/actuator/health` доступен из коробки, остальные actuator-эндпоинты — только `ROLE_ADMIN`.
 
 
-> **TL;DR — почему новый проект не стартует.**
-> 1. Не добавляй `spring-boot-starter-security` явно — он приходит транзитивно через `auth-spring-boot-starter`. Явное добавление ломает autoconfig в Boot 4.
-> 2. Зарегистрируй **хотя бы один свой `@Bean SecurityFilterChain`** с узким `securityMatcher` (например, `/actuator/**`). Без этого `ServletWebSecurityAutoConfiguration` публикует default form-login chain → `UnreachableFilterChainException` на старте.
-> 3. JVM **25** с Kotlin **2.3.21**.
-> 4. Auth-starter тянет свой `application-dev.yaml` внутри jar. Твои `application-*.yml` в `src/main/resources/` его перекрывают — они **обязательны**, иначе подхватится starter-овский DB (`template/postgres`).
-> 5. У starter-а свой Flyway на `db/migration/auth`. Твои миграции — отдельно в `db/migration/`. Не перемешивай.
-> 6. `spring-boot-starter-actuator` идёт транзитивно (starter ≥ 0.0.3-SNAPSHOT) → `/actuator/health` доступен из коробки. Явно подключать в свой `pom.xml` не нужно.
 
 ---
 
@@ -238,8 +261,8 @@
 spring:
   application:
     name: {projectName}
-  profiles:
-    active: dev
+  # Профиль НЕ задаём здесь: локально SPRING_PROFILES_ACTIVE=dev, на сервере — prod. Дефолт `dev`
+  # в базовом файле включил бы dev-коды на любом деплое, где забыли переменную.
   jackson:
     default-property-inclusion: non_null
   jpa:
@@ -250,7 +273,7 @@ spring:
         format_sql: false
   flyway:
     enabled: true
-    locations: classpath:db/migration   # ТВОИ миграции; auth-starter поднимает свой Flyway на db/migration/auth
+    locations: classpath:db/migration   # ТВОИ миграции; auth-starter поднимает свой Flyway (схема auth, db/migration-auth)
 ```
 
 ### `backend/src/main/resources/application-dev.yml`
@@ -272,6 +295,17 @@ logging:
   level:
     org.hibernate.SQL: DEBUG
     org.hibernate.orm.jdbc.bind: TRACE
+
+# Фиксированные коды для локальной разработки — ТОЛЬКО в dev-файле.
+# Под prod/production starter откажется стартовать, если они заданы.
+app:
+  auth:
+    sms:
+      dev-code: "123456"
+    email-otp:
+      dev-code: "123456"
+    verification:
+      dev-code: "123456"
 
 # (опционально) включить локальные провайдеры авторизации
 # app:
@@ -296,53 +330,46 @@ spring:
     hibernate:
       ddl-auto: validate
 
-# JWT keystore — обязательно в prod
-# app:
-#   security:
-#     jwt:
-#       keystore-location: ${JWT_KEYSTORE_LOCATION}
-#       keystore-password: ${JWT_KEYSTORE_PASSWORD}
-#       key-alias: ${JWT_KEY_ALIAS:jwt}
-#   cors:
-#     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS}
-#   firebase:
-#     enabled: ${FIREBASE_ENABLED:false}
+server:
+  # За reverse proxy: иначе лимит отправки кодов "на клиента" видит один адрес на всех.
+  forward-headers-strategy: framework
+
+# Starter не везёт yaml — связывай env-переменные здесь сам. Без keystore, issuer/audience
+# и CORS приложение под prod не стартует (ProductionSafetyConfig / RsaKeyConfig).
+app:
+  security:
+    jwt:
+      keystore-location: ${JWT_KEYSTORE_LOCATION}
+      keystore-password: ${JWT_KEYSTORE_PASSWORD}
+      key-alias: ${JWT_KEY_ALIAS:jwt}
+      issuer: ${JWT_ISSUER}
+      audience: ${JWT_AUDIENCE}
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS}
+  firebase:
+    enabled: ${FIREBASE_ENABLED:false}
 ```
 
-### Обязательный `SecurityFilterChain` (иначе Boot 4 валится на старте)
+### Свой `SecurityFilterChain` — не обязателен
 
-`backend/src/main/kotlin/kz/innlab/{projectName}/common/AppSecurityConfig.kt`:
+Цепочка starter-а покрывает всё приложение: `anyRequest().authenticated()`, `/actuator/health`
+открыт, остальной `/actuator/**` и `/api/v1/admin/**` — только `ROLE_ADMIN`. Публичные пути
+добавляй через `app.auth.security.public-paths` (админские правила проверяются раньше — `/api/**`
+их не откроет).
+
+Своя цепочка нужна только для путей с другими правилами. Делай её с узким `securityMatcher` и
+`@Order < 100` и **не открывай `/actuator/**` целиком**: если включишь `heapdump`, `env` или
+`loggers`, они станут публичными (в heap dump — ключ подписи JWT).
 
 ```kotlin
-package kz.innlab.{projectName}.common
-
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
-import org.springframework.core.annotation.Order
-import org.springframework.security.config.Customizer
-import org.springframework.security.config.annotation.web.builders.HttpSecurity
-import org.springframework.security.web.SecurityFilterChain
-
-/**
- * Назначение двойное:
- *  1. Открыть /actuator (под k8s-пробы и мониторинг).
- *  2. Зарегистрировать user SecurityFilterChain в обычной @Configuration-фазе,
- *     чтобы Boot 4 ServletWebSecurityAutoConfiguration backoff'нулся и НЕ публиковал
- *     default form-login chain — иначе старт падает с UnreachableFilterChainException
- *     (он конфликтует с JWT-chain'ом из kz.innlab.starter.config.SecurityConfig (any-request)).
- *
- * Все свои app-chain'ы делай с конкретным `securityMatcher` и @Order < 100.
- * `anyRequest`-chain остаётся за starter'ом.
- */
 @Configuration
 class AppSecurityConfig {
 
     @Bean
     @Order(80)
-    fun actuatorFilterChain(http: HttpSecurity): SecurityFilterChain {
+    fun webhookFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
-            .securityMatcher("/actuator/**")
-            .cors(Customizer.withDefaults())
+            .securityMatcher("/webhooks/payments/**")   // только этот путь
             .authorizeHttpRequests { it.anyRequest().permitAll() }
             .csrf { it.disable() }
         return http.build()
@@ -381,7 +408,7 @@ cd /path/to/auth-starter && ./mvnw clean install -DskipTests
 cd /path/to/{projectName}/backend && ./mvnw spring-boot:run
 ```
 
-Приложение слушает порт из bundled `application-dev.yaml` starter-а (обычно `:7070`). `/api/*` → 401 без JWT — это норма.
+Приложение слушает `server.port` из твоего конфига (по умолчанию Spring — `:8080`). `/api/*` → 401 без JWT — это норма.
 
 ---
 
@@ -630,9 +657,6 @@ spring:
     url: jdbc:postgresql://localhost:5432/myapp
     username: postgres
     password: postgres
-  flyway:
-    enabled: true
-    locations: classpath:db/migration/auth
   jpa:
     open-in-view: false
     hibernate:
@@ -667,7 +691,7 @@ app:
       - http://localhost:3000
 ```
 
-This gives you working JWT auth with email+password registration and login. RSA keys are generated in-memory, verification codes are logged to console (`123456`).
+This gives you working JWT auth with email+password registration and login. RSA keys are generated in-memory. Console fallbacks log that a code would have been sent, never the code itself — set `app.auth.*.dev-code` in your `application-dev.yml` for a fixed code locally.
 
 ### Full (Production)
 
@@ -675,18 +699,12 @@ This gives you working JWT auth with email+password registration and login. RSA 
 server:
   port: 8080
 
+# Активируй профилем окружения (SPRING_PROFILES_ACTIVE=prod), а не в файле.
 spring:
-  profiles:
-    active: prod
   datasource:
     url: ${DATABASE_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
-  flyway:
-    enabled: true
-    locations: classpath:db/migration/auth
-    baseline-on-migrate: false
-    validate-on-migrate: true
   jpa:
     open-in-view: false
     hibernate:
@@ -721,6 +739,8 @@ app:
       keystore-location: ${JWT_KEYSTORE_LOCATION}
       keystore-password: ${JWT_KEYSTORE_PASSWORD}
       key-alias: ${JWT_KEY_ALIAS:jwt}
+      issuer: ${JWT_ISSUER}        # уникально для окружения; дефолт template-app отклоняется
+      audience: ${JWT_AUDIENCE}
 
   # --- CORS ---
   cors:
@@ -729,7 +749,7 @@ app:
   # --- Firebase push notifications ---
   firebase:
     enabled: true
-    # Set env: FIREBASE_CREDENTIALS_PATH=/path/to/service-account.json
+    # Set env: FIREBASE_CREDENTIALS_JSON=<service-account JSON, base64-encoded>
 
   # --- Email (SMTP sending + IMAP receiving) ---
   mail:
@@ -757,13 +777,12 @@ app:
       max-per-user: 5
 
   # --- Twilio (WhatsApp-first OTP delivery with SMS fallback) ---
-  # Starter везёт bundled defaults — копировать ключи здесь НЕ обязательно.
-  # Достаточно выставить env vars: TWILIO_ENABLED, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN,
-  # TWILIO_WHATSAPP_ENABLED, TWILIO_WHATSAPP_FROM, TWILIO_WHATSAPP_TEMPLATE_SID,
-  # TWILIO_SMS_ENABLED, TWILIO_SMS_FROM. См. §4 «Twilio (WhatsApp + SMS OTP)».
+  # Starter (≥ 0.1.5) не везёт yaml: задай ключи здесь (можно через ${TWILIO_...})
+  # или стандартными env-именами APP_TWILIO_ENABLED, APP_TWILIO_ACCOUNT_SID, ...
+  # См. §4 «Twilio (WhatsApp + SMS OTP)».
 ```
 
-> **Перекрытие bundled-конфига starter-а.** Auth-starter везёт внутри jar свой `application-dev.yaml` с `DB_NAME:template/DB_USERNAME:postgres`. Твой `application-dev.yml` в `src/main/resources/` его перекрывает — поэтому он **обязателен**, даже если ты ничего не дополняешь сверху. Если файла нет — приложение полезет в `template` базу и упадёт.
+> **Конфиг starter-а.** С 0.1.5 starter не везёт `application*.yaml` — всё, что не задано в твоих файлах, берёт дефолты из кода (таблицы в §4). В 0.1.4 и ниже внутри jar был `application-dev.yaml` с кодами `123456`: на этих версиях свой `application-dev.yml` обязателен.
 
 ---
 
@@ -776,12 +795,12 @@ app:
 | `app.auth.local.enabled` | boolean | `true` | Email + password registration/login |
 | `app.auth.google.enabled` | boolean | `false` | Google OAuth2 login |
 | `app.auth.google.client-id` | string | — | Google OAuth2 client ID |
-| `app.auth.apple.enabled` | boolean | `true` | Apple Sign In |
-| `app.auth.apple.bundle-id` | string | `com.example.app` | Apple app bundle ID |
+| `app.auth.apple.enabled` | boolean | `false` | Apple Sign In |
+| `app.auth.apple.bundle-id` | string | — | Apple app bundle ID (required when Apple is enabled) |
 | `app.auth.phone.enabled` | boolean | `true` | Phone + SMS OTP login |
 | `app.auth.telegram.enabled` | boolean | `false` | Telegram bot authentication |
 | `app.auth.telegram.bot-token` | string | — | Telegram Bot API token |
-| `app.auth.telegram.bot-username` | string | `MathHubBot` | Telegram bot username (for deep link URL). Also returned in `TelegramInitResponse.botUsername` (any leading `@` stripped) so frontends can render `@<username>` without parsing the URL. |
+| `app.auth.telegram.bot-username` | string | — | Telegram bot username (for deep link URL). Also returned in `TelegramInitResponse.botUsername` (any leading `@` stripped) so frontends can render `@<username>` without parsing the URL. |
 | `app.auth.telegram.webhook-secret` | string | — | Secret token for webhook validation |
 | `app.auth.telegram.session-ttl-seconds` | int | `300` | Auth session TTL (5 min) |
 | `app.auth.telegram.max-attempts` | int | `3` | Max code verification attempts per session |
@@ -793,8 +812,24 @@ app:
 | `app.auth.registration.enabled` | boolean | `true` | Public self-registration. When `false`, social/phone/email signup paths reject new accounts — only ADMIN can create users via `/api/v1/admin/users`. |
 | `app.auth.email-verification.enabled` | boolean | `false` | Требовать подтверждение email для **новых LOCAL-регистраций**. `true` → `register()` выдаёт токены, но добавляет required-action `VERIFY_EMAIL` + шлёт код; доступ к защищённым API блокируется `RequiredActionFilter` (403) до `POST /verify-email`. Соц/телефон/существующие юзеры не затронуты. |
 | `app.auth.security.required-action.enabled` | boolean | `true` | Hard-enforce JWT `required_actions` claim. When `true`, every authenticated request whose token carries a non-empty `required_actions` list is rejected with `403` unless the path matches an allowlist entry. |
-| `app.auth.security.required-action.allowed-paths` | list | see below | Ant-pattern paths bypassed by the required-action filter. Default: `/api/v1/users/me`, `/api/v1/users/me/change-password`, `/api/v1/auth/refresh`, `/api/v1/auth/revoke`. |
-| `app.auth.security.public-paths` | list | — | Additional consumer-defined public paths that skip JWT auth. |
+| `app.auth.security.required-action.allowed-paths` | list | see below | Ant-pattern paths bypassed by the required-action filter. Default: `/api/v1/users/me`, `/api/v1/users/me/change-password`, `/api/v1/auth/refresh`, `/api/v1/auth/revoke`, `/api/v1/auth/logout`, `/api/v1/auth/verify-email`, `/api/v1/auth/verify-email/resend`. |
+| `app.auth.security.public-paths` | list | — | Additional consumer-defined public paths that skip JWT auth. Admin rules are evaluated first, so these cannot open admin endpoints. |
+| `app.auth.security.public-api-docs` | boolean | `false` | Serve Swagger UI and `/v3/api-docs` without authentication. |
+| `app.auth.security.admin-fresh-login-seconds` | long | `900` | How recent the admin's login (`auth_time`) must be for password/email/phone/role changes, deletion and creation of users. |
+| `app.security.production-profiles` | list | `prod,production` | Profiles under which `ProductionSafetyConfig` and the keystore check run. |
+
+### Rate limits (`app.auth.rate-limit`)
+
+Each rule has `max-attempts` and `window-seconds`; exceeded limits answer `429` with `Retry-After`. In-memory by default, so per instance — declare a `RateLimiter` bean on a shared store for a cluster.
+
+| Rule | Default | Keyed by |
+|------|---------|----------|
+| `enabled` | `true` | Master switch |
+| `login` | `10` / `300` s | Email |
+| `change-password` | `5` / `300` s | User (also re-authentication with `currentPassword`) |
+| `otp-verify` | `10` / `86400` s | Identifier + purpose, across codes |
+| `code-send-per-client` | `20` / `3600` s | Client address (IPv6 per /64) — behind a proxy set `server.forward-headers-strategy` |
+| `code-send-per-purpose` | `1000` / `3600` s | Purpose, all clients — a circuit breaker; size it to your traffic |
 
 ### httpOnly Cookie Auth (`app.auth.cookie`) — опционально, по умолчанию OFF
 
@@ -819,13 +854,13 @@ app:
 - `POST /api/v1/auth/refresh` и `/revoke` берут refresh-токен из body **или** из refresh-cookie (приоритет body → cookie).
 - `POST /api/v1/auth/logout` — читает refresh-cookie → `revoke()`, чистит обе cookie (`Max-Age=0`). Идемпотентно (нет cookie → `204`). Добавлен в дефолтный `required-action.allowed-paths`.
 
-**CSRF:** при `SameSite=Strict`/`Lax` доп. CSRF-токен не нужен для same-origin SPA. Только для `SameSite=None` (кросс-домен) добавь double-submit / `CookieCsrfTokenRepository` — по умолчанию НЕ включено.
+**CSRF:** в cookie-режиме CSRF-защита включена для всех запросов, которые несут auth-cookie и меняют состояние (включая refresh и logout). Получи токен через `GET /api/v1/auth/csrf` (он же ставит cookie `XSRF-TOKEN`) и отправляй его в заголовке `X-XSRF-TOKEN`. Bearer-запросы без auth-cookie работают без CSRF-токена. `SameSite` — дополнительная защита, не замена. В prod starter откажется стартовать с `secure=false`.
 
 **Аутентификация по cookie** реализована кастомным `BearerTokenResolver` (`CookieBearerTokenResolver`), зарегистрированным в `oauth2ResourceServer` только при `enabled=true`. Downstream JWT-логика не меняется.
 
 ### Actuator (bundled)
 
-`spring-boot-starter-actuator` идёт транзитивно через auth-starter. По умолчанию открыт только `/actuator/health`.
+`spring-boot-starter-actuator` идёт транзитивно через auth-starter. Публичен только `/actuator/health`; остальные actuator-эндпоинты — только `ROLE_ADMIN`.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -835,11 +870,11 @@ app:
 | `management.endpoint.health.probes.enabled` | boolean | `false` | Включить `/actuator/health/liveness` + `/readiness` (k8s probes). |
 | `management.server.port` | int | (main port) | Отдельный порт для actuator (если нужно изолировать от публичного API). |
 
-⚠ Starter делает `permitAll` только на `/actuator/health` (и вложенные пути) — для healthcheck'ов контейнера. Остальные actuator-эндпоинты требуют аутентификации; более широкий доступ — решение консьюмера, см. `AppSecurityConfig.actuatorFilterChain()` в §0.
+⚠ Starter делает `permitAll` только на `/actuator/health` (и вложенные пути) — для healthcheck'ов контейнера. Остальные actuator-эндпоинты требуют `ROLE_ADMIN`: в `heapdump` лежит ключ подписи JWT, в `env` — секреты. Чтобы открыть конкретный эндпоинт (например, `/actuator/prometheus` для скрейпа), добавь именно его в `app.auth.security.public-paths` или вынеси actuator на отдельный `management.server.port`, закрытый сетью.
 
 ### OpenAPI / Swagger UI
 
-Swagger UI доступен на `/swagger-ui.html`. Title по умолчанию берётся из `spring.application.name` консьюмера — **не** хардкодится как "Spring Boot Auth Template API".
+Swagger UI — `/swagger-ui.html`, спецификация — `/v3/api-docs`. **Оба требуют аутентификации**, пока не задан `app.auth.security.public-api-docs=true` (спецификация описывает каждый эндпоинт — в prod держи закрытой). Title по умолчанию берётся из `spring.application.name` консьюмера — **не** хардкодится как "Spring Boot Auth Template API".
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -882,7 +917,7 @@ keytool -genkey -alias jwt -keyalg RSA -keysize 2048 \
 |----------|------|---------|-------------|
 | `app.firebase.enabled` | boolean | `false` | Enable Firebase push notifications |
 
-Set `FIREBASE_CREDENTIALS_PATH` env variable pointing to the service account JSON file.
+Set the `FIREBASE_CREDENTIALS_JSON` env variable to the service-account JSON, **base64-encoded** (`base64 -i service-account.json`).
 
 ### Email
 
@@ -918,9 +953,24 @@ Set `FIREBASE_CREDENTIALS_PATH` env variable pointing to the service account JSO
 
 OTP delivery идёт через `OtpDeliveryService`: сначала WhatsApp, при ошибке (`RuntimeException` от Twilio) — fallback на SMS. Если `app.twilio.whatsapp.enabled=false` или bean не зарегистрирован — звонят сразу в `SmsService` (`TwilioSmsService` при `app.twilio.sms.enabled=true`, иначе `ConsoleSmsService`).
 
-**Bundled defaults.** Starter везёт внутри jar полный `app.twilio.*` блок с env-driven defaults (всё off). В consumer-овском `application*.yml` ничего копировать не надо — достаточно выставить env vars (см. ниже). Если нужен hard-coded override — просто переопредели нужный ключ в своём yaml.
+**Связка с env.** С 0.1.5 starter не везёт yaml, поэтому `TWILIO_*`-переменные работают, только если связать их в своём `application-prod.yml` (дефолты в коде — всё выключено):
 
-| Property | Env var (bundled default) | Type | Default | Description |
+```yaml
+app:
+  twilio:
+    enabled: ${TWILIO_ENABLED:false}
+    account-sid: ${TWILIO_ACCOUNT_SID:}
+    auth-token: ${TWILIO_AUTH_TOKEN:}
+    whatsapp:
+      enabled: ${TWILIO_WHATSAPP_ENABLED:false}
+      from: ${TWILIO_WHATSAPP_FROM:}
+      content-sid: ${TWILIO_WHATSAPP_TEMPLATE_SID:}
+    sms:
+      enabled: ${TWILIO_SMS_ENABLED:false}
+      from: ${TWILIO_SMS_FROM:}
+```
+
+| Property | Env var (со связкой выше) | Type | Default | Description |
 |----------|---------------------------|------|---------|-------------|
 | `app.twilio.enabled` | `TWILIO_ENABLED` | boolean | `false` | Master toggle. Без него `TwilioConfig` не загружается и Twilio SDK не инициализируется. |
 | `app.twilio.account-sid` | `TWILIO_ACCOUNT_SID` | string | `""` | Twilio Account SID (AC…). Required when `enabled=true`. |
@@ -931,7 +981,7 @@ OTP delivery идёт через `OtpDeliveryService`: сначала WhatsApp, 
 | `app.twilio.sms.enabled` | `TWILIO_SMS_ENABLED` | boolean | `false` | Регистрирует `TwilioSmsService` как `SmsService`. Console-default (`ConsoleSmsService`) при этом backoff'ится через `@ConditionalOnMissingBean`. |
 | `app.twilio.sms.from` | `TWILIO_SMS_FROM` | string | `""` | E.164 sender или alphanumeric sender ID (где разрешено). |
 
-**Prod-минимум — только env vars:**
+**Prod-минимум — env vars (при связке выше):**
 ```bash
 export TWILIO_ENABLED=true
 export TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -1209,30 +1259,32 @@ spring:
 
 Auth-starter поднимает **отдельный** `Flyway`-bean (`authFlyway`) на `classpath:db/migration-auth` (schema `auth`) — не нужно прописывать его в свой `locations`. Не клади свои миграции в `db/migration-auth` и наоборот.
 
-Tables created by starter (schema `auth`): `users`, `user_providers`, `user_provider_ids`, `user_roles`, `user_required_actions`, `refresh_tokens`, `sms_verifications`, `verification_codes`, `telegram_auth_sessions`, `device_tokens`, `notification_history`, `notification_topics`, `notification_preferences`, `mail_history`, `admin_audit_log`.
+Migrations V1–V16. Never edit a starter migration in your database history: a changed checksum stops Flyway. Tables created by starter (schema `auth`): `users`, `user_providers`, `user_provider_ids`, `user_roles`, `user_required_actions`, `refresh_tokens`, `verification_codes`, `telegram_auth_sessions`, `device_tokens`, `notification_history`, `notification_topics`, `notification_preferences`, `mail_history`, `admin_audit_log`.
 
 ---
 
 ## 7. Admin User Management
 
-When `app.auth.registration.enabled=false`, public signup paths reject new users. Only ADMIN-role principals can provision accounts through `/api/v1/admin/users/**`. All mutating endpoints write to the `admin_audit_log` table and emit `ADMIN_AUDIT` SLF4J log lines.
+When `app.auth.registration.enabled=false`, public signup paths reject new users. Only ADMIN-role principals can provision accounts through `/api/v1/admin/users/**`. All mutating endpoints write to the `admin_audit_log` table (with before/after values) and emit an `ADMIN_AUDIT` SLF4J line (admin, action and target only — no personal data). The endpoints are protected by URL rules **and** `@PreAuthorize("hasRole('ADMIN')")`, so they stay closed if you disable or replace the starter's filter chain.
 
 ### Endpoints (all require `ROLE_ADMIN`)
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/api/v1/admin/users?q=&page=&size=` | Paginated user list, brief representation. `q` matches email/name/phone substring. |
+| `GET` | `/api/v1/admin/users?q=&page=&size=&sort=` | Paginated user list, brief representation. `q` matches email/name/phone substring. `sort` only by `email`, `name`, `phone`, `createdAt` (anything else → 400); `size` capped at 100. |
 | `GET` | `/api/v1/admin/users/{id}` | Full user profile. |
-| `POST` | `/api/v1/admin/users` | Create user — bypasses `registration.enabled`. Body: `{email, password, name?, roles?, temporary?}`. |
-| `PATCH` | `/api/v1/admin/users/{id}/password` | Reset password. Revokes all refresh tokens. Body: `{newPassword, temporary?}`. |
-| `PATCH` | `/api/v1/admin/users/{id}/email` | Change email — skips OTP. Body: `{email}`. |
-| `PATCH` | `/api/v1/admin/users/{id}/phone` | Change phone — skips SMS. Normalizes to E.164. Body: `{phone}`. |
-| `PATCH` | `/api/v1/admin/users/{id}/profile` | Update name + picture. Body: `{name?, picture?}`. |
-| `PATCH` | `/api/v1/admin/users/{id}/roles` | Replace role set. Body: `{roles: [USER, ADMIN]}`. |
-| `DELETE` | `/api/v1/admin/users/{id}` | Delete user — revokes refresh tokens. |
+| `POST` | `/api/v1/admin/users` | ⏱ Create user — bypasses `registration.enabled`. Body: `{email, password, name?, roles?, temporary?}`. |
+| `PATCH` | `/api/v1/admin/users/{id}/password` | ⏱ Reset password. Revokes all refresh tokens. Body: `{newPassword, temporary?}`. |
+| `PATCH` | `/api/v1/admin/users/{id}/email` | ⏱ Change email — skips OTP, revokes the user's refresh tokens. Body: `{email}`. |
+| `PATCH` | `/api/v1/admin/users/{id}/phone` | ⏱ Change phone — skips SMS. Normalizes to E.164. Body: `{phone}`. |
+| `PATCH` | `/api/v1/admin/users/{id}/profile` | Update name (≤ 255) + picture (http(s) URL). Body: `{name?, picture?}`. |
+| `PATCH` | `/api/v1/admin/users/{id}/roles` | ⏱ Replace role set; revokes the user's refresh tokens. Body: `{roles: [USER, ADMIN]}`. |
+| `DELETE` | `/api/v1/admin/users/{id}` | ⏱ Delete user — revokes refresh tokens. |
+
+⏱ — нужен свежий вход: `auth_time` токена не старше `app.auth.security.admin-fresh-login-seconds` (900 с), иначе `403 "Log in again to make this change"`. Украденный старый токен админа не может передать аккаунт.
 
 **Guardrails:**
-- Last-admin lockout blocked on role downgrade and delete (`countAdmins() <= 1` → 409).
+- Last-admin lockout blocked on role downgrade and delete (`countAdmins() <= 1` → 409). Admin rows are locked before counting, so two admins demoting each other at once cannot leave none.
 - Self-demotion of ADMIN role blocked (409).
 - Self-delete blocked (409).
 - Email/phone collisions → 409.
@@ -1277,11 +1329,13 @@ Generate the bcrypt hash with `org.springframework.security.crypto.bcrypt.BCrypt
 
 | Симптом | Причина | Фикс |
 |---------|---------|------|
-| `UnreachableFilterChainException` на старте | Нет своего `SecurityFilterChain` → Boot 4 публикует default form-login chain поверх starter-овского `anyRequest`-chain | Добавь bean из §0 (actuator chain с узким `securityMatcher`) |
+| `UnreachableFilterChainException` на старте | Своя цепочка без `securityMatcher` (тоже `anyRequest`) конфликтует с цепочкой starter-а | Дай своей цепочке узкий `securityMatcher` (§0) или убери её — она не обязательна |
 | `Unsupported class file major version` / Kotlin compile error | Java/Kotlin не совпадают с baseline проекта | Используй JVM 25 + Kotlin 2.3.21 |
-| Подключается к БД `template` с юзером `postgres` | Нет своего `application-dev.yml` → подхватился bundled из jar starter-а | Создай `src/main/resources/application-dev.yml` с твоей БД |
+| Подключается к БД `template` с юзером `postgres` (starter ≤ 0.1.4) | Нет своего `application-dev.yml` → подхватился bundled из jar starter-а (вместе с кодами `123456`) | Обновись до 0.1.5 или создай `src/main/resources/application-dev.yml` |
+| Под prod не стартует: «Refusing to start under a production profile» | `ProductionSafetyConfig` нашёл dev-code, дефолтный issuer/audience, Telegram без токена/секрета, cookie без `Secure` или console-fallback | Исправь перечисленное в сообщении; console-fallback — waiver per channel (`app.security.console-fallbacks.allow-*`) |
+| Под prod не стартует: «Production JWT signing key is required» | Не задан keystore | `app.security.jwt.keystore-location` + `keystore-password` (`./scripts/generate-keystore.sh`) |
 | `BeanDefinitionOverrideException` для security-конфига | Явно добавлен `spring-boot-starter-security` | Убери — приходит транзитивно |
-| Flyway: «migration checksum mismatch» на auth-таблицах | Свои миграции положены в `db/migration/auth` | Перенеси свои в `db/migration/`, оставь `auth` за starter-ом |
+| Flyway: «migration checksum mismatch» на auth-таблицах | Свои миграции положены в `db/migration-auth` | Перенеси свои в `db/migration/`, оставь `db/migration-auth` и схему `auth` за starter-ом |
 | `creator/editor` всегда `null` в `Auditable` | Не зарегистрирован `AuditorAware<UUID>` | Подожди, пока auth-starter положит principal в `SecurityContext`, и регистрируй `AuditorAware`, читающий из него |
 | 401 на `/api/**` без JWT в dev | Это норма — starter защищает `anyRequest` | Получи токен через `/auth/login` |
 | `403 {"requiredActions":["UPDATE_PASSWORD"]}` на любом endpoint | JWT carries non-empty `required_actions` claim — `RequiredActionFilter` блокирует всё кроме allowlist | Юзер должен вызвать `POST /api/v1/users/me/change-password`. После — re-login, claim очистится |
@@ -1293,6 +1347,8 @@ Generate the bcrypt hash with `org.springframework.security.crypto.bcrypt.BCrypt
 ---
 
 ## Версии и breaking changes
+
+Для 0.1.x — [CHANGELOG.md](CHANGELOG.md) и блок «Upgrading» в начале этого файла. Ниже — история 0.0.x.
 
 ### 0.0.12 (2026-07-16) — FEAT: подтверждение email при регистрации (опционально)
 
@@ -1408,114 +1464,15 @@ fun consoleMailService(): ConsoleMailService = ConsoleMailService()
 - [ ] JVM **25**
 - [ ] `pom.xml` из §0 — БЕЗ явного `spring-boot-starter-security`
 - [ ] `application.yml` + `application-dev.yml` + `application-prod.yml` лежат в `src/main/resources/`
-- [ ] Свой `SecurityFilterChain`-bean с узким `securityMatcher` зарегистрирован
+- [ ] `SPRING_PROFILES_ACTIVE` задан окружением (не в `application.yml`); `dev-code` — только в `application-dev.yml`
+- [ ] Своя `SecurityFilterChain` (если есть) — с узким `securityMatcher`, `/actuator/**` целиком не открыт
 - [ ] Kotlin compiler plugins (`spring + jpa + all-open + no-arg`) с extension на `@Entity/@MappedSuperclass/@Embeddable`
-- [ ] Свои миграции — в `db/migration/`, starter-овские — в `db/migration/auth` (не трогать)
+- [ ] Свои миграции — в `db/migration/`, starter-овские — в `db/migration-auth`, схема `auth` (не трогать)
 - [ ] PostgreSQL поднят (`docker compose up -d postgres`)
-- [ ] (Prod) сгенерирован JWT keystore, `app.security.jwt.*` через env vars
+- [ ] (Prod) сгенерирован JWT keystore, `app.security.jwt.*` (включая `issuer` и `audience`) связаны с env vars в своём `application-prod.yml`
+- [ ] (Prod) за reverse proxy: `server.forward-headers-strategy` задан
 - [ ] (Prod) `APP_CORS_ALLOWED_ORIGINS` выставлен
 - [ ] (Optional) Реализованы `SmsService` / `WhatsAppService` / `EmailService` / `TelegramBotService` для реальной доставки
-- [ ] (Optional) Twilio WhatsApp+SMS: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`, `TWILIO_WHATSAPP_TEMPLATE_SID` (HX…), `TWILIO_SMS_FROM` через env vars
-- [ ] (Optional) Telegram bot: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_SECRET` через env vars
-- [ ] (Optional) Firebase для push (`FIREBASE_CREDENTIALS_PATH`)
-
-POST /api/v1/auth/local/register  →  201
-{
-  "accessToken": "...",
-  "refreshToken": "...",
-  "requiredActions": ["VERIFY_EMAIL"],
-  "verificationId": "0198c3f2-0000-7000-8000-000000000001"
-}
-```
-- `POST /api/v1/auth/verify-email/resend {email}` → новый код (rate-limit 1/60с, анти-энумерация).
-- Линковка LOCAL к соц-аккаунту НЕ требует повторной верификации. `emailVerified` в `GET /api/v1/users/me`.
-
-**Новые/изменённые классы:**
-- `VerificationPurpose` +`VERIFY_EMAIL`. `User` +`emailVerified: Boolean = true` (дефолт true — старые/соц/телефон юзеры не блокируются). Миграция `db/migration-auth/V7__add_email_verified.sql` (`email_verified BOOLEAN NOT NULL DEFAULT TRUE`).
-- `LocalAuthService.register` — гейт нового юзера + прокидывает `verificationId` в ответ. `AccountManagementService` +`verifyEmail`/`resendEmailVerification`. `LocalAuthController` +2 эндпоинта. DTO: `VerifyEmailRequest`, `ResendEmailVerificationRequest`. `AuthResponse` +`verificationId: UUID? = null` + `@JsonInclude(NON_NULL)`. `AuthSecurityProperties` — verify-email пути в `required-action.allowed-paths`. `UserProfileResponse` +`emailVerified`.
-
-**Что делать downstream:** ничего обязательного. `RequiredAction.VERIFY_EMAIL` уже был в enum. Включить — `app.auth.email-verification.enabled=true` + реальный `EmailService` (иначе код только в console-логах).
-
----
-
-### 0.0.11 (2026-07-13) — FEAT: httpOnly-cookie аутентификация (опционально)
-
-**Что добавлено:**
-- Новый блок конфига `app.auth.cookie.*` (см. §4 → «httpOnly Cookie Auth»). По умолчанию `enabled=false` — **никаких изменений** для существующих body-token потребителей.
-- При `enabled=true`: access + refresh кладутся в `httpOnly`+`Secure`+`SameSite` cookie на всех точках выдачи `AuthResponse` (login/register/google/apple/phone-verify/telegram-verify/refresh) через централизованный `AuthResponseCookieAdvice` — без дублирования в контроллерах.
-- Access-токен читается из cookie кастомным `CookieBearerTokenResolver` (заголовок `Authorization` всегда в приоритете).
-- `POST /api/v1/auth/refresh` и `/revoke` принимают refresh из body **или** cookie (приоритет body → cookie).
-- Новый `POST /api/v1/auth/logout`: revoke refresh-cookie + очистка обеих cookie. Идемпотентно (204).
-- `suppress-body-tokens=true` — убрать токены из JSON body (cookie как единственный транспорт).
-
-**Новые/изменённые классы:**
-- `config/AuthCookieProperties.kt` (new), `authentication/cookie/{AuthCookieWriter, AuthResponseCookieAdvice, CookieBearerTokenResolver}.kt` (new).
-- `AuthController` — refresh/revoke из cookie + `logout`. `SecurityConfig` — регистрация resolver. `RefreshRequest` — `refreshToken` теперь опционален (снят `@NotBlank`; пустой body → cookie). `AuthSecurityProperties` — `/api/v1/auth/logout` добавлен в `required-action.allowed-paths`.
-
-**Что делать downstream:** ничего обязательного. Чтобы включить — выставь `app.auth.cookie.enabled=true` (+ `same-site`, `secure`).
-
-**Также в 0.0.11 — FIX: разделены console-fallback bean для mail.**
-- В 0.0.8 `MailService` + `EmailService` покрывались одним bean `ConsoleMailService` (dual-interface). Это ломало тесты с `@MockitoBean EmailService`: mock подменял единственный bean → `MailController` (ждёт `MailService`) падал с `BeanNotOfRequiredTypeException` / `Failed to load ApplicationContext`.
-- Теперь два раздельных single-interface bean: `ConsoleMailService` реализует только `MailService`, новый `ConsoleEmailService` — только `EmailService`. Каждый под своим `@ConditionalOnMissingBean`:
-  ```kotlin
-  @Bean @ConditionalOnMissingBean(MailService::class)
-  fun consoleMailService(): ConsoleMailService = ConsoleMailService()
-
-  @Bean @ConditionalOnMissingBean(EmailService::class)
-  fun consoleEmailService(): ConsoleEmailService = ConsoleEmailService()
-  ```
-- `NoUniqueBeanDefinition` (баг 0.0.6/0.0.7) НЕ возвращается: на каждый интерфейс по-прежнему ровно один кандидат — `Smtp`/`External` (dual-interface) отступают console-bean через `@ConditionalOnMissingBean`.
-- Prod-пути (SMTP / External) не тронуты. Downstream действий не требуется.
-
----
-
-### 0.0.10 (2026-07-10) — FEAT: resend-cooldown в ответе `/auth/phone/request`
-
-**Что изменилось:**
-- `POST /api/v1/auth/phone/request` теперь возвращает не только `verificationId`, но и когда можно переотправить код — фронт рисует countdown-таймер без хардкода 60с.
-
-**Новый response body:**
-```json
-{
-  "verificationId": "0198e2c0-0000-7000-8000-000000000001",
-  "resendAvailableAt": "2026-07-10T12:34:56Z",
-  "retryAfterSeconds": 60
-}
-```
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `verificationId` | UUID | Передаётся обратно в `/auth/phone/verify` (как раньше). |
-| `resendAvailableAt` | ISO-8601 instant (UTC) | Абсолютное время, когда разрешён следующий запрос кода. Переживает reload/сдвиг часов клиента — предпочтительнее для UI. |
-| `retryAfterSeconds` | long | Длина cooldown-окна в секундах (сейчас `60` = `RATE_LIMIT_SECONDS`). Для countdown-таймера. |
-
-**Rate limit семантика (без изменений):** повторный запрос до истечения cooldown → `409` c `IllegalStateException("Please wait before requesting a new code")`. `resendAvailableAt` даёт фронту точное время, чтобы не ловить 409.
-
-**Что делать downstream:** ничего обязательного. Старые клиенты продолжают читать `verificationId`, лишние поля игнорируют. Новые — используют `resendAvailableAt` / `retryAfterSeconds` для UX.
-
----
-
-### 0.0.8 (2026-06-18) — FIX: дубликат `EmailService` bean
-
-**Проблема (0.0.6, 0.0.7):**
-- `MailConfig` регистрировал два fallback bean: `consoleMailService(): MailService` и `consoleEmailService(): EmailService`.
-- `ConsoleMailService` реализует **оба** интерфейса (`MailService, EmailService`). Spring регистрировал его под обоими супер-типами + отдельный `ConsoleEmailService` под `EmailService` → 2 кандидата на `EmailService` → `NoUniqueBeanDefinitionException`.
-- На Spring Boot 4 контекст не поднимается при `app.mail.enabled=false` (дефолт), любой consumer с `private val emailService: EmailService` в конструкторе валится.
-
-**Фикс в 0.0.8:**
-```kotlin
-// MailConfig.kt
-@Bean
-@ConditionalOnMissingBean(value = [MailService::class, EmailService::class])
-fun consoleMailService(): ConsoleMailService = ConsoleMailService()
-```
-- Возвращаемый тип — конкретный класс → Spring регистрирует под обоими интерфейсами.
-- `ConsoleEmailService` удалён.
-
-> ⚠ **Отменено в 0.0.11.** Объединённый dual-interface bean 0.0.8 ломал тесты с `@MockitoBean EmailService` (mock подменял единственный bean → `MailController` терял `MailService`). В 0.0.11 fallback снова разделён на два single-interface bean (`ConsoleMailService` = только `MailService`, `ConsoleEmailService` = только `EmailService`), но `NoUniqueBeanDefinition` не возвращается — на каждый интерфейс ровно один кандидат. См. changelog 0.0.11.
-
-**Что делать downstream:**
-- Подняться на `0.0.8` в `pom.xml`.
-- Никаких изменений в коде потребителя не нужно — `EmailService` инжектится по-прежнему.
-
----
+- [ ] (Optional) Twilio WhatsApp+SMS: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM`, `TWILIO_WHATSAPP_TEMPLATE_SID` (HX…), `TWILIO_SMS_FROM` через env vars + связка в своём yaml (§4)
+- [ ] (Optional) Telegram bot: `app.auth.telegram.bot-token`, `bot-username`, `webhook-secret` (через env vars со связкой в своём yaml)
+- [ ] (Optional) Firebase для push (`FIREBASE_CREDENTIALS_JSON`, base64)

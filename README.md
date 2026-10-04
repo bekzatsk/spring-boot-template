@@ -23,57 +23,21 @@ migrations V14–V16 run — see [CHANGELOG.md](CHANGELOG.md).
 
 ## Usage in Another Project
 
-The starter is published to **GitHub Packages** at [`bekzatsk/spring-boot-template`](https://github.com/bekzatsk/spring-boot-template/packages).
+The starter is published to **Maven Central** — no extra repository or credentials needed.
 
-> GitHub Packages requires authentication even for read access on public packages. You need a Personal Access Token (classic) with the `read:packages` scope.
-
-### 1. Create a GitHub PAT (Classic)
-
-1. Open https://github.com/settings/tokens → **Generate new token (classic)**.
-2. Scopes: `read:packages` (and `write:packages` if you also publish).
-3. Copy the token (starts with `ghp_…`). GitHub shows it only once.
-
-### 2. Configure `~/.m2/settings.xml`
+### 1. Add the dependency
 
 ```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<settings>
-  <servers>
-    <server>
-      <id>github</id>
-      <username>YOUR_GITHUB_USERNAME</username>
-      <password>ghp_xxxxxxxxxxxxxxxxxxxxxxxx</password>
-    </server>
-  </servers>
-</settings>
+<dependency>
+  <groupId>kz.innlab</groupId>
+  <artifactId>auth-spring-boot-starter</artifactId>
+  <version>0.1.5</version>
+</dependency>
 ```
 
-Lock down permissions: `chmod 600 ~/.m2/settings.xml`.
-
-### 3. Add Repository + Dependency to your `pom.xml`
-
-```xml
-<repositories>
-  <repository>
-    <id>github</id>
-    <url>https://maven.pkg.github.com/bekzatsk/spring-boot-template</url>
-    <releases><enabled>true</enabled></releases>
-    <snapshots><enabled>true</enabled></snapshots>
-  </repository>
-</repositories>
-
-<dependencies>
-  <dependency>
-    <groupId>kz.innlab</groupId>
-    <artifactId>auth-spring-boot-starter</artifactId>
-    <version>0.1.5</version>
-  </dependency>
-</dependencies>
-```
+Gradle: `implementation("kz.innlab:auth-spring-boot-starter:0.1.5")`.
 
 ### Alternative: Build from Source
-
-Skip GitHub Packages and install to local Maven repo:
 
 ```bash
 git clone https://github.com/bekzatsk/spring-boot-template.git auth-starter
@@ -81,9 +45,9 @@ cd auth-starter
 ./mvnw clean install -DskipTests
 ```
 
-This publishes `kz.innlab:auth-spring-boot-starter:0.1.5` to `~/.m2/repository`.
+This installs `kz.innlab:auth-spring-boot-starter:0.1.5` into `~/.m2/repository`.
 
-### 4. Configure `application.yaml`
+### 2. Configure `application.yaml`
 
 Minimal configuration for dev:
 
@@ -93,9 +57,6 @@ spring:
     url: jdbc:postgresql://localhost:5432/myapp
     username: postgres
     password: postgres
-  flyway:
-    enabled: true
-    locations: classpath:db/migration/auth
   jpa:
     open-in-view: false
 
@@ -118,9 +79,33 @@ app:
       - http://localhost:3000
 ```
 
-The starter auto-configures everything else. In dev profile, RSA keys are generated in-memory and SMS/email codes are logged to console.
+The starter auto-configures everything else. It runs its own Flyway migrations into the `auth`
+schema (`classpath:db/migration-auth`), separate from your application's migrations.
 
-### 5. Run
+**The starter ships no `application*.yaml`** (since 0.1.5): every setting comes from your
+application, and anything you do not set uses the defaults in the property tables below. Without a
+keystore, RSA keys are generated in-memory, and console fallbacks log that SMS/email/push would
+have been sent (never the code). For a fixed code in local development, set it in your own
+`application-dev.yaml`:
+
+```yaml
+app:
+  auth:
+    sms:
+      dev-code: "123456"
+    email-otp:
+      dev-code: "123456"
+    verification:
+      dev-code: "123456"
+```
+
+Never set `dev-code` outside development — `ProductionSafetyConfig` refuses to start a production
+profile with one.
+
+**Behind a reverse proxy**, set `server.forward-headers-strategy: framework` (or `native`) so the
+client address is the real one; the per-client code-send limit keys on it.
+
+### 3. Run
 
 ```bash
 # Start PostgreSQL
@@ -130,7 +115,7 @@ docker compose up -d
 ./mvnw spring-boot:run
 ```
 
-Flyway migrations run automatically and create all required tables.
+Flyway migrations run automatically and create all required tables in the `auth` schema.
 
 ---
 
@@ -158,20 +143,24 @@ The starter auto-registers these endpoints:
 | `POST /api/v1/auth/refresh` | Refresh access token (body or refresh cookie) |
 | `POST /api/v1/auth/revoke` | Revoke refresh token (body or refresh cookie) |
 | `POST /api/v1/auth/logout` | Revoke refresh cookie + clear auth cookies (cookie mode) |
-| `POST /api/v1/auth/forgot-password` | Request password reset code |
+| `POST /api/v1/auth/forgot-password` | Request password reset code. Always returns a `verificationId`, whether or not the account exists |
 | `POST /api/v1/auth/reset-password` | Reset password with code |
-| `POST /api/v1/auth/verify-email` | Verify email with code (when email-verification enabled) |
-| `POST /api/v1/auth/verify-email/resend` | Resend email-verification code |
+| `POST /api/v1/auth/verify-email` | Verify email with code. Not idempotent: a repeat call after success answers `401` |
+| `POST /api/v1/auth/verify-email/resend` | Resend email-verification code. Always returns a `verificationId` |
 
 ### Account Management — Authenticated (`/api/v1/users/me`)
 
 | Endpoint | Description |
 |----------|-------------|
-| `POST /users/me/change-password` | Change password |
-| `POST /users/me/change-email/request` | Request email change |
-| `POST /users/me/change-email/verify` | Verify email change |
-| `POST /users/me/change-phone/request` | Request phone change |
-| `POST /users/me/change-phone/verify` | Verify phone change |
+| `POST /users/me/change-password` | Change password (`currentPassword`, rate-limited) |
+| `POST /users/me/reauth/request` | Send a re-authentication code to the current email (or phone) → `{verificationId, channel}` |
+| `POST /users/me/change-email/request` | Request email change. Needs `currentPassword`, or `reauthVerificationId` + `reauthCode` |
+| `POST /users/me/change-email/verify` | Verify email change; ends every session |
+| `POST /users/me/change-phone/request` | Request phone change. Same proof as change-email |
+| `POST /users/me/change-phone/verify` | Verify phone change; ends every session |
+
+Email and phone changes are refused (`403`) while the account's email is unverified. Accounts with
+no password, email or phone (Telegram-only) may add one within 5 minutes of logging in.
 
 ### User Profile — Authenticated
 
@@ -188,18 +177,45 @@ The starter auto-registers these endpoints:
 | `DELETE /notifications/tokens/{deviceId}` | Delete device token |
 | `POST /notifications/send/token` | Send push to device |
 | `POST /notifications/send/multicast` | Send push to multiple devices |
-| `POST /notifications/send/topic` | Send push to topic |
-| `POST /notifications/topics/{name}/subscribe` | Subscribe to topic |
+| `POST /notifications/send/topic` | Send push to topic — **ADMIN** |
+| `POST /notifications/topics/{name}/subscribe` | Subscribe own token to topic |
+| `DELETE /notifications/topics/{name}/subscribe` | Unsubscribe own token |
+| `GET` / `PUT /notifications/preferences` | Channel preferences |
+| `GET /notifications/history` | Own notification history |
 
-### Email — Authenticated (`/api/v1/mail`)
+Push sends accept only tokens registered to the caller; `body` up to 2,000 characters, `data` up to
+20 entries (keys ≤ 64, values ≤ 1,024 characters).
+
+### Email (`/api/v1/mail`)
 
 | Endpoint | Description |
 |----------|-------------|
-| `POST /mail/send` | Send email |
-| `POST /mail/send/with-attachments` | Send email with attachments |
-| `GET /mail/inbox` | List inbox messages (IMAP) |
-| `GET /mail/inbox/{messageNumber}` | Get single message |
-| `GET /mail/history` | Get mail history |
+| `POST /mail/send` | Send email (one recipient, subject ≤ 255) — **ADMIN** |
+| `POST /mail/send/with-attachments` | Send email with attachments — **ADMIN** |
+| `GET /mail/inbox` | List shared inbox messages (IMAP) — **ADMIN** |
+| `GET /mail/inbox/{messageNumber}` | Get single message; HTML is sanitized (no scripts, handlers, `javascript:` links or images) — **ADMIN** |
+| `PUT` / `DELETE /mail/inbox/{messageNumber}/read` | Mark read / unread — **ADMIN** |
+| `GET /mail/history` | Own mail history |
+
+### Admin (`/api/v1/admin`) — ADMIN role
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /admin/users` | List users (search `q`; sort by `email`, `name`, `phone`, `createdAt`; ≤ 100 per page) |
+| `GET /admin/users/{id}` | Get a user |
+| `POST /admin/users` | Create a user ⏱ |
+| `PATCH /admin/users/{id}/password` | Reset password; revokes sessions ⏱ |
+| `PATCH /admin/users/{id}/email` | Change email; revokes sessions ⏱ |
+| `PATCH /admin/users/{id}/phone` | Change phone ⏱ |
+| `PATCH /admin/users/{id}/profile` | Name (≤ 255) and picture (http(s) URL) |
+| `PATCH /admin/users/{id}/roles` | Change roles; revokes sessions; refuses to remove the last admin or self-demotion ⏱ |
+| `DELETE /admin/users/{id}` | Delete; refuses the last admin and self-delete ⏱ |
+| `POST /admin/topics`, `DELETE /admin/topics/{name}` | Manage push topics |
+
+⏱ Needs a recent login: the token's `auth_time` within `app.auth.security.admin-fresh-login-seconds`
+(default 900), otherwise `403 "Log in again to make this change"`. Admin endpoints are protected
+both by URL rules and by `@PreAuthorize`, so they stay closed if you disable or replace the
+starter's filter chain. Admin changes to users are recorded in `admin_audit_log`.
 
 All auth endpoints return:
 ```json
@@ -209,7 +225,9 @@ All auth endpoints return:
 }
 ```
 
-Swagger UI is available at `/swagger-ui.html`. Title defaults to your `spring.application.name` (not the starter's name). Override via `app.openapi.title`, `app.openapi.version`, `app.openapi.description`:
+Swagger UI is at `/swagger-ui.html` and the spec at `/v3/api-docs`. **Both require authentication**
+unless `app.auth.security.public-api-docs=true` (the spec maps every endpoint; keep it private in
+production). Title defaults to your `spring.application.name` (not the starter's name). Override via `app.openapi.title`, `app.openapi.version`, `app.openapi.description`:
 
 ```yaml
 spring:
@@ -256,7 +274,10 @@ Similarly, `PushService` and `MailService` can be overridden.
 
 ### Adding Your Own Secured Endpoints
 
-The starter configures Spring Security with JWT. Your endpoints are secured by default. To allow public access to specific paths, define a `SecurityFilterChain` bean:
+The starter configures Spring Security with JWT. Your endpoints are secured by default. To allow
+public access to specific paths, list them in `app.auth.security.public-paths` — admin rules are
+evaluated first, so an entry such as `/api/**` cannot open the admin endpoints. For anything more
+elaborate, define your own `SecurityFilterChain` bean:
 
 ```kotlin
 @Configuration
@@ -305,34 +326,74 @@ class MyService(
 
 ### Auth Providers
 
+Defaults are the code defaults — the starter ships no configuration file. Every property can also
+be set through its standard environment variable (`app.auth.local.enabled` →
+`APP_AUTH_LOCAL_ENABLED`).
+
 | Property | Default | Description |
 |----------|---------|-------------|
 | `app.auth.local.enabled` | `true` | Email + password auth |
-| `app.auth.google.enabled` | `false` | Google OAuth2 |
+| `app.auth.registration.enabled` | `true` | Self-registration (admins can always create users) |
+| `app.auth.google.enabled` | `false` | Google sign-in |
 | `app.auth.google.client-id` | — | Google OAuth2 client ID |
-| `app.auth.apple.enabled` | `true` | Apple Sign In |
-| `app.auth.apple.bundle-id` | `com.example.app` | Apple app bundle ID |
+| `app.auth.apple.enabled` | `false` | Apple Sign In |
+| `app.auth.apple.bundle-id` | — | Apple app bundle ID |
 | `app.auth.phone.enabled` | `true` | Phone + SMS OTP |
 | `app.auth.phone.code-length` | `6` | Phone OTP length: `4` or `6` |
 | `app.auth.email-otp.enabled` | `true` | Passwordless email OTP |
 | `app.auth.email-otp.code-length` | `6` | Email OTP length: `4` or `6` |
 | `app.auth.telegram.enabled` | `false` | Telegram bot authentication |
-| `app.auth.telegram.bot-token` | — | Telegram Bot API token |
-| `app.auth.telegram.bot-username` | `MathHubBot` | Bot username for deep link URL. Also exposed in `TelegramInitResponse.botUsername` (any leading `@` stripped). |
-| `app.auth.telegram.webhook-secret` | — | Secret token for webhook validation |
-| `app.auth.access-token.expiry-minutes` | `15` | JWT access token TTL in minutes. `1440` = 1 day, `60` = 1 hour. Env: `ACCESS_TOKEN_EXPIRY_MINUTES`. |
-| `app.auth.refresh-token.expiry-days` | `30` | Refresh token TTL. Env: `REFRESH_TOKEN_EXPIRY_DAYS`. |
-| `app.auth.email-verification.enabled` | `false` | Require email confirmation for **new LOCAL registrations**. When `true`, register issues tokens but adds a `VERIFY_EMAIL` required action + sends a code; user is blocked from protected APIs (via `RequiredActionFilter`) until `POST /verify-email`. Social/phone/existing users unaffected. |
+| `app.auth.telegram.bot-token` | — | Telegram Bot API token (required in production when Telegram is enabled) |
+| `app.auth.telegram.bot-username` | — | Bot username for the deep link; also in `TelegramInitResponse.botUsername` (leading `@` stripped) |
+| `app.auth.telegram.webhook-secret` | — | Secret token for webhook validation (required when Telegram is enabled) |
+| `app.auth.access-token.expiry-minutes` | `15` | JWT access token TTL |
+| `app.auth.refresh-token.expiry-days` | `30` | Refresh token TTL |
+| `app.auth.email-verification.enabled` | `false` | Gate new LOCAL registrations behind email confirmation (see below) |
+
+### Security and Limits
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `app.auth.security.public-paths` | — | Extra paths that skip authentication. Admin rules are evaluated first, so these cannot open admin endpoints. |
+| `app.auth.security.public-api-docs` | `false` | Serve Swagger UI and `/v3/api-docs` without authentication |
+| `app.auth.security.admin-fresh-login-seconds` | `900` | How recent an admin's login must be for account-handover admin actions |
+| `app.security.production-profiles` | `prod,production` | Profiles under which `ProductionSafetyConfig` and the keystore check run |
+| `app.auth.rate-limit.enabled` | `true` | Master switch for the limits below (`false` only if a gateway enforces them) |
+| `app.auth.rate-limit.login.*` | `10` / `300` s | Login attempts per email |
+| `app.auth.rate-limit.change-password.*` | `5` / `300` s | Current-password checks per user (also used by re-authentication) |
+| `app.auth.rate-limit.otp-verify.*` | `10` / `86400` s | One-time-code checks per identifier and purpose, across codes |
+| `app.auth.rate-limit.code-send-per-client.*` | `20` / `3600` s | Codes sent per client address (IPv6 per /64) — stops SMS toll fraud |
+| `app.auth.rate-limit.code-send-per-purpose.*` | `1000` / `3600` s | Codes sent per purpose, all clients — a circuit breaker; size it to your traffic |
+
+Each `*` rule has `max-attempts` and `window-seconds`. Limits answer `429` with `Retry-After`. The
+default limiter is in-memory, so limits are per instance; declare a `RateLimiter` bean backed by a
+shared store for a cluster.
+
+Under a production profile the application refuses to start with a `dev-code` set, the default JWT
+issuer/audience, Telegram without a bot token or webhook secret, auth cookies without `Secure`, or
+console SMS/email/mail fallbacks serving traffic (waivable per channel with
+`app.security.console-fallbacks.allow-sms|allow-email|allow-mail`).
 
 ### Email Verification (`app.auth.email-verification`)
 
-Optional. **Off by default — registration behavior is unchanged.** When `enabled=true`:
+Every password registration starts with `emailVerified=false`, whatever this setting says. The
+setting decides whether the account is **gated** until the address is confirmed. When
+`enabled=true`:
 
-1. `POST /local/register` for a **new** email+password user → creates user with `emailVerified=false`, adds required action `VERIFY_EMAIL`, sends a 6-digit code via `EmailService.sendCode(email, code, "VERIFY_EMAIL")`. Tokens are still issued (soft gate) but their JWT carries `required_actions: ["VERIFY_EMAIL"]`, so `RequiredActionFilter` returns `403` on any non-allowlisted protected endpoint.
-2. `POST /api/v1/auth/verify-email` `{email, verificationId, code}` → sets `emailVerified=true`, clears the action. After re-login (or refresh) the JWT is clean → full access.
-3. `POST /api/v1/auth/verify-email/resend` `{email}` → new code (rate-limited 1/60s, anti-enumeration: `verificationId` returned only for a real unverified user).
+1. `POST /local/register` creates the user, adds required action `VERIFY_EMAIL` and sends a code via
+   `EmailService.sendCode(email, code, "VERIFY_EMAIL")`. Tokens are issued, but their JWT carries
+   `required_actions: ["VERIFY_EMAIL"]`, so `RequiredActionFilter` answers `403` on any
+   non-allowlisted endpoint.
+2. `POST /api/v1/auth/verify-email` `{email, verificationId, code}` → `emailVerified=true`, action
+   cleared. After refresh or re-login the JWT is clean.
+3. `POST /api/v1/auth/verify-email/resend` `{email}` → new code. Always returns a `verificationId`
+   (a random one when nothing is sent), so the response does not reveal whether the account exists.
 
-Registration rejects an existing email, including an account created through a social provider. Adding a password to an existing account requires a separate authenticated, owner-verified flow. `emailVerified` is exposed on `GET /api/v1/users/me`. The verify-email paths are in the default `required-action.allowed-paths`.
+Whether gated or not, an unverified account cannot change its email or phone. If someone else later
+signs in to that address with an email code, the account is handed to them: the registrant's
+password, phone, sessions and push devices are removed. Registration rejects an existing email,
+including one created through a social provider. `emailVerified` is exposed on
+`GET /api/v1/users/me`.
 
 ### httpOnly Cookie Auth (`app.auth.cookie`)
 
@@ -367,91 +428,93 @@ app:
 
 ### Database
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `DATABASE_URL` | Prod | — | JDBC PostgreSQL URL |
-| `DB_USERNAME` | No | `postgres` | Database user |
-| `DB_PASSWORD` | No | `postgres` | Database password |
+Standard Spring Boot settings: `spring.datasource.url`, `spring.datasource.username`,
+`spring.datasource.password` (env `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`,
+`SPRING_DATASOURCE_PASSWORD`). Set `spring.jpa.hibernate.ddl-auto: validate` in production; the
+schema comes from the starter's migrations.
 
 ### JWT (Production)
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `JWT_KEYSTORE_LOCATION` | Yes | Classpath resource or `file:/absolute/path/to/keystore.p12` |
-| `JWT_KEYSTORE_PASSWORD` | Yes | Keystore password |
-| `JWT_KEY_ALIAS` | No (`jwt`) | Key alias |
-| `JWT_ISSUER` | Yes | Issuer identifier, unique to this environment |
-| `JWT_AUDIENCE` | Yes | Identifier of the API accepting this access token |
+| Property (env var) | Required | Description |
+|--------------------|----------|-------------|
+| `app.security.jwt.keystore-location` (`APP_SECURITY_JWT_KEYSTORE_LOCATION`) | Prod | `file:/absolute/path/to/keystore.p12` or a classpath resource |
+| `app.security.jwt.keystore-password` (`APP_SECURITY_JWT_KEYSTORE_PASSWORD`) | Prod | Keystore password |
+| `app.security.jwt.key-alias` (`APP_SECURITY_JWT_KEY_ALIAS`) | No (`jwt`) | Key alias |
+| `app.security.jwt.issuer` (`APP_SECURITY_JWT_ISSUER`) | Prod | Issuer, unique to this environment. The default `template-app` is refused in production. |
+| `app.security.jwt.audience` (`APP_SECURITY_JWT_AUDIENCE`) | Prod | The API accepting the token. The default `template-app` is refused in production. |
+
+Shorter names such as `JWT_KEYSTORE_LOCATION` work only if your `application-prod.yaml` maps them
+(`keystore-location: ${JWT_KEYSTORE_LOCATION}`); the starter no longer ships a file that does.
 
 Generate a keystore:
 
 ```bash
-keytool -genkey -alias jwt -keyalg RSA -keysize 2048 \
-  -keystore jwt.p12 -storetype PKCS12
-
-# Or use the included script (writes secrets/jwt-keystore.p12 with a generated password):
+# Writes secrets/jwt-keystore.p12 with a generated password and prints the settings:
 ./scripts/generate-keystore.sh
 ```
 
-Never put the keystore under `src/main/resources`: it would be packaged into the jar.
-
-Dev profile uses in-memory RSA keys — no keystore needed.
+Never put the keystore under `src/main/resources`: it would be packaged into your jar. Without a
+keystore, outside production profiles, RSA keys are generated in-memory and change on every restart.
 
 ### Firebase
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `FIREBASE_ENABLED` | No (`false`) | Enable Firebase push |
-| `FIREBASE_CREDENTIALS_PATH` | When enabled | Path to service account JSON |
+| Setting | Required | Description |
+|---------|----------|-------------|
+| `app.firebase.enabled` | No (`false`) | Enable Firebase push |
+| `FIREBASE_CREDENTIALS_JSON` (env var) | When enabled | Service-account JSON, **base64-encoded** |
 
 ### Email (SMTP/IMAP)
 
-| Variable | Default | Description |
+| Property | Default | Description |
 |----------|---------|-------------|
-| `MAIL_ENABLED` | `false` | Enable mail service |
-| `SMTP_HOST` | — | SMTP server |
-| `SMTP_PORT` | `587` | SMTP port |
-| `SMTP_USERNAME` | — | SMTP user |
-| `SMTP_PASSWORD` | — | SMTP password |
-| `SMTP_FROM` | `noreply@example.com` | Sender address |
-| `SMTP_SSL_ENABLED` | `false` | SSL for SMTP |
-| `IMAP_HOST` | — | IMAP server |
-| `IMAP_PORT` | `993` | IMAP port |
-| `IMAP_USERNAME` | — | IMAP user |
-| `IMAP_PASSWORD` | — | IMAP password |
-| `IMAP_SSL_ENABLED` | `true` | SSL for IMAP |
+| `app.mail.enabled` | `false` | Enable mail service |
+| `app.mail.smtp.host` / `port` | — / `587` | SMTP server |
+| `app.mail.smtp.username` / `password` | — | SMTP credentials |
+| `app.mail.smtp.from` | `noreply@example.com` | Sender address |
+| `app.mail.smtp.ssl-enabled` | `false` | SSL for SMTP |
+| `app.mail.imap.host` / `port` | — / `993` | IMAP server (shared admin inbox) |
+| `app.mail.imap.username` / `password` | — | IMAP credentials |
+| `app.mail.imap.ssl-enabled` | `true` | SSL for IMAP |
+| `app.mail.external.base-url` / `master-key` | — | Use an external mail HTTP service instead of SMTP |
+| `app.mail.limits.per-user-per-hour` | `20` | Send quota per sender |
+| `app.mail.limits.max-attachments` | `10` | Attachments per message |
+| `app.mail.limits.max-attachment-bytes` | `5 MB` | Per attachment |
+| `app.mail.limits.max-total-attachment-bytes` | `20 MB` | Per message |
 
 ### Other
 
-| Variable | Default | Description |
+| Property | Default | Description |
 |----------|---------|-------------|
-| `APP_CORS_ALLOWED_ORIGINS` | localhost | Allowed CORS origins |
-| `NOTIFICATION_MAX_TOKENS_PER_USER` | `5` | Max device tokens per user |
+| `app.cors.allowed-origins` | — (none) | Allowed CORS origins; required in production |
+| `app.notification.token.max-per-user` | `5` | Max device tokens per user |
+| `app.auth.telegram.trust-forwarded-headers` | `false` | Honour `X-Forwarded-For` for Telegram session limits — only behind a trusted proxy |
 
 ---
 
 ## Database Schema
 
-Flyway migrations create these tables automatically:
+The starter's Flyway migrations (`classpath:db/migration-auth`, V1 through V16) create these tables
+in the `auth` schema:
 
 ```
-users                   — id, email, name, picture, password_hash, phone
-user_providers          — user_id, provider (GOOGLE|APPLE|LOCAL|PHONE)
-user_provider_ids       — user_id, provider, provider_id
-user_roles              — user_id, role (USER|ADMIN)
-refresh_tokens          — id, user_id, token_hash, expires_at, revoked, used_at
-sms_verifications       — id, phone, code_hash, expires_at, used, attempts
-verification_codes      — id, user_id, identifier, purpose, code_hash, expires_at
-device_tokens           — id, user_id, token, device_type, created_at, updated_at
-notification_history    — sent notification records
-notification_topics     — topic management
-notification_preferences — user channel preferences
-mail_history            — sent email records
+users                    — id, email, name, picture, password_hash, phone, email_verified, telegram ids, version
+user_providers           — user_id, provider (GOOGLE|APPLE|LOCAL|TELEGRAM)
+user_provider_ids        — user_id, provider, provider_id (unique per provider)
+user_roles               — user_id, role (USER|ADMIN)
+user_required_actions    — user_id, action (VERIFY_EMAIL|UPDATE_PASSWORD|VERIFY_PHONE)
+refresh_tokens           — id, user_id, token_hash, expires_at, revoked, used_at, authenticated_at
+verification_codes       — id, user_id, identifier, purpose, code_hash, expires_at, attempts
+telegram_auth_sessions   — Telegram login sessions
+device_tokens            — id, user_id, platform, fcm_token (unique), device_id
+notification_history     — sent notifications
+notification_topics      — push topics
+notification_preferences — per-user channel preferences
+mail_history             — sent mail
+admin_audit_log          — admin changes to users
 ```
 
-All primary keys are UUID v7 (time-ordered, RFC 9562).
-
-Migrations location: `classpath:db/migration/auth` (V1 through V4).
+All primary keys are UUID v7 (time-ordered, RFC 9562). Entity tables carry a `version` column for
+optimistic locking.
 
 ---
 
@@ -459,13 +522,23 @@ Migrations location: `classpath:db/migration/auth` (V1 through V4).
 
 | Token | Format | Expiry | Storage |
 |-------|--------|--------|---------|
-| Access | RS256 JWT | 15 min | Client only |
+| Access | RS256 JWT | 15 min (`app.auth.access-token.expiry-minutes`) | Client only |
 | Refresh | Opaque (32 bytes, base64url) | 30 days | SHA-256 hash in DB |
-| Verification | 6-digit code | 15 min (email) / 5 min (SMS) | BCrypt hash in DB |
+| Verification | 4- or 6-digit code | 15 min (email) / 5 min (login OTP) | BCrypt hash in DB |
 
-**JWT claims:** `iss`, `aud`, `sub` (user UUID), `roles`, `exp`, `iat`. The resource server validates both `iss` and `aud` from `app.security.jwt.issuer` and `app.security.jwt.audience`. Configure distinct values per environment/API. Existing access tokens without `aud` are rejected after upgrade; clients must sign in again. Refresh tokens remain valid unless revoked separately.
+**JWT claims:** `iss`, `aud`, `sub` (user UUID), `roles`, `required_actions`, `auth_time`, `exp`,
+`iat`. The resource server validates `iss` and `aud` against `app.security.jwt.issuer` and
+`app.security.jwt.audience`; configure distinct values per environment and API. `auth_time` is the
+time of the login the token descends from — refresh keeps it — and gates actions that need a recent
+login.
 
-**Refresh token rotation:** used tokens within 10s grace window return 409; reuse after grace revokes all user tokens.
+**Refresh token rotation:** used tokens within a 10 s grace window answer `409`; reuse after the
+grace window revokes all of the user's tokens. Password, email, phone and role changes also revoke
+them.
+
+**One-time codes:** 3 attempts per code, plus a budget per identifier and purpose across codes
+(`app.auth.rate-limit.otp-verify`), so requesting new codes does not reset the guessing count. Email
+identifiers are compared without letter case.
 
 ---
 
@@ -479,14 +552,14 @@ Phone-only users have `email = ""` with a partial unique index.
 
 ## Dev vs Prod
 
-| Feature | Dev | Prod |
-|---------|-----|------|
-| RSA keys | In-memory (regenerated) | PKCS12 keystore |
-| Verification codes | Hardcoded `123456` | SecureRandom 6-digit |
-| SMS | Console log | Pluggable `SmsService` |
-| Email | Console log | Pluggable `EmailService` |
-| Push | Console log | Firebase FCM |
-| Flyway | `clean-on-validation-error` | Strict validation |
+| Feature | Without production config | Production profile |
+|---------|---------------------------|--------------------|
+| RSA keys | In-memory (regenerated on restart) | PKCS12 keystore (required) |
+| Verification codes | Random, unless your `application-dev.yaml` sets `dev-code` | Random; a `dev-code` is refused at startup |
+| SMS / email / push | Console fallback (logs that a message would be sent, never its content) | Real providers; console fallbacks refused unless waived per channel |
+| JWT issuer/audience | `template-app` | Must be set; the default is refused |
+
+Production profiles are `prod` and `production` by default (`app.security.production-profiles`).
 
 ---
 
@@ -578,9 +651,6 @@ spring:
     url: jdbc:postgresql://localhost:5432/myapp
     username: postgres
     password: postgres
-  flyway:
-    enabled: true
-    locations: classpath:db/migration/auth
   jpa:
     open-in-view: false
     hibernate:
@@ -618,52 +688,45 @@ Done. You now have full JWT auth at `http://localhost:8080/api/v1/auth/*`.
 
 ## Error Responses
 
-All errors follow a consistent format:
+All errors from the starter's endpoints follow one format:
 ```json
 { "error": "Bad Request", "message": "email: must be valid", "status": 400 }
 ```
 
 | Status | When |
 |--------|------|
-| 400 | Validation failure, invalid format |
-| 401 | Invalid credentials, expired token/code |
-| 403 | Insufficient permissions |
-| 404 | Not found |
-| 409 | Email/phone taken, rate limit, grace window |
+| 400 | Validation failure, malformed path variable or missing parameter |
+| 401 | Invalid credentials, expired or wrong token/code |
+| 403 | Insufficient role, pending required action, unverified email for identity changes, admin login not recent enough |
+| 404 | Not found, or a disabled provider's endpoint |
+| 409 | Email/phone taken, resend cooldown, refresh grace window, concurrent update |
+| 429 | Attempt or send limit reached — honour `Retry-After` |
+
+Messages from exceptions thrown inside libraries are not passed through; the client gets a generic
+message and the details stay in the server log.
 
 ---
 
 ## Publishing (Maintainers)
 
-The starter publishes to **GitHub Packages** via `scripts/publish.sh`.
-
-### One-time setup
-
-1. Create a GitHub PAT (classic) with `write:packages` + `read:packages` scopes: https://github.com/settings/tokens
-2. Either export it per shell:
-   ```bash
-   export GITHUB_TOKEN=ghp_xxx
-   ```
-   …or store it in `~/.m2/settings.xml` under `<server><id>github</id>` (the script falls back to this if `GITHUB_TOKEN` is unset).
-
-### Publish commands
+Releases go to **Maven Central** through the `release` profile (GPG-signed, uploaded to Sonatype).
+Full steps and one-time setup: [DEPLOY_MVN.md](DEPLOY_MVN.md).
 
 ```bash
-# Publish current pom version (e.g. 0.1.5)
-./scripts/publish.sh --skip-tests
-
-# Bump to next snapshot
-./scripts/publish.sh --snapshot 0.0.3 --skip-tests
-
-# Cut an immutable release (bumps pom, deploys, tags v0.0.2, pushes)
-./scripts/publish.sh --release 0.0.2 --skip-tests
+JAVA_HOME="$(/usr/libexec/java_home -v 25)" ./mvnw clean deploy -P release -DskipTests
 ```
 
-After publish, package appears at: https://github.com/bekzatsk/spring-boot-template/packages
+The deployment stops at VALIDATED and is published by hand at
+https://central.sonatype.com/publishing/deployments. Central is immutable: a published version can
+never be replaced, and a migration that shipped must never be edited. Bump the version in
+`pom.xml`, this README and `INSTALL_INSTRUCTION.md`, and add a `CHANGELOG.md` entry first.
 
 ---
 
 ## Changelog
+
+Release notes for 0.1.x are in [CHANGELOG.md](CHANGELOG.md). The entries below cover the 0.0.x
+snapshots.
 
 ### 0.0.5-SNAPSHOT (unreleased)
 
