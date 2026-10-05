@@ -19,6 +19,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository
 import org.springframework.security.web.csrf.CsrfFilter
 import org.springframework.security.web.util.matcher.RequestMatcher
@@ -56,6 +57,9 @@ class SecurityConfig(
                         }
                     }
                     csrfTokenRepository = repository
+                    // Stateless: every cookie-authenticated request looks like a new login, and the
+                    // default CsrfAuthenticationStrategy would clear XSRF-TOKEN in each response.
+                    sessionAuthenticationStrategy = NullAuthenticatedSessionStrategy()
                     requireCsrfProtectionMatcher = RequestMatcher { request ->
                         request.method !in setOf("GET", "HEAD", "OPTIONS", "TRACE") &&
                             request.cookies?.any {
