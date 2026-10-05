@@ -1,9 +1,5 @@
 package kz.innlab.starter.user.controller
 
-import java.time.Instant
-import kz.innlab.starter.shared.util.authTime
-import kz.innlab.starter.shared.error.ForbiddenOperationException
-import kz.innlab.starter.config.AuthSecurityProperties
 import org.springframework.security.access.prepost.PreAuthorize
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -43,8 +39,7 @@ import java.util.UUID
 @RequestMapping("/api/v1/admin/users")
 class AdminUserController(
     private val userService: UserService,
-    private val adminUserService: AdminUserService,
-    private val authSecurityProperties: AuthSecurityProperties
+    private val adminUserService: AdminUserService
 ) {
 
     @Operation(summary = "List users (paginated, searchable by email/name/phone). Returns brief representation.")
@@ -70,8 +65,6 @@ class AdminUserController(
         @Parameter(hidden = true) @AuthenticationPrincipal jwt: Jwt,
         @Valid @RequestBody request: AdminCreateUserRequest
     ): ResponseEntity<UserProfileResponse> {
-        // Creating an admin with a known password is as good as taking one over.
-        requireFreshLogin(jwt)
         val user = adminUserService.createUser(
             adminId = UUID.fromString(jwt.subject),
             email = request.email,
@@ -91,7 +84,6 @@ class AdminUserController(
         @Valid @RequestBody request: AdminUpdatePasswordRequest
     ): ResponseEntity<UserProfileResponse> {
         val adminId = UUID.fromString(jwt.subject)
-        requireFreshLogin(jwt)
         val user = adminUserService.updatePassword(adminId, id, request.newPassword, request.temporary)
         return ResponseEntity.ok(UserProfileResponse.from(user))
     }
@@ -104,7 +96,6 @@ class AdminUserController(
         @Valid @RequestBody request: AdminUpdateEmailRequest
     ): ResponseEntity<UserProfileResponse> {
         val adminId = UUID.fromString(jwt.subject)
-        requireFreshLogin(jwt)
         val user = adminUserService.updateEmail(adminId, id, request.email)
         return ResponseEntity.ok(UserProfileResponse.from(user))
     }
@@ -117,7 +108,6 @@ class AdminUserController(
         @Valid @RequestBody request: AdminUpdatePhoneRequest
     ): ResponseEntity<UserProfileResponse> {
         val adminId = UUID.fromString(jwt.subject)
-        requireFreshLogin(jwt)
         val user = adminUserService.updatePhone(adminId, id, request.phone)
         return ResponseEntity.ok(UserProfileResponse.from(user))
     }
@@ -142,7 +132,6 @@ class AdminUserController(
         @Valid @RequestBody request: AdminUpdateRolesRequest
     ): ResponseEntity<UserProfileResponse> {
         val adminId = UUID.fromString(jwt.subject)
-        requireFreshLogin(jwt)
         val user = adminUserService.updateRoles(adminId, id, request.roles)
         return ResponseEntity.ok(UserProfileResponse.from(user))
     }
@@ -154,21 +143,7 @@ class AdminUserController(
         @PathVariable id: UUID
     ): ResponseEntity<Void> {
         val adminId = UUID.fromString(jwt.subject)
-        requireFreshLogin(jwt)
         adminUserService.deleteUser(adminId, id)
         return ResponseEntity.noContent().build()
-    }
-
-    /**
-     * Sudo mode for the changes that hand over an account. A stolen admin token could otherwise
-     * reset any password or move any email — the admin's own included — without the checks the
-     * same change needs under /users/me.
-     */
-    private fun requireFreshLogin(jwt: Jwt) {
-        val loggedInAt = jwt.authTime()
-        val oldest = Instant.now().minusSeconds(authSecurityProperties.adminFreshLoginSeconds)
-        if (loggedInAt == null || loggedInAt.isBefore(oldest)) {
-            throw ForbiddenOperationException("Log in again to make this change")
-        }
     }
 }

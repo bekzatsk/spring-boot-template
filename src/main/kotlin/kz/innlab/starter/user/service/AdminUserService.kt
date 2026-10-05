@@ -1,5 +1,6 @@
 package kz.innlab.starter.user.service
 
+import kz.innlab.starter.shared.security.FreshLoginGuard
 import kz.innlab.starter.shared.error.ResourceNotFoundException
 import kz.innlab.starter.shared.util.normalizeToE164
 import kz.innlab.starter.user.dto.UserSummaryResponse
@@ -25,7 +26,8 @@ class AdminUserService(
     private val passwordEncoder: PasswordEncoder,
     private val refreshTokenRevoker: RefreshTokenRevoker,
     private val auditLogRepository: AdminAuditLogRepository,
-    private val userService: UserService
+    private val userService: UserService,
+    private val freshLoginGuard: FreshLoginGuard
 ) {
 
     companion object {
@@ -57,6 +59,7 @@ class AdminUserService(
         roles: Set<Role>?,
         temporary: Boolean
     ): User {
+        freshLoginGuard.requireFreshLogin()
         val user = userService.createUserByAdmin(email, rawPassword, name, roles, temporary)
         audit(adminId, "CREATE_USER", user.id, after = "roles=${user.roles.map { it.name }.sorted()}")
         return user
@@ -77,6 +80,7 @@ class AdminUserService(
 
     @Transactional
     fun updatePassword(adminId: UUID, targetId: UUID, newPassword: String, temporary: Boolean): User {
+        freshLoginGuard.requireFreshLogin()
         val user = findById(targetId)
         user.passwordHash = passwordEncoder.encode(newPassword)
         user.linkProvider(AuthProvider.LOCAL)
@@ -94,6 +98,7 @@ class AdminUserService(
 
     @Transactional
     fun updateEmail(adminId: UUID, targetId: UUID, newEmail: String): User {
+        freshLoginGuard.requireFreshLogin()
         val user = findById(targetId)
         if (user.email == newEmail) return user
 
@@ -113,6 +118,7 @@ class AdminUserService(
 
     @Transactional
     fun updatePhone(adminId: UUID, targetId: UUID, rawPhone: String): User {
+        freshLoginGuard.requireFreshLogin()
         val phoneE164 = normalizeToE164(rawPhone)
         val user = findById(targetId)
         if (user.phone == phoneE164) return user
@@ -143,6 +149,7 @@ class AdminUserService(
 
     @Transactional
     fun updateRoles(adminId: UUID, targetId: UUID, roles: Set<Role>): User {
+        freshLoginGuard.requireFreshLogin()
         val user = findById(targetId)
         val wasAdmin = Role.ADMIN in user.roles
         val willBeAdmin = Role.ADMIN in roles
@@ -169,6 +176,7 @@ class AdminUserService(
 
     @Transactional
     fun deleteUser(adminId: UUID, targetId: UUID) {
+        freshLoginGuard.requireFreshLogin()
         if (adminId == targetId) {
             throw IllegalStateException("Admin cannot delete self")
         }

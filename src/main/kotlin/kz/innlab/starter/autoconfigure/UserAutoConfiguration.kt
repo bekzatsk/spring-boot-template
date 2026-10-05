@@ -1,5 +1,6 @@
 package kz.innlab.starter.autoconfigure
 
+import kz.innlab.starter.shared.security.FreshLoginGuard
 import kz.innlab.starter.config.AuthSecurityProperties
 import kz.innlab.starter.config.AuthTokenProperties
 import kz.innlab.starter.user.controller.AdminUserController
@@ -26,9 +27,11 @@ class UserAutoConfiguration {
         passwordEncoder: PasswordEncoder,
         authTokenProperties: AuthTokenProperties,
         refreshTokenRevoker: RefreshTokenRevoker,
-        deviceRegistrationRevoker: DeviceRegistrationRevoker
+        deviceRegistrationRevoker: DeviceRegistrationRevoker,
+        freshLoginGuard: FreshLoginGuard
     ): UserService = UserService(
-        userRepository, passwordEncoder, authTokenProperties, refreshTokenRevoker, deviceRegistrationRevoker
+        userRepository, passwordEncoder, authTokenProperties, refreshTokenRevoker, deviceRegistrationRevoker,
+        freshLoginGuard
     )
 
     @Bean
@@ -38,10 +41,16 @@ class UserAutoConfiguration {
         passwordEncoder: PasswordEncoder,
         refreshTokenRevoker: RefreshTokenRevoker,
         auditLogRepository: AdminAuditLogRepository,
-        userService: UserService
+        userService: UserService,
+        freshLoginGuard: FreshLoginGuard
     ): AdminUserService = AdminUserService(
-        userRepository, passwordEncoder, refreshTokenRevoker, auditLogRepository, userService
+        userRepository, passwordEncoder, refreshTokenRevoker, auditLogRepository, userService, freshLoginGuard
     )
+
+    @Bean
+    @ConditionalOnMissingBean
+    fun freshLoginGuard(authSecurityProperties: AuthSecurityProperties): FreshLoginGuard =
+        FreshLoginGuard(authSecurityProperties)
 
     @Bean
     @ConditionalOnMissingBean
@@ -51,7 +60,6 @@ class UserAutoConfiguration {
     @ConditionalOnMissingBean
     fun adminUserController(
         userService: UserService,
-        adminUserService: AdminUserService,
-        authSecurityProperties: AuthSecurityProperties
-    ): AdminUserController = AdminUserController(userService, adminUserService, authSecurityProperties)
+        adminUserService: AdminUserService
+    ): AdminUserController = AdminUserController(userService, adminUserService)
 }

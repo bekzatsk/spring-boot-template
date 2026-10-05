@@ -11,6 +11,12 @@ import org.springframework.security.oauth2.server.resource.web.DefaultBearerToke
  * [DefaultBearerTokenResolver] preserves its malformed-header handling. Only when the delegate
  * finds no bearer token do we read the httpOnly access cookie.
  */
+@Deprecated(
+    "Disables CSRF for cookie-authenticated requests when used as the resource server's resolver: " +
+        "the resource server exempts every request its resolver finds a token in. The starter now " +
+        "uses AccessTokenCookieFilter after CsrfFilter instead.",
+    level = DeprecationLevel.WARNING
+)
 class CookieBearerTokenResolver(
     private val accessCookieName: String,
     private val delegate: BearerTokenResolver = DefaultBearerTokenResolver()

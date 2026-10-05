@@ -1,6 +1,6 @@
 package kz.innlab.starter.config
 
-import kz.innlab.starter.authentication.cookie.CookieBearerTokenResolver
+import kz.innlab.starter.authentication.cookie.AccessTokenCookieFilter
 import kz.innlab.starter.authentication.filter.ApiAccessDeniedHandler
 import kz.innlab.starter.authentication.filter.ApiAuthenticationEntryPoint
 import kz.innlab.starter.authentication.filter.RequiredActionFilter
@@ -20,6 +20,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository
+import org.springframework.security.web.csrf.CsrfFilter
 import org.springframework.security.web.util.matcher.RequestMatcher
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
@@ -118,16 +119,18 @@ class SecurityConfig(
                     jwtDecoder = this@SecurityConfig.jwtDecoder
                     jwtAuthenticationConverter = jwtAuthenticationConverter()
                 }
-                // Cookie mode: read access token from cookie when no Authorization header (header always wins)
-                if (authCookieProperties.enabled) {
-                    bearerTokenResolver = CookieBearerTokenResolver(authCookieProperties.accessCookieName)
-                }
                 authenticationEntryPoint = this@SecurityConfig.authenticationEntryPoint
                 accessDeniedHandler = this@SecurityConfig.accessDeniedHandler
             }
             exceptionHandling {
                 authenticationEntryPoint = this@SecurityConfig.authenticationEntryPoint
                 accessDeniedHandler = this@SecurityConfig.accessDeniedHandler
+            }
+            // Cookie mode: the access cookie becomes a bearer header only after CsrfFilter has run.
+            // Handing it to the resource server as a token resolver instead made the resource
+            // server exempt every cookie-authenticated request from CSRF. See AccessTokenCookieFilter.
+            if (authCookieProperties.enabled) {
+                addFilterAfter<CsrfFilter>(AccessTokenCookieFilter(authCookieProperties.accessCookieName))
             }
             addFilterAfter<BearerTokenAuthenticationFilter>(requiredActionFilter)
         }

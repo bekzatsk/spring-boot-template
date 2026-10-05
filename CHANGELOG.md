@@ -1,5 +1,34 @@
 # Changelog
 
+## Unreleased
+
+### Security
+
+- **CSRF was not enforced on cookie-authenticated requests.** In cookie mode the access cookie was
+  read by a `BearerTokenResolver` plugged into the resource server, and the resource server exempts
+  from CSRF every request its resolver finds a token in. Any state-changing request carrying only
+  the access cookie skipped CSRF — a forged write to a consumer's own endpoint answered `204`. The
+  cookie is now turned into an `Authorization` header by `AccessTokenCookieFilter` **after**
+  `CsrfFilter`, so CSRF judges the request as the browser sent it. Requests with their own
+  `Authorization` header still need no CSRF token.
+- **The recent-login rule for admin actions is enforced in the services**, not only in the
+  starter's controller. A consumer endpoint calling `AdminUserService` (or
+  `UserService.createUserByAdmin`) directly — a team screen, an invitation flow — skipped it.
+  The check lives in the new public `FreshLoginGuard` bean; call `requireFreshLogin()` from your
+  own endpoints that grant access in the same way. A JWT caller must have logged in within
+  `app.auth.security.admin-fresh-login-seconds`; an anonymous caller is refused; code running with
+  no authentication at all (a scheduled job, a migration) is allowed.
+- `ForbiddenOperationException` carries `@ResponseStatus(FORBIDDEN)`, so it answers `403` from
+  consumer controllers too (the starter's exception handler only covers its own).
+
+### Changed (breaking)
+
+- `AdminUserService` and `UserService` take a `FreshLoginGuard` constructor argument, and their
+  account-handover methods throw `RecentLoginRequiredException` (403) for a stale or anonymous
+  caller. Calls with no authentication in the security context are unaffected.
+- `CookieBearerTokenResolver` is deprecated and no longer used. Plugged into a resource server, it
+  disables CSRF for cookie-authenticated requests.
+
 ## 0.1.5 — 2026-10-02
 
 Second security release, from a re-audit of 0.1.4. **0.1.4 and earlier ship
