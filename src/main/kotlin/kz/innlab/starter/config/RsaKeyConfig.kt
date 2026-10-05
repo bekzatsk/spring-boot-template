@@ -97,7 +97,7 @@ class RsaKeyConfig(
     fun jwtDecoder(jwkSource: JWKSource<SecurityContext>): JwtDecoder {
         val decoder = NimbusJwtDecoder.withJwkSource(jwkSource).build()
         val audienceValidator = JwtClaimValidator<List<String>>(JwtClaimNames.AUD) { audience ->
-            audience?.contains(jwtIdentityProperties.audience) == true
+            jwtIdentityProperties.audience in audience
         }
         decoder.setJwtValidator(DelegatingOAuth2TokenValidator<Jwt>(
             JwtValidators.createDefaultWithIssuer(jwtIdentityProperties.issuer),
