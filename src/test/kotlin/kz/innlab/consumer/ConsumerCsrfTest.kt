@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import jakarta.servlet.http.Cookie
 import kz.innlab.starter.authentication.service.TokenService
 import kz.innlab.starter.user.model.Role
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -66,6 +67,26 @@ class ConsumerCsrfTest {
                 .cookie(Cookie("access_token", token), csrfCookie)
                 .header("X-XSRF-TOKEN", csrfToken)
         ).andExpect(status().isNoContent)
+    }
+
+    @Test
+    fun `cookie-authenticated requests keep the CSRF token, so one token serves many writes`() {
+        // Each cookie-authenticated request looked like a fresh login to CsrfAuthenticationStrategy,
+        // which cleared XSRF-TOKEN in the response — the frontend had to fetch a new token per write.
+        val csrf = mockMvc.perform(get("/api/v1/auth/csrf")).andReturn()
+        val csrfCookie = csrf.response.getCookie("XSRF-TOKEN")!!
+        val csrfToken = JsonMapper.builder().build().readTree(csrf.response.contentAsString).get("token").asString()
+        val cookies = arrayOf(Cookie("access_token", token), csrfCookie)
+
+        val read = mockMvc.perform(get("/api/crm/notes").cookie(*cookies))
+            .andExpect(status().isOk).andReturn()
+        assertNull(read.response.getCookie("XSRF-TOKEN"), "a read must not touch the CSRF cookie")
+
+        repeat(2) {
+            val write = mockMvc.perform(post("/api/crm/notes").cookie(*cookies).header("X-XSRF-TOKEN", csrfToken))
+                .andExpect(status().isNoContent).andReturn()
+            assertNull(write.response.getCookie("XSRF-TOKEN"), "a write must not touch the CSRF cookie")
+        }
     }
 
     @Test
