@@ -413,7 +413,7 @@ class NotificationIntegrationTest {
         val body = result.response.contentAsString
         val mapper = tools.jackson.databind.json.JsonMapper.builder().build()
         val items = mapper.readTree(body)
-        val cursorId = items.get(1).get("id").asText()
+        val cursorId = items.get(1).get("id").asString()
 
         // Second page using cursor
         mockMvc.perform(

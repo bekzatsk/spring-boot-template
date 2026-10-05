@@ -55,7 +55,7 @@ class CookieAuthIntegrationTest {
             .andExpect(status().isOk)
             .andReturn().response
         val cookie = response.getCookie("XSRF-TOKEN")!!
-        val token = JsonMapper.builder().build().readTree(response.contentAsString).get("token").asText()
+        val token = JsonMapper.builder().build().readTree(response.contentAsString).get("token").asString()
         return cookie to token
     }
 

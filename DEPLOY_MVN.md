@@ -8,8 +8,12 @@ Quick reference. Full background: `INSTALL_INSTRUCTION.md` §1 Option A.
 - GPG key `D613F472A9A59A52` published to keyservers
 - `~/.m2/settings.xml` has:
   - `<server id="central">` with Sonatype user token
-  - `<profile id="gpg">` with `gpg.keyname` + `gpg.passphrase`, `activeByDefault=true`
-- `pom.xml` profile `release` configured with `central-publishing-maven-plugin` + `maven-gpg-plugin` (`--pinentry-mode loopback`)
+  - `<profile id="gpg">` with `gpg.keyname`, `activeByDefault=true` — **no `gpg.passphrase`**
+- `pom.xml` profile `release` configured with `central-publishing-maven-plugin` + `maven-gpg-plugin` (`--pinentry-mode loopback`, `bestPractices=true`)
+
+The signing passphrase is never stored in a file. `bestPractices` makes the GPG plugin refuse one
+from `pom.xml` or `settings.xml`; it reads `MAVEN_GPG_PASSPHRASE` from the environment, or uses a
+passphrase cached by `gpg-agent`.
 
 ## Per-release steps
 
@@ -30,7 +34,10 @@ sed -i '' 's/0\.0\.PREV/0.0.X/g' INSTALL_INSTRUCTION.md
 ```bash
 export JAVA_HOME="$(/usr/libexec/java_home -v 25)"   # Project baseline: Java 25 + Kotlin 2.3.21
 export GPG_TTY=$(tty)                                 # needed for gpg pinentry loopback
+read -rs MAVEN_GPG_PASSPHRASE && export MAVEN_GPG_PASSPHRASE   # typed, not stored; or rely on gpg-agent
 ```
+
+Unset it after the deploy (`unset MAVEN_GPG_PASSPHRASE`). Do not put it in a shell profile.
 
 ### 3. Deploy
 

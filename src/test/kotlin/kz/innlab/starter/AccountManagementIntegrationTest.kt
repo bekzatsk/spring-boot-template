@@ -122,7 +122,7 @@ class AccountManagementIntegrationTest {
         val body = result.response.contentAsString
         val mapper = JsonMapper.builder().build()
         val tree = mapper.readTree(body)
-        return tree.get("verificationId").asText()
+        return tree.get("verificationId").asString()
     }
 
     // --- Forgot Password Tests ---
@@ -658,7 +658,7 @@ class AccountManagementIntegrationTest {
                 .content("""{"refreshToken": "$refreshToken"}""")
         ).andExpect(status().isOk).andReturn()
         val accessToken = JsonMapper.builder().build()
-            .readTree(result.response.contentAsString).get("accessToken").asText()
+            .readTree(result.response.contentAsString).get("accessToken").asString()
 
         val authTime = jwtDecoder.decode(accessToken).claims["auth_time"] as Number
         assert(authTime.toLong() == loggedInAt.epochSecond)

@@ -69,7 +69,7 @@ class EmailOtpIntegrationTest {
 
     private fun verificationId(result: MvcResult): String =
         JsonMapper.builder().build().readTree(result.response.contentAsString)
-            .get("verificationId").asText()
+            .get("verificationId").asString()
 
     @Test
     fun `email OTP creates passwordless user and returns tokens`() {
@@ -141,8 +141,8 @@ class EmailOtpIntegrationTest {
                 .content("""{"email":"$email","password":"AttackerPassword123"}""")
         ).andExpect(status().isCreated).andReturn()
         val registered = JsonMapper.builder().build().readTree(registerResult.response.contentAsString)
-        val attackerRefreshToken = registered.get("refreshToken").asText()
-        val attackerAccess = registered.get("accessToken").asText()
+        val attackerRefreshToken = registered.get("refreshToken").asString()
+        val attackerAccess = registered.get("accessToken").asString()
 
         // The registrant cannot attach a phone before the address is verified...
         mockMvc.perform(

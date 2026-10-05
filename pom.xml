@@ -320,6 +320,9 @@
 									<goal>sign</goal>
 								</goals>
 								<configuration>
+									<!-- Refuses a passphrase from pom/settings.xml: it sat in plain text in
+									     ~/.m2/settings.xml. Supply it through MAVEN_GPG_PASSPHRASE or gpg-agent. -->
+									<bestPractices>true</bestPractices>
 									<gpgArguments>
 										<arg>--pinentry-mode</arg>
 										<arg>loopback</arg>

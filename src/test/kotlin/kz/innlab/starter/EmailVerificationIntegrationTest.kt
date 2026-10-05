@@ -60,7 +60,7 @@ class EmailVerificationIntegrationTest {
         ).andReturn()
 
     private fun jsonField(result: MvcResult, field: String): String =
-        JsonMapper.builder().build().readTree(result.response.contentAsString).get(field).asText()
+        JsonMapper.builder().build().readTree(result.response.contentAsString).get(field).asString()
 
     @Test
     fun `register emits VERIFY_EMAIL action, sets emailVerified false, sends code`() {

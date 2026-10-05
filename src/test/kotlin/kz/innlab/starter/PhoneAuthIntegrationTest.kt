@@ -75,7 +75,7 @@ class PhoneAuthIntegrationTest {
         val body = result.response.contentAsString
         val mapper = JsonMapper.builder().build()
         val tree = mapper.readTree(body)
-        return tree.get("verificationId").asText()
+        return tree.get("verificationId").asString()
     }
 
     @Test
