@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.6 — 2026-10-05
+
+Security release. **0.1.5 and earlier do not enforce CSRF on requests authenticated by the
+`access_token` cookie**, and enforce the admin recent-login rule only in the starter's own
+controller, so consumer endpoints calling the admin services skip it. Both fixed. Breaking changes
+below; no migrations.
 
 ### Security
 

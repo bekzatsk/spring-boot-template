@@ -1,6 +1,6 @@
 # Installation Guide
 
-> ## ⛔ Do not use 0.1.0 — use 0.1.5
+> ## ⛔ Do not use 0.1.0 — use 0.1.6
 >
 > **0.1.0 ships with cookie authentication dead.** `AuthCookieWriter` is not registered by the
 > auto-configuration, and every component injects it optionally, so the application starts clean,
@@ -8,10 +8,10 @@
 > effect in that release, whatever you set it through (yaml, env, `SPRING_APPLICATION_JSON`).
 >
 > 0.1.0 stays on Maven Central because Central is immutable; treat it as withdrawn. Version 0.1.1
-> fixed cookie authentication; current **0.1.5** contains that fix plus Spring Boot 4.1.1,
-> Java 25, Kotlin 2.3.21 and configurable email/phone OTP. 0.1.4 and 0.1.5 are security releases
+> fixed cookie authentication; current **0.1.6** contains that fix plus Spring Boot 4.1.1,
+> Java 25, Kotlin 2.3.21 and configurable email/phone OTP. 0.1.4–0.1.6 are security releases
 > with breaking changes and migrations V14–V16; read their CHANGELOG.md entries before upgrading.
-> **0.1.4 and earlier carry `application-dev.yaml` (fixed `123456` codes) inside the jar** — use 0.1.5.
+> **0.1.4 and earlier carry `application-dev.yaml` (fixed `123456` codes) inside the jar** — use 0.1.6.
 > The 0.0.x upgrade steps below still apply.
 >
 > Check your deployment with:
@@ -60,7 +60,13 @@
 > Rate limiting is in-memory, so limits apply **per instance**. Declare a `RateLimiter` bean
 > backed by a shared store for a clustered deployment.
 
-> ## ⚠ Upgrading to 0.1.4 / 0.1.5
+> ## ⚠ Upgrading to 0.1.4 – 0.1.6
+>
+> **0.1.6:** CSRF is now enforced on requests authenticated by the `access_token` cookie (0.1.5 and
+> earlier skipped it) — browser clients in cookie mode need `X-XSRF-TOKEN` on every write, including
+> your own endpoints. The admin recent-login rule now runs inside `AdminUserService` /
+> `UserService.createUserByAdmin`, so your endpoints that call them get it too; call
+> `FreshLoginGuard.requireFreshLogin()` in your own access-granting flows (invitations).
 >
 > Security releases with breaking changes — [CHANGELOG.md](CHANGELOG.md) has the full list. The ones
 > that change behaviour for clients or operators:
@@ -151,7 +157,7 @@
         <dependency>
             <groupId>kz.innlab</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>0.1.5</version>
+            <version>0.1.6</version>
         </dependency>
 
         <dependency>
@@ -414,7 +420,7 @@ cd /path/to/{projectName}/backend && ./mvnw spring-boot:run
 
 ## 1. Publish Starter
 
-> **Текущая версия starter:** `kz.innlab:auth-spring-boot-starter:0.1.5`.
+> **Текущая версия starter:** `kz.innlab:auth-spring-boot-starter:0.1.6`.
 > Если ты **используешь** starter — переходи к §2. Эта секция нужна только если ты **форкнул** его и публикуешь свой вариант.
 
 ### Option A: Maven Central (canonical, no extra config for consumers)
@@ -569,7 +575,7 @@ Artifact goes to `~/.m2/repository`. Works only on your machine.
 <dependency>
     <groupId>kz.innlab</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>0.1.5</version>
+    <version>0.1.6</version>
 </dependency>
 ```
 
@@ -609,7 +615,7 @@ repositories {
 }
 
 dependencies {
-    implementation("kz.innlab:auth-spring-boot-starter:0.1.5")
+    implementation("kz.innlab:auth-spring-boot-starter:0.1.6")
 }
 ```
 
@@ -632,7 +638,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'kz.innlab:auth-spring-boot-starter:0.1.5'
+    implementation 'kz.innlab:auth-spring-boot-starter:0.1.6'
 }
 ```
 
