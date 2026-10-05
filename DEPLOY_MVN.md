@@ -9,6 +9,10 @@ Quick reference. Full background: `INSTALL_INSTRUCTION.md` §1 Option A.
 - `~/.m2/settings.xml` has:
   - `<server id="central">` with Sonatype user token
   - `<profile id="gpg">` with `gpg.keyname`, `activeByDefault=true` — **no `gpg.passphrase`**
+- macOS Keychain holds the GPG passphrase as a generic password (account `gpg`, service `maven-gpg`):
+  ```bash
+  security add-generic-password -a gpg -s maven-gpg -w   # prompts for the passphrase
+  ```
 - `pom.xml` profile `release` configured with `central-publishing-maven-plugin` + `maven-gpg-plugin` (`--pinentry-mode loopback`, `bestPractices=true`)
 
 The signing passphrase is never stored in a file. `bestPractices` makes the GPG plugin refuse one
@@ -34,8 +38,11 @@ sed -i '' 's/0\.0\.PREV/0.0.X/g' INSTALL_INSTRUCTION.md
 ```bash
 export JAVA_HOME="$(/usr/libexec/java_home -v 25)"   # Project baseline: Java 25 + Kotlin 2.3.21
 export GPG_TTY=$(tty)                                 # needed for gpg pinentry loopback
-read -rs MAVEN_GPG_PASSPHRASE && export MAVEN_GPG_PASSPHRASE   # typed, not stored; or rely on gpg-agent
+export MAVEN_GPG_PASSPHRASE="$(security find-generic-password -a gpg -s maven-gpg -w)"
 ```
+
+Without the Keychain entry, type the passphrase instead: `read -rs MAVEN_GPG_PASSPHRASE && export
+MAVEN_GPG_PASSPHRASE`. Or rely on a passphrase cached by `gpg-agent`.
 
 Unset it after the deploy (`unset MAVEN_GPG_PASSPHRASE`). Do not put it in a shell profile.
 
@@ -85,6 +92,7 @@ git push && git push --tags
 |-------|-------|-----|
 | `repository element was not specified in the POM` | Forgot `-P release` | `./mvnw clean deploy -P release -DskipTests` |
 | `gpg: Note: database_open waiting for lock (held by PID)` | Stale gpg keybox lock from dead PID | `rm -f ~/.gnupg/public-keys.d/*.lock && gpgconf --kill all` |
+| `Do not store passphrase in any file (disk or SCM repository)…` | `gpg.passphrase` is still in `~/.m2/settings.xml` (or `-Dgpg.passphrase` on the command line) | Remove it; export `MAVEN_GPG_PASSPHRASE` from the Keychain (step 2) |
 | `gpg: signing failed: Inappropriate ioctl for device` | Pinentry can't reach TTY | `export GPG_TTY=$(tty)` before deploy |
 | `Failed to deploy: version already exists` | Re-publishing same version | Bump patch — Maven Central forbids overwrite |
 | `Unsupported class file major version` | Java/Kotlin do not match project baseline | `export JAVA_HOME="$(/usr/libexec/java_home -v 25)"` and use Kotlin 2.3.21 |
@@ -98,7 +106,9 @@ git push && git push --tags
 # 2.
 export JAVA_HOME="$(/usr/libexec/java_home -v 25)"
 export GPG_TTY=$(tty)
+export MAVEN_GPG_PASSPHRASE="$(security find-generic-password -a gpg -s maven-gpg -w)"
 ./mvnw clean deploy -P release -DskipTests
+unset MAVEN_GPG_PASSPHRASE
 # 3. https://central.sonatype.com/publishing/deployments → click Publish
 # 4. wait 15-30 min, verify with curl
 # 5. git tag + push
