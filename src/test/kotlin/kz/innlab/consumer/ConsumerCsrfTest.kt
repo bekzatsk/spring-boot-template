@@ -59,7 +59,7 @@ class ConsumerCsrfTest {
     fun `a CSRF token lets the cookie-authenticated write through`() {
         val csrf = mockMvc.perform(get("/api/v1/auth/csrf")).andReturn()
         val csrfCookie = csrf.response.getCookie("XSRF-TOKEN")!!
-        val csrfToken = JsonMapper.builder().build().readTree(csrf.response.contentAsString).get("token").asText()
+        val csrfToken = JsonMapper.builder().build().readTree(csrf.response.contentAsString).get("token").asString()
 
         mockMvc.perform(
             post("/api/crm/notes")

@@ -60,7 +60,7 @@ class TelegramAuthIntegrationTest {
 
     private fun extractSessionId(responseBody: String): String {
         val tree = mapper.readTree(responseBody)
-        return tree.get("sessionId").asText()
+        return tree.get("sessionId").asString()
     }
 
     private fun captureCodeOnBotSend(): () -> String {

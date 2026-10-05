@@ -87,7 +87,7 @@ class ConsumerCookieAuthIntegrationTest {
         val csrf = mockMvc.perform(get("/api/v1/auth/csrf"))
             .andExpect(status().isOk).andReturn().response
         val csrfCookie = csrf.getCookie("XSRF-TOKEN")!!
-        val csrfToken = JsonMapper.builder().build().readTree(csrf.contentAsString).get("token").asText()
+        val csrfToken = JsonMapper.builder().build().readTree(csrf.contentAsString).get("token").asString()
 
         val rotated = mockMvc.perform(
             post("/api/v1/auth/refresh")
