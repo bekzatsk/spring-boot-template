@@ -1,6 +1,6 @@
 # Installation Guide
 
-> ## ⛔ Do not use 0.1.0 — use 0.1.6
+> ## ⛔ Do not use 0.1.0 — use 0.1.7
 >
 > **0.1.0 ships with cookie authentication dead.** `AuthCookieWriter` is not registered by the
 > auto-configuration, and every component injects it optionally, so the application starts clean,
@@ -8,10 +8,10 @@
 > effect in that release, whatever you set it through (yaml, env, `SPRING_APPLICATION_JSON`).
 >
 > 0.1.0 stays on Maven Central because Central is immutable; treat it as withdrawn. Version 0.1.1
-> fixed cookie authentication; current **0.1.6** contains that fix plus Spring Boot 4.1.1,
+> fixed cookie authentication; current **0.1.7** contains that fix plus Spring Boot 4.1.1,
 > Java 25, Kotlin 2.3.21 and configurable email/phone OTP. 0.1.4–0.1.6 are security releases
 > with breaking changes and migrations V14–V16; read their CHANGELOG.md entries before upgrading.
-> **0.1.4 and earlier carry `application-dev.yaml` (fixed `123456` codes) inside the jar** — use 0.1.6.
+> **0.1.4 and earlier carry `application-dev.yaml` (fixed `123456` codes) inside the jar** — use 0.1.7.
 > The 0.0.x upgrade steps below still apply.
 >
 > Check your deployment with:
@@ -60,7 +60,10 @@
 > Rate limiting is in-memory, so limits apply **per instance**. Declare a `RateLimiter` bean
 > backed by a shared store for a clustered deployment.
 
-> ## ⚠ Upgrading to 0.1.4 – 0.1.6
+> ## ⚠ Upgrading to 0.1.4 – 0.1.7
+>
+> **0.1.7** (no breaking changes): the `XSRF-TOKEN` cookie is no longer cleared on every
+> cookie-authenticated request, so a frontend can fetch the CSRF token once and cache it.
 >
 > **0.1.6:** CSRF is now enforced on requests authenticated by the `access_token` cookie (0.1.5 and
 > earlier skipped it) — browser clients in cookie mode need `X-XSRF-TOKEN` on every write, including
@@ -157,7 +160,7 @@
         <dependency>
             <groupId>kz.innlab</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>0.1.6</version>
+            <version>0.1.7</version>
         </dependency>
 
         <dependency>
@@ -420,7 +423,7 @@ cd /path/to/{projectName}/backend && ./mvnw spring-boot:run
 
 ## 1. Publish Starter
 
-> **Текущая версия starter:** `kz.innlab:auth-spring-boot-starter:0.1.6`.
+> **Текущая версия starter:** `kz.innlab:auth-spring-boot-starter:0.1.7`.
 > Если ты **используешь** starter — переходи к §2. Эта секция нужна только если ты **форкнул** его и публикуешь свой вариант.
 
 ### Option A: Maven Central (canonical, no extra config for consumers)
@@ -575,7 +578,7 @@ Artifact goes to `~/.m2/repository`. Works only on your machine.
 <dependency>
     <groupId>kz.innlab</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>0.1.6</version>
+    <version>0.1.7</version>
 </dependency>
 ```
 
@@ -615,7 +618,7 @@ repositories {
 }
 
 dependencies {
-    implementation("kz.innlab:auth-spring-boot-starter:0.1.6")
+    implementation("kz.innlab:auth-spring-boot-starter:0.1.7")
 }
 ```
 
@@ -638,7 +641,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'kz.innlab:auth-spring-boot-starter:0.1.6'
+    implementation 'kz.innlab:auth-spring-boot-starter:0.1.7'
 }
 ```
 
@@ -860,7 +863,7 @@ Each rule has `max-attempts` and `window-seconds`; exceeded limits answer `429` 
 - `POST /api/v1/auth/refresh` и `/revoke` берут refresh-токен из body **или** из refresh-cookie (приоритет body → cookie).
 - `POST /api/v1/auth/logout` — читает refresh-cookie → `revoke()`, чистит обе cookie (`Max-Age=0`). Идемпотентно (нет cookie → `204`). Добавлен в дефолтный `required-action.allowed-paths`.
 
-**CSRF:** в cookie-режиме CSRF-защита включена для всех запросов, которые несут auth-cookie и меняют состояние — на твоих эндпоинтах тоже, а не только на эндпоинтах starter-а (включая refresh и logout). До версии с этим исправлением запрос только с cookie `access_token` обходил проверку. Получи токен через `GET /api/v1/auth/csrf` (он же ставит cookie `XSRF-TOKEN`) и отправляй его в заголовке `X-XSRF-TOKEN`. Bearer-запросы без auth-cookie работают без CSRF-токена. `SameSite` — дополнительная защита, не замена. В prod starter откажется стартовать с `secure=false`.
+**CSRF:** в cookie-режиме CSRF-защита включена для всех запросов, которые несут auth-cookie и меняют состояние — на твоих эндпоинтах тоже, а не только на эндпоинтах starter-а (включая refresh и logout). До версии с этим исправлением запрос только с cookie `access_token` обходил проверку. Получи токен через `GET /api/v1/auth/csrf` (он же ставит cookie `XSRF-TOKEN`) и отправляй его в заголовке `X-XSRF-TOKEN`. Bearer-запросы без auth-cookie работают без CSRF-токена. С 0.1.7 токен не сбрасывается между запросами: получи его один раз и используй для всех записей (в 0.1.6 каждый ответ на запрос с cookie очищал `XSRF-TOKEN`). `SameSite` — дополнительная защита, не замена. В prod starter откажется стартовать с `secure=false`.
 
 **Аутентификация по cookie** реализована кастомным `BearerTokenResolver` (`CookieBearerTokenResolver`), зарегистрированным в `oauth2ResourceServer` только при `enabled=true`. Downstream JWT-логика не меняется.
 

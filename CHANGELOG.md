@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.7 — 2026-10-06
+
+Bug fix release. No breaking changes, no migrations.
+
+### Fixed
+
+- **The `XSRF-TOKEN` cookie was cleared on every cookie-authenticated request.** The filter chain
+  is stateless, so Spring treated each request carrying the access cookie as a new login, and the
+  default `CsrfAuthenticationStrategy` cleared the token in the response — GET requests included.
+  A frontend could not cache the token and needed an extra `GET /api/v1/auth/csrf` before each
+  write. The CSRF configuration now uses `NullAuthenticatedSessionStrategy`; fetch the token once
+  and reuse it. CSRF enforcement on writes is unchanged.
+- The JWT audience validator no longer uses an unnecessary safe call, which caused a Kotlin
+  compiler warning.
+
+### Changed
+
+- Release signing (`maven-gpg-plugin`) runs with `bestPractices`: the GPG passphrase must come from
+  `MAVEN_GPG_PASSPHRASE` or `gpg-agent`, not from `settings.xml`. Affects only maintainers who
+  publish the starter.
+- Tests use Jackson 3 `JsonNode.asString()` instead of the deprecated `asText()`.
+
 ## 0.1.6 — 2026-10-05
 
 Security release. **0.1.5 and earlier do not enforce CSRF on requests authenticated by the
