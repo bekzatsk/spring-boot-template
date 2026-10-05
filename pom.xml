@@ -129,7 +129,7 @@
 		<dependency>
 			<groupId>com.googlecode.libphonenumber</groupId>
 			<artifactId>libphonenumber</artifactId>
-			<version>8.13.52</version>
+			<version>9.0.40</version>
 		</dependency>
 
 		<!-- Twilio SDK for WhatsApp + SMS OTP delivery (transitive: consumers don't need to declare separately) -->
