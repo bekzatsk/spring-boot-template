@@ -6,7 +6,7 @@ Ready-to-use Spring Boot starter for JWT authentication with multi-provider logi
 
 ---
 
-Current release: **`0.1.5`**. **Do not use `0.1.0`** — cookie authentication is dead in it
+Current release: **`0.1.6`**. **Do not use `0.1.0`** — cookie authentication is dead in it
 (`Set-Cookie` is never sent, silently); see [CHANGELOG.md](CHANGELOG.md).
 
 Upgrading from `0.0.x`? The `0.1.x` line carries five breaking changes and three new migrations —
@@ -14,9 +14,12 @@ Upgrading from `0.0.x`? The `0.1.x` line carries five breaking changes and three
 
 **0.1.4 and earlier ship `application-dev.yaml` inside the jar**, with fixed `123456` login codes:
 an application running with the `dev` profile and no `application-dev.yaml` of its own accepts them.
-Upgrade to `0.1.5`.
+Upgrade to `0.1.6`.
 
-Upgrading to `0.1.5`? 0.1.4 and 0.1.5 are security releases with breaking changes — mail send and
+**0.1.5 and earlier skip CSRF for requests authenticated by the `access_token` cookie**, and apply
+the admin recent-login rule only in the starter's own controller — fixed in `0.1.6`.
+
+Upgrading to `0.1.6`? 0.1.4–0.1.6 are security releases with breaking changes — mail send and
 admin actions are stricter, email/phone changes need the current password or a re-authentication
 code, Swagger and actuator are no longer public, the jar no longer carries `application*.yaml`, and
 migrations V14–V16 run — see [CHANGELOG.md](CHANGELOG.md).
@@ -31,11 +34,11 @@ The starter is published to **Maven Central** — no extra repository or credent
 <dependency>
   <groupId>kz.innlab</groupId>
   <artifactId>auth-spring-boot-starter</artifactId>
-  <version>0.1.5</version>
+  <version>0.1.6</version>
 </dependency>
 ```
 
-Gradle: `implementation("kz.innlab:auth-spring-boot-starter:0.1.5")`.
+Gradle: `implementation("kz.innlab:auth-spring-boot-starter:0.1.6")`.
 
 ### Alternative: Build from Source
 
@@ -45,7 +48,7 @@ cd auth-starter
 ./mvnw clean install -DskipTests
 ```
 
-This installs `kz.innlab:auth-spring-boot-starter:0.1.5` into `~/.m2/repository`.
+This installs `kz.innlab:auth-spring-boot-starter:0.1.6` into `~/.m2/repository`.
 
 ### 2. Configure `application.yaml`
 
@@ -610,7 +613,7 @@ Production profiles are `prod` and `production` by default (`app.security.produc
         <dependency>
             <groupId>kz.innlab</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>0.1.5</version>
+            <version>0.1.6</version>
         </dependency>
     </dependencies>
 
