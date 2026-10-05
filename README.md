@@ -6,7 +6,7 @@ Ready-to-use Spring Boot starter for JWT authentication with multi-provider logi
 
 ---
 
-Current release: **`0.1.6`**. **Do not use `0.1.0`** — cookie authentication is dead in it
+Current release: **`0.1.7`**. **Do not use `0.1.0`** — cookie authentication is dead in it
 (`Set-Cookie` is never sent, silently); see [CHANGELOG.md](CHANGELOG.md).
 
 Upgrading from `0.0.x`? The `0.1.x` line carries five breaking changes and three new migrations —
@@ -14,7 +14,7 @@ Upgrading from `0.0.x`? The `0.1.x` line carries five breaking changes and three
 
 **0.1.4 and earlier ship `application-dev.yaml` inside the jar**, with fixed `123456` login codes:
 an application running with the `dev` profile and no `application-dev.yaml` of its own accepts them.
-Upgrade to `0.1.6`.
+Upgrade to `0.1.7`.
 
 **0.1.5 and earlier skip CSRF for requests authenticated by the `access_token` cookie**, and apply
 the admin recent-login rule only in the starter's own controller — fixed in `0.1.6`.
@@ -34,11 +34,11 @@ The starter is published to **Maven Central** — no extra repository or credent
 <dependency>
   <groupId>kz.innlab</groupId>
   <artifactId>auth-spring-boot-starter</artifactId>
-  <version>0.1.6</version>
+  <version>0.1.7</version>
 </dependency>
 ```
 
-Gradle: `implementation("kz.innlab:auth-spring-boot-starter:0.1.6")`.
+Gradle: `implementation("kz.innlab:auth-spring-boot-starter:0.1.7")`.
 
 ### Alternative: Build from Source
 
@@ -48,7 +48,7 @@ cd auth-starter
 ./mvnw clean install -DskipTests
 ```
 
-This installs `kz.innlab:auth-spring-boot-starter:0.1.6` into `~/.m2/repository`.
+This installs `kz.innlab:auth-spring-boot-starter:0.1.7` into `~/.m2/repository`.
 
 ### 2. Configure `application.yaml`
 
@@ -421,7 +421,7 @@ Optional mode — access + refresh tokens delivered as `httpOnly`+`Secure`+`Same
 **Refresh / revoke / logout:** `POST /refresh` and `/revoke` accept the refresh token from the body *or* the refresh cookie (body wins). `POST /logout` revokes the refresh cookie and clears both cookies (`Max-Age=0`); idempotent (no cookie → `204`).
 
 **CSRF:** in cookie mode, every state-changing request that carries an auth cookie needs a CSRF
-token — on your own endpoints as well as the starter's. Call `GET /api/v1/auth/csrf` to receive a token and an `XSRF-TOKEN` cookie. Send the returned token in the `X-XSRF-TOKEN` header for requests that carry access or refresh cookies and change state, including refresh and logout. The CSRF cookie must accompany the request. Bearer-only requests without auth cookies continue to work without a CSRF token. `SameSite` adds defense but does not replace this check.
+token — on your own endpoints as well as the starter's. Call `GET /api/v1/auth/csrf` to receive a token and an `XSRF-TOKEN` cookie. Send the returned token in the `X-XSRF-TOKEN` header for requests that carry access or refresh cookies and change state, including refresh and logout. The CSRF cookie must accompany the request. Bearer-only requests without auth cookies continue to work without a CSRF token. From `0.1.7` the token stays valid across requests, so fetch it once and reuse it for every write; earlier releases cleared `XSRF-TOKEN` in each cookie-authenticated response. `SameSite` adds defense but does not replace this check.
 
 ```yaml
 app:
@@ -613,7 +613,7 @@ Production profiles are `prod` and `production` by default (`app.security.produc
         <dependency>
             <groupId>kz.innlab</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>0.1.6</version>
+            <version>0.1.7</version>
         </dependency>
     </dependencies>
 
