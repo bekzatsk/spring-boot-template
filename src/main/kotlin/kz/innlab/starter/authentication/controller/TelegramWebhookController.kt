@@ -64,11 +64,17 @@ class TelegramWebhookController(
 
     private fun processUpdate(update: TelegramUpdate) {
         val message = update.message ?: return
-        val text = message.text ?: return
         val chatId = message.chat?.id ?: return
         val from = message.from ?: return
-
         val telegramUserId = from.id ?: return
+
+        val contact = message.contact
+        if (contact != null) {
+            telegramAuthService.handleWebhookContact(telegramUserId, chatId, contact.userId, contact.phoneNumber)
+            return
+        }
+
+        val text = message.text ?: return
         val telegramUsername = from.username
 
         when {
@@ -82,7 +88,7 @@ class TelegramWebhookController(
             }
             text == "/start" -> telegramAuthService.handleWebhookDefault(chatId)
             text == "/help" -> telegramAuthService.handleWebhookHelp(chatId)
-            else -> telegramAuthService.handleWebhookDefault(chatId)
+            else -> telegramAuthService.handleWebhookText(telegramUserId, chatId)
         }
     }
 }

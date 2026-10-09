@@ -47,6 +47,10 @@ class TelegramAuthSession(
     @Column(name = "telegram_chat_id")
     var telegramChatId: Long? = null
 
+    /** E.164 number the user shared in the bot; set only when the phone is required. */
+    @Column(name = "phone")
+    var phone: String? = null
+
     @Column(name = "ip_address")
     var ipAddress: String? = null
 

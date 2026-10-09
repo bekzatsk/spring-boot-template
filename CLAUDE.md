@@ -95,7 +95,7 @@ Tests use H2 in-memory DB with Flyway disabled and `create-drop` DDL. External d
 
 ## Database Migrations
 
-Flyway migrations in `src/main/resources/db/migration-auth/` (V1 through V16), applied to the `auth` schema by the starter's own Flyway bean (`AuthFlywayConfig`). Dev profile has `clean-on-validation-error: true`; prod uses strict validation. **Never edit a migration that shipped in a release** — every database that applied it fails checksum validation; add a new version instead.
+Flyway migrations in `src/main/resources/db/migration-auth/` (V1 through V17), applied to the `auth` schema by the starter's own Flyway bean (`AuthFlywayConfig`). Dev profile has `clean-on-validation-error: true`; prod uses strict validation. **Never edit a migration that shipped in a release** — every database that applied it fails checksum validation; add a new version instead.
 
 The test suite never executes migrations (H2 `create-drop`), so a broken migration passes `./mvnw test`. CI (`.github/workflows/ci.yml`) has a separate job that applies every migration to PostgreSQL 18 and fails if any entity table lacks a `version` column — when adding a new entity, add its table to that job's `entity_tables` list.
 

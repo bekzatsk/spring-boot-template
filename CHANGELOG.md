@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+Adds migration `V17__telegram_session_phone.sql`.
+
+### Added
+
+- **Telegram login can require the user's phone number** (`app.auth.telegram.require-phone`, off by
+  default). After `/start` the bot shows a `request_contact` button instead of the code; the code
+  is sent once the user shares their own contact. A forwarded contact (its `user_id` is not the
+  sender's) is refused. The number is stored on the user in E.164. A new Telegram account whose
+  number belongs to an existing user is linked to that user; a number already linked to another
+  Telegram account, or used by another account when an existing Telegram user adds it, answers
+  409. Telegram users that already have a phone are not asked.
+- `TelegramStatusResponse.phoneRequired` and the `phone_requested` status, so a frontend can tell
+  the user to share their number in the bot.
+- `TelegramBotService.requestContact` / `sendMessageRemovingKeyboard` and
+  `TelegramBotMessages.phoneRequest` / `phoneButton` / `phoneRejected`. All have default
+  implementations, so existing custom beans keep compiling; a custom `TelegramBotService` must
+  override `requestContact` to show the button.
+
 ## 0.1.7 — 2026-10-06
 
 Bug fix release. No breaking changes, no migrations.

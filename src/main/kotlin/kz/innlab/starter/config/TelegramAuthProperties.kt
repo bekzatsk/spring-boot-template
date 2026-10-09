@@ -22,5 +22,11 @@ data class TelegramAuthProperties(
     @field:Positive val maxSessionsPerTelegramUserPerHour: Int = 3,
     /** Only honour X-Forwarded-For when a trusted reverse proxy sets it. */
     val trustForwardedHeaders: Boolean = false,
+    /**
+     * Ask the user to share their phone number in the bot (a `request_contact` button) before the
+     * code is sent. The number is verified by Telegram, stored as the user's phone, and links the
+     * Telegram account to an existing phone user. Users that already have a phone are not asked.
+     */
+    val requirePhone: Boolean = false,
     val devCode: String = ""
 )

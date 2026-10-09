@@ -20,6 +20,16 @@ interface TelegramBotMessages {
     fun welcome(): String
 
     fun help(): String
+
+    // Phone sharing (app.auth.telegram.require-phone). Defaults keep implementations written before
+    // these existed compiling; override them together with the rest of the copy.
+
+    fun phoneRequest(): String = "Кіру үшін төмендегі батырманы басып, телефон нөміріңізбен бөлісіңіз."
+
+    fun phoneButton(): String = "📱 Нөмірді жіберу"
+
+    /** The shared contact is not the sender's own, or its number is not valid. */
+    fun phoneRejected(): String = "Тек өз нөміріңізді батырма арқылы жіберіңіз."
 }
 
 /** Brand-neutral Kazakh defaults. */

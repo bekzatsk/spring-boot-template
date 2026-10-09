@@ -1,6 +1,7 @@
 package kz.innlab.starter.authentication.repository
 
 import kz.innlab.starter.authentication.model.TelegramAuthSession
+import kz.innlab.starter.authentication.model.TelegramSessionStatus
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
@@ -11,6 +12,11 @@ import java.util.UUID
 interface TelegramAuthSessionRepository : JpaRepository<TelegramAuthSession, UUID> {
 
     fun findBySessionId(sessionId: String): TelegramAuthSession?
+
+    fun findFirstByTelegramUserIdAndStatusOrderByCreatedAtDesc(
+        telegramUserId: Long,
+        status: TelegramSessionStatus
+    ): TelegramAuthSession?
 
     fun countByIpAddressAndCreatedAtAfter(ipAddress: String, after: Instant): Long
 

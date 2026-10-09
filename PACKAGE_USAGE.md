@@ -51,7 +51,7 @@ class MyService(
 | | `findOrCreateGoogleUser(providerId, email, name?, picture?)` | `User`. Idempotent link/create. |
 | | `findOrCreateAppleUser(...)` | `User`. |
 | | `findOrCreatePhoneUser(phoneE164)` | `User` (`email=""`). Respects `registration.enabled`. Expects E.164. |
-| | `findOrCreateTelegramUser(telegramUserId, telegramUsername?)` | `User`. |
+| | `findOrCreateTelegramUser(telegramUserId, telegramUsername?, phoneE164?)`, `telegramUserHasPhone(telegramUserId)` | `User`. |
 | | `findById(id)` | `User` (throws if missing). |
 | **LocalAuthService** | `register(email, rawPassword, name?)` | `AuthResponse`. Honors `registration.enabled` + `email-verification.enabled`. |
 | | `login(email, rawPassword)` | `AuthResponse`. 401 on bad creds. |
@@ -103,7 +103,7 @@ All `JpaRepository<Entity, UUID>` — you get `findById/save/delete/findAll` plu
 | **RefreshTokenRepository** | `findByTokenHash`, `findByReplacedByTokenHash`, `deleteAllByUser(user)` |
 | **VerificationCodeRepository** | `existsByIdentifierAndPurposeAndCreatedAtAfter`, `deleteAllByIdentifierAndPurpose`, `deleteExpiredOrUsed(cutoff)` |
 | **SmsVerificationRepository** | `existsByPhoneAndCreatedAtAfter`, `deleteAllByPhone`, `findActiveByPhone`, `deleteExpiredOrUsed` |
-| **TelegramAuthSessionRepository** | `findBySessionId`, `countByIpAddressAndCreatedAtAfter`, `countByTelegramUserIdAndCreatedAtAfter`, `deleteExpired` |
+| **TelegramAuthSessionRepository** | `findBySessionId`, `findFirstByTelegramUserIdAndStatusOrderByCreatedAtDesc`, `countByIpAddressAndCreatedAtAfter`, `countByTelegramUserIdAndCreatedAtAfter`, `deleteExpired` |
 | **DeviceTokenRepository** | `findByUserId`, `findByUserIdAndDeviceId`, `deleteByFcmToken`, `deleteAllByFcmTokenIn` |
 | **NotificationHistoryRepository** | `findByUserIdBeforeCursor(...)`, `findByUserIdLatest(...)` |
 | **NotificationTopicRepository** | `findByName`, `existsByName` |
@@ -121,7 +121,7 @@ All `JpaRepository<Entity, UUID>` — you get `findById/save/delete/findAll` plu
 | **RefreshToken** | `refresh_tokens` | `user`, `tokenHash`, `expiresAt`, `revoked`, `usedAt?`, `replacedByTokenHash?` |
 | **VerificationCode** | `verification_codes` | `identifier`, `purpose`, `codeHash`, `expiresAt`, `newValue?`, `userId?`, `used`, `attempts` |
 | **SmsVerification** | `sms_verifications` | `phone`, `codeHash`, `expiresAt`, `used`, `attempts` |
-| **TelegramAuthSession** | `telegram_auth_sessions` | `sessionId`, `status`, `codeHash?`, `attempts`, `telegramUserId?`, `telegramChatId?`, `ipAddress?`, `verifiedAt?` |
+| **TelegramAuthSession** | `telegram_auth_sessions` | `sessionId`, `status`, `codeHash?`, `attempts`, `telegramUserId?`, `telegramChatId?`, `phone?`, `ipAddress?`, `verifiedAt?` |
 | **DeviceToken** | `device_tokens` | `userId`, `platform`, `fcmToken`, `deviceId` |
 | **NotificationHistory** | `notification_history` | `userId`, `type`, `recipient`, `title`, `body`, `data?`, `status` |
 | **NotificationTopic** | `notification_topics` | `name` |
@@ -141,7 +141,7 @@ All extend `BaseEntity` (UUID v7 PK via `Persistable`).
 | **AuthProvider** | `GOOGLE`, `APPLE`, `LOCAL`, `TELEGRAM` |
 | **RequiredAction** | `UPDATE_PASSWORD`, `VERIFY_EMAIL`, `VERIFY_PHONE` |
 | **VerificationPurpose** | `FORGOT_PASSWORD`, `CHANGE_EMAIL`, `CHANGE_PHONE`, `VERIFY_EMAIL` |
-| **TelegramSessionStatus** | `PENDING`, `CODE_SENT`, `VERIFIED`, `EXPIRED` |
+| **TelegramSessionStatus** | `PENDING`, `PHONE_REQUESTED`, `CODE_SENT`, `VERIFIED`, `EXPIRED` |
 | **Platform** | `ANDROID`, `IOS`, `WEB` |
 | **NotificationChannel** | `PUSH`, `EMAIL` |
 | **NotificationType** | `SINGLE`, `MULTICAST`, `TOPIC` |
@@ -160,7 +160,7 @@ Declare your own `@Bean` — starter's default backs off automatically.
 | **EmailService** | `sendCode(to, code, purpose)` | `ConsoleEmailService` (logs). |
 | **MailService** | `send(...)`, `sendEmail(...)` | `ConsoleMailService` / `SmtpMailService` / `ExternalMailService` by config. |
 | **PushService** | `sendToToken/​sendMulticast/​sendToTopic/​subscribeToTopic` | `FirebasePushService` when `app.firebase.enabled=true`. |
-| **TelegramBotService** | `sendMessage(chatId, text)` | console default. |
+| **TelegramBotService** | `sendMessage(chatId, text)`, `requestContact(chatId, text, buttonText)`, `sendMessageRemovingKeyboard(chatId, text)` | console default. |
 
 ```kotlin
 @Configuration
