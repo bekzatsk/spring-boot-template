@@ -10,6 +10,7 @@ import kz.innlab.starter.authentication.repository.TelegramAuthSessionRepository
 import kz.innlab.starter.shared.transaction.AfterCommitRunner
 import kz.innlab.starter.user.service.UserService
 import kz.innlab.starter.config.TelegramAuthProperties
+import kz.innlab.starter.shared.util.normalizeToE164
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -87,23 +88,88 @@ class TelegramAuthService(
             return
         }
 
-        val code = generateCode()
-        val codeHash = passwordEncoder.encode(code)
-
         session.telegramUserId = telegramUserId
         session.telegramUsername = telegramUsername
         session.telegramChatId = chatId
-        session.codeHash = codeHash
+
+        if (telegramProperties.requirePhone && !userService.telegramUserHasPhone(telegramUserId)) {
+            session.status = TelegramSessionStatus.PHONE_REQUESTED
+            sessionRepository.save(session)
+            afterCommitRunner.run {
+                telegramBotService.requestContact(chatId, messages.phoneRequest(), messages.phoneButton())
+            }
+            return
+        }
+
+        sendCode(session, chatId, removeKeyboard = false)
+    }
+
+    /**
+     * The user shared a contact in the bot. A contact message carries no session id, so the
+     * session is the sender's latest one waiting for a phone.
+     */
+    @Transactional
+    fun handleWebhookContact(telegramUserId: Long, chatId: Long, contactUserId: Long?, rawPhone: String?) {
+        val session = sessionRepository.findFirstByTelegramUserIdAndStatusOrderByCreatedAtDesc(
+            telegramUserId, TelegramSessionStatus.PHONE_REQUESTED
+        )
+        if (session == null) {
+            afterCommitRunner.run { telegramBotService.sendMessageRemovingKeyboard(chatId, messages.welcome()) }
+            return
+        }
+        if (session.expiresAt <= Instant.now()) {
+            session.status = TelegramSessionStatus.EXPIRED
+            sessionRepository.save(session)
+            afterCommitRunner.run { telegramBotService.sendMessageRemovingKeyboard(chatId, messages.sessionExpired()) }
+            return
+        }
+
+        // Only the sender's own contact is verified by Telegram; a forwarded one is anybody's.
+        val phone = if (contactUserId == telegramUserId) rawPhone?.let(::toE164OrNull) else null
+        if (phone == null) {
+            afterCommitRunner.run {
+                telegramBotService.requestContact(chatId, messages.phoneRejected(), messages.phoneButton())
+            }
+            return
+        }
+
+        session.phone = phone
+        sendCode(session, chatId, removeKeyboard = true)
+    }
+
+    /** Any other message. While a phone is awaited the button is offered again. */
+    @Transactional(readOnly = true)
+    fun handleWebhookText(telegramUserId: Long, chatId: Long) {
+        val waiting = sessionRepository.findFirstByTelegramUserIdAndStatusOrderByCreatedAtDesc(
+            telegramUserId, TelegramSessionStatus.PHONE_REQUESTED
+        )
+        afterCommitRunner.run {
+            if (waiting != null && waiting.expiresAt > Instant.now()) {
+                telegramBotService.requestContact(chatId, messages.phoneRequest(), messages.phoneButton())
+            } else {
+                telegramBotService.sendMessage(chatId, messages.welcome())
+            }
+        }
+    }
+
+    private fun sendCode(session: TelegramAuthSession, chatId: Long, removeKeyboard: Boolean) {
+        val code = generateCode()
+        session.codeHash = passwordEncoder.encode(code)
         session.codeSentAt = Instant.now()
         session.status = TelegramSessionStatus.CODE_SENT
         sessionRepository.save(session)
 
+        val text = messages.verificationCode(code, telegramProperties.sessionTtlSeconds / 60)
         afterCommitRunner.run {
-            telegramBotService.sendMessage(
-                chatId,
-                messages.verificationCode(code, telegramProperties.sessionTtlSeconds / 60)
-            )
+            if (removeKeyboard) telegramBotService.sendMessageRemovingKeyboard(chatId, text)
+            else telegramBotService.sendMessage(chatId, text)
         }
+    }
+
+    /** Telegram sends the number without the '+' (and sometimes with it). */
+    private fun toE164OrNull(raw: String): String? {
+        val trimmed = raw.trim()
+        return runCatching { normalizeToE164(if (trimmed.startsWith("+")) trimmed else "+$trimmed") }.getOrNull()
     }
 
     fun handleWebhookDefault(chatId: Long) {
@@ -193,7 +259,8 @@ class TelegramAuthService(
         }
         val user = userService.findOrCreateTelegramUser(
             telegramUserId = telegramUserId,
-            telegramUsername = session.telegramUsername
+            telegramUsername = session.telegramUsername,
+            phoneE164 = session.phone
         )
         val tokens = authTokenIssuer.issue(user)
 
@@ -223,6 +290,11 @@ class TelegramAuthService(
 
         if (session.telegramChatId == null) {
             throw IllegalStateException("Telegram bot not connected yet. Please open the bot first.")
+        }
+
+        // Without this a resend would deliver the code and skip the phone the session still needs.
+        if (session.status == TelegramSessionStatus.PHONE_REQUESTED) {
+            throw IllegalStateException("Share your phone number in the Telegram bot first.")
         }
 
         // Server-side throttling. Without it an attacker could loop verify (3 guesses) -> resend
@@ -274,6 +346,7 @@ class TelegramAuthService(
         return TelegramStatusResponse(
             status = effectiveStatus.name.lowercase(),
             telegramConnected = session.telegramUserId != null,
+            phoneRequired = effectiveStatus == TelegramSessionStatus.PHONE_REQUESTED,
             expiresAt = session.expiresAt
         )
     }

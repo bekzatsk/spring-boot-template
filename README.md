@@ -352,6 +352,7 @@ be set through its standard environment variable (`app.auth.local.enabled` →
 | `app.auth.telegram.bot-token` | — | Telegram Bot API token (required in production when Telegram is enabled) |
 | `app.auth.telegram.bot-username` | — | Bot username for the deep link; also in `TelegramInitResponse.botUsername` (leading `@` stripped) |
 | `app.auth.telegram.webhook-secret` | — | Secret token for webhook validation (required when Telegram is enabled) |
+| `app.auth.telegram.require-phone` | `false` | Bot asks the user to share their own phone number (`request_contact`) before sending the code; the number is stored on the user and links to an existing phone account. Users that already have a phone are not asked |
 | `app.auth.access-token.expiry-minutes` | `15` | JWT access token TTL |
 | `app.auth.refresh-token.expiry-days` | `30` | Refresh token TTL |
 | `app.auth.email-verification.enabled` | `false` | Gate new LOCAL registrations behind email confirmation (see below) |
@@ -500,7 +501,7 @@ keystore, outside production profiles, RSA keys are generated in-memory and chan
 
 ## Database Schema
 
-The starter's Flyway migrations (`classpath:db/migration-auth`, V1 through V16) create these tables
+The starter's Flyway migrations (`classpath:db/migration-auth`, V1 through V17) create these tables
 in the `auth` schema:
 
 ```

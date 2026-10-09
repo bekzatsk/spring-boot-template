@@ -171,15 +171,45 @@ class UserService(
         )
     }
 
+    /**
+     * [phoneE164] is a number Telegram verified as the user's own (a shared contact whose user id
+     * is the sender's). It is the phone equivalent of a verified email: a new Telegram account
+     * whose number belongs to an existing user is linked to that user instead of registering a
+     * second one.
+     */
     @Transactional
-    fun findOrCreateTelegramUser(telegramUserId: Long, telegramUsername: String?): User {
+    fun findOrCreateTelegramUser(telegramUserId: Long, telegramUsername: String?, phoneE164: String? = null): User {
         val existing = userRepository.findByTelegramUserId(telegramUserId)
         if (existing != null) {
+            var changed = false
             if (telegramUsername != null && existing.telegramUsername != telegramUsername) {
                 existing.telegramUsername = telegramUsername
-                return userRepository.save(existing)
+                changed = true
             }
-            return existing
+            if (phoneE164 != null && existing.phone == null) {
+                // Two accounts cannot be merged here: the other one may carry its own data.
+                if (userRepository.findByPhone(phoneE164) != null) {
+                    throw IllegalStateException("Phone number is already used by another account")
+                }
+                existing.phone = phoneE164
+                changed = true
+            }
+            return if (changed) userRepository.save(existing) else existing
+        }
+
+        if (phoneE164 != null) {
+            val phoneUser = userRepository.findByPhone(phoneE164)
+            if (phoneUser != null) {
+                // The number's owner already signed in with another Telegram account. Replacing
+                // that link would hand the account to whoever holds the number now.
+                if (phoneUser.telegramUserId != null) {
+                    throw IllegalStateException("Phone number is linked to another Telegram account")
+                }
+                phoneUser.linkProvider(AuthProvider.TELEGRAM, telegramUserId.toString())
+                phoneUser.telegramUserId = telegramUserId
+                phoneUser.telegramUsername = telegramUsername
+                return userRepository.save(phoneUser)
+            }
         }
 
         if (!authTokenProperties.registration.enabled) {
@@ -190,9 +220,14 @@ class UserService(
                 it.linkProvider(AuthProvider.TELEGRAM, telegramUserId.toString())
                 it.telegramUserId = telegramUserId
                 it.telegramUsername = telegramUsername
+                it.phone = phoneE164
             }
         )
     }
+
+    @Transactional(readOnly = true)
+    fun telegramUserHasPhone(telegramUserId: Long): Boolean =
+        !userRepository.findByTelegramUserId(telegramUserId)?.phone.isNullOrBlank()
 
     @Transactional(readOnly = true)
     fun findById(id: UUID): User =

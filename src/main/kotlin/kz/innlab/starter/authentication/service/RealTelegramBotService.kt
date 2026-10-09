@@ -21,12 +21,32 @@ class RealTelegramBotService(
 
     private val client: RestClient = RestClient.create("https://api.telegram.org")
 
-    override fun sendMessage(chatId: Long, text: String) {
+    override fun sendMessage(chatId: Long, text: String) =
+        send(mapOf("chat_id" to chatId, "text" to text))
+
+    override fun requestContact(chatId: Long, text: String, buttonText: String) =
+        send(
+            mapOf(
+                "chat_id" to chatId,
+                "text" to text,
+                "reply_markup" to mapOf(
+                    "keyboard" to listOf(listOf(mapOf("text" to buttonText, "request_contact" to true))),
+                    "resize_keyboard" to true,
+                    "one_time_keyboard" to true
+                )
+            )
+        )
+
+    override fun sendMessageRemovingKeyboard(chatId: Long, text: String) =
+        send(mapOf("chat_id" to chatId, "text" to text, "reply_markup" to mapOf("remove_keyboard" to true)))
+
+    private fun send(body: Map<String, Any>) {
+        val chatId = body["chat_id"]
         try {
             client.post()
                 .uri("/bot{token}/sendMessage", botToken)
                 .header("Content-Type", "application/json")
-                .body(mapOf("chat_id" to chatId, "text" to text))
+                .body(body)
                 .retrieve()
                 .toBodilessEntity()
             logger.info("[TELEGRAM] sent message to chatId={}", chatId)
