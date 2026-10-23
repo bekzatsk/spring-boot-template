@@ -1,6 +1,7 @@
 package kz.innlab.starter.user.service
 
 import kz.innlab.starter.shared.security.FreshLoginGuard
+import kz.innlab.starter.shared.error.ForbiddenOperationException
 import kz.innlab.starter.shared.error.ResourceNotFoundException
 import kz.innlab.starter.user.model.AuthProvider
 import kz.innlab.starter.user.model.RequiredAction
@@ -62,14 +63,28 @@ class UserService(
         providerId: String,
         email: String,
         name: String?,
-        picture: String?
+        picture: String?,
+        linkByVerifiedEmail: Boolean = false
     ): User {
         val byGoogleSub = userRepository.findByGoogleProviderId(providerId)
         if (byGoogleSub != null) {
             return byGoogleSub
         }
-        if (userRepository.findByEmailIgnoreCase(email) != null) {
-            throw IllegalStateException("Account already exists; sign in to link a provider")
+        val byEmail = userRepository.findByEmailIgnoreCase(email)
+        if (byEmail != null) {
+            // [email] is Google-verified (the caller checks). An unverified local account may belong
+            // to someone who registered the address without owning it; an admin account is worth
+            // an explicit link. Neither is taken over by email alone.
+            val linkable = linkByVerifiedEmail &&
+                byEmail.emailVerified &&
+                Role.ADMIN !in byEmail.roles &&
+                byEmail.providerIds[AuthProvider.GOOGLE] == null
+            if (!linkable) {
+                throw IllegalStateException("Account already exists; sign in to link a provider")
+            }
+            byEmail.linkProvider(AuthProvider.GOOGLE, providerId)
+            if (byEmail.picture == null) byEmail.picture = picture
+            return userRepository.save(byEmail)
         }
         if (!authTokenProperties.registration.enabled) {
             throw IllegalStateException("Registration is currently disabled")
@@ -81,6 +96,31 @@ class UserService(
                 it.picture = picture
             }
         )
+    }
+
+    /**
+     * Links the Google account [providerId] to the signed-in user [userId]. [email] must be the
+     * Google-verified address of that Google account (the caller checks) and must equal the user's
+     * own email. Ownership of the address is then proven, so an unverified email becomes verified.
+     */
+    @Transactional
+    fun linkGoogleAccount(userId: UUID, providerId: String, email: String): User {
+        val user = userRepository.findById(userId).orElseThrow { ResourceNotFoundException("User not found") }
+        if (user.email.isBlank() || !user.email.equals(email, ignoreCase = true)) {
+            throw ForbiddenOperationException("The Google account's email does not match this account")
+        }
+        val holder = userRepository.findByGoogleProviderId(providerId)
+        if (holder != null && holder.id != user.id) {
+            throw IllegalStateException("This Google account is linked to another user")
+        }
+        val linked = user.providerIds[AuthProvider.GOOGLE]
+        if (linked != null && linked != providerId) {
+            throw IllegalStateException("Another Google account is already linked")
+        }
+        user.linkProvider(AuthProvider.GOOGLE, providerId)
+        user.emailVerified = true
+        user.requiredActions.remove(RequiredAction.VERIFY_EMAIL)
+        return userRepository.save(user)
     }
 
     @Transactional

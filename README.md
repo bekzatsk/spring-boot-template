@@ -156,6 +156,7 @@ The starter auto-registers these endpoints:
 | Endpoint | Description |
 |----------|-------------|
 | `POST /users/me/change-password` | Change password (`currentPassword`, rate-limited) |
+| `POST /users/me/providers/google` | Link a Google account (`idToken`) whose verified email equals the user's; 409 if it is linked to another user |
 | `POST /users/me/reauth/request` | Send a re-authentication code to the current email (or phone) → `{verificationId, channel}` |
 | `POST /users/me/change-email/request` | Request email change. Needs `currentPassword`, or `reauthVerificationId` + `reauthCode` |
 | `POST /users/me/change-email/verify` | Verify email change; ends every session |
@@ -355,6 +356,7 @@ be set through its standard environment variable (`app.auth.local.enabled` →
 | `app.auth.registration.enabled` | `true` | Self-registration (admins can always create users) |
 | `app.auth.google.enabled` | `false` | Google sign-in |
 | `app.auth.google.client-id` | — | Google OAuth2 client ID |
+| `app.auth.google.link-by-verified-email` | `false` | Google sign-in links an existing account with the same Google-verified email instead of answering 409. Never for an account with an unverified email or an admin |
 | `app.auth.apple.enabled` | `false` | Apple Sign In |
 | `app.auth.apple.bundle-id` | — | Apple app bundle ID |
 | `app.auth.phone.enabled` | `true` | Phone + SMS OTP |
@@ -566,7 +568,7 @@ identifiers are compared without letter case.
 
 ## Account Linking
 
-Google and Apple returning users are identified by their provider subject. A new provider identity whose email matches an existing account receives 409; email matching alone never links credentials. Local registration also returns 409 for an existing email. Implement an explicit owner-verified linking flow if the product needs multi-provider accounts. Existing linked accounts remain usable by their saved provider IDs.
+Google and Apple returning users are identified by their provider subject. A new provider identity whose email matches an existing account receives 409; email matching alone never links credentials. Local registration also returns 409 for an existing email. A signed-in user links Google explicitly with `POST /users/me/providers/google`; `app.auth.google.link-by-verified-email=true` links on sign-in instead (for invite-only applications where users are created before their first login), except for accounts with an unverified email and for admins. Existing linked accounts remain usable by their saved provider IDs.
 
 Phone-only users have `email = ""` with a partial unique index.
 

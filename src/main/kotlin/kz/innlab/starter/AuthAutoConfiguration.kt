@@ -27,6 +27,7 @@ import kz.innlab.starter.config.ProductionSafetyConfig
 import kz.innlab.starter.config.RsaKeyConfig
 import kz.innlab.starter.config.SecurityConfig
 import kz.innlab.starter.config.SmsSchedulerConfig
+import kz.innlab.starter.config.GoogleAuthProperties
 import kz.innlab.starter.config.TelegramAuthProperties
 import kz.innlab.starter.config.TelegramConfig
 import kz.innlab.starter.config.TwilioConfig
@@ -55,6 +56,7 @@ import org.springframework.context.annotation.Import
     AuthTokenProperties::class,
     VerificationProperties::class,
     TelegramAuthProperties::class,
+    GoogleAuthProperties::class,
     DeviceTokenProperties::class,
     RateLimitProperties::class,
     MailProperties::class,
