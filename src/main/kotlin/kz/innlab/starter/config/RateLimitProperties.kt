@@ -16,6 +16,12 @@ data class RateLimitProperties(
     /** Password check on /auth/local/login, keyed by email and by client address. */
     @field:Valid val login: Rule = Rule(maxAttempts = 10, windowSeconds = 300),
     /** Current-password check on /users/me/change-password, keyed by user id. */
+    /**
+     * Password check on /auth/active-directory/login, keyed by login. Keep it below the domain's
+     * account lockout threshold (often 5–10): every wrong password here also counts there, and
+     * without a stricter limit anyone could lock a colleague out of Windows through this endpoint.
+     */
+    @field:Valid val directoryLogin: Rule = Rule(maxAttempts = 3, windowSeconds = 900),
     @field:Valid val changePassword: Rule = Rule(maxAttempts = 5, windowSeconds = 300),
     /**
      * Code checks per identifier and purpose, across codes. The per-code limit alone resets with

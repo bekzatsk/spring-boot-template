@@ -17,7 +17,9 @@ class AuthTokenIssuer(
 ) {
 
     fun issue(user: User): AuthResponse = AuthResponse(
-        accessToken = tokenService.generateAccessToken(user.id, user.roles, user.requiredActions),
+        accessToken = tokenService.generateAccessToken(
+            user.id, user.roles, user.requiredActions, groups = user.directoryGroups
+        ),
         refreshToken = refreshTokenService.createToken(user),
         requiredActions = user.requiredActions.map { it.name }
     )

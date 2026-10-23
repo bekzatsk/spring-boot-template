@@ -200,6 +200,13 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- In-process LDAP server for the Active Directory integration tests -->
+		<dependency>
+			<groupId>com.unboundid</groupId>
+			<artifactId>unboundid-ldapsdk</artifactId>
+			<scope>test</scope>
+		</dependency>
+
 		<!-- Asynchronous assertion library for integration tests -->
 		<dependency>
 			<groupId>org.awaitility</groupId>

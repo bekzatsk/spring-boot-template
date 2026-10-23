@@ -23,10 +23,11 @@ class TokenService(
         userId: UUID,
         roles: Set<Role>,
         requiredActions: Set<RequiredAction> = emptySet(),
-        authTime: Instant = Instant.now()
+        authTime: Instant = Instant.now(),
+        groups: Set<String> = emptySet()
     ): String {
         val now = Instant.now()
-        val claims = JwtClaimsSet.builder()
+        val builder = JwtClaimsSet.builder()
             .issuer(jwtIdentityProperties.issuer)
             .audience(listOf(jwtIdentityProperties.audience))
             .issuedAt(now)
@@ -36,7 +37,9 @@ class TokenService(
             .claim("required_actions", requiredActions.map { it.name })
             // When the user logged in, not when this token was minted: refresh keeps it.
             .claim("auth_time", authTime.epochSecond)
-            .build()
-        return jwtEncoder.encode(JwtEncoderParameters.from(claims)).tokenValue
+        // Directory groups (Active Directory, Entra ID) for the application's own authorization;
+        // left out for everyone else so ordinary tokens stay as they were.
+        if (groups.isNotEmpty()) builder.claim("groups", groups.sorted())
+        return jwtEncoder.encode(JwtEncoderParameters.from(builder.build())).tokenValue
     }
 }

@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse
 import kz.innlab.starter.authentication.cookie.AuthCookieWriter
 import kz.innlab.starter.authentication.dto.AuthResponse
 import kz.innlab.starter.authentication.dto.RefreshRequest
+import kz.innlab.starter.authentication.service.RefreshAccountCheck
 import kz.innlab.starter.authentication.service.RefreshTokenService
 import kz.innlab.starter.authentication.service.TokenService
 import org.springframework.beans.factory.ObjectProvider
@@ -27,7 +28,8 @@ import org.springframework.web.bind.annotation.RestController
 class AuthController(
     private val refreshTokenService: RefreshTokenService,
     private val tokenService: TokenService,
-    private val cookieWriter: ObjectProvider<AuthCookieWriter>
+    private val cookieWriter: ObjectProvider<AuthCookieWriter>,
+    private val accountChecks: ObjectProvider<RefreshAccountCheck>
 ) {
 
     /** Browser clients obtain this token before sending a cookie-authenticated write request. */
@@ -44,9 +46,10 @@ class AuthController(
     ): ResponseEntity<AuthResponse> {
         val rawToken = resolveRefreshToken(request, httpRequest)
             ?: throw BadCredentialsException("Refresh token is required")
+        checkAccount(rawToken)
         val (user, newRawToken, authenticatedAt) = refreshTokenService.rotate(rawToken)
         val accessToken = tokenService.generateAccessToken(
-            user.id, user.roles, user.requiredActions, authTime = authenticatedAt
+            user.id, user.roles, user.requiredActions, authTime = authenticatedAt, groups = user.directoryGroups
         )
         // Cookies (access + rotated refresh) are set centrally by AuthResponseCookieAdvice.
         return ResponseEntity.ok(AuthResponse(
@@ -79,6 +82,21 @@ class AuthController(
             httpResponse.addHeader(HttpHeaders.SET_COOKIE, it.clearRefreshCookie().toString())
         }
         return ResponseEntity.noContent().build()
+    }
+
+    /**
+     * Runs before rotation and outside a transaction: a directory call must not hold a DB
+     * connection, and a directory outage must not consume the client's refresh token. An account
+     * the directory no longer allows loses every session, not only this one.
+     */
+    private fun checkAccount(rawToken: String) {
+        val owner = refreshTokenService.findRotatableOwner(rawToken) ?: return
+        try {
+            accountChecks.orderedStream().forEach { it.check(owner) }
+        } catch (ex: BadCredentialsException) {
+            refreshTokenService.revokeAllFor(owner)
+            throw ex
+        }
     }
 
     /** Resolve the refresh token: request body first, then the refresh cookie (cookie mode). */

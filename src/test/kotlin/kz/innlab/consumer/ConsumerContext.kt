@@ -3,6 +3,7 @@ package kz.innlab.consumer
 import com.google.firebase.FirebaseApp
 import kz.innlab.starter.AuthAutoConfiguration
 import org.mockito.Mockito.mock
+import java.nio.file.Files
 import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration
 import org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration
@@ -65,3 +66,14 @@ private fun baseRunner(): WebApplicationContextRunner = WebApplicationContextRun
             AuthAutoConfiguration::class.java
         )
     )
+
+/** The minimum that switches Active Directory on; nothing connects until a login. */
+val ACTIVE_DIRECTORY_PROPERTIES = arrayOf(
+    "app.auth.active-directory.enabled=true",
+    "app.auth.active-directory.base-dn=dc=test",
+    "app.auth.active-directory.bind-dn=cn=svc,dc=test",
+    "app.auth.active-directory.bind-password=secret"
+)
+
+/** The Kerberos validator refuses to start without a readable keytab; its content is read only at first login. */
+fun keytab(): String = Files.createTempFile("auth-starter", ".keytab").also { it.toFile().deleteOnExit() }.toString()

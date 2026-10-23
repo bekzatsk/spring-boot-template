@@ -34,7 +34,14 @@ class AutoConfigurationCoverageTest {
         "app.auth.telegram.enabled=true",
         "app.firebase.enabled=true",
         "app.mail.enabled=true",
-        "app.mail.smtp.host=localhost"
+        "app.mail.smtp.host=localhost",
+        "app.auth.microsoft.enabled=true",
+        "app.auth.microsoft.tenant-id=9188040d-6c67-4c5b-b112-36a304b66dad",
+        "app.auth.microsoft.client-id=test",
+        *ACTIVE_DIRECTORY_PROPERTIES,
+        "app.auth.active-directory.kerberos.enabled=true",
+        "app.auth.active-directory.kerberos.service-principal=HTTP/app.test@TEST",
+        "app.auth.active-directory.kerberos.keytab=${keytab()}"
     ).withStubFirebaseApp()
 
     /**

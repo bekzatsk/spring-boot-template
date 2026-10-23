@@ -18,6 +18,7 @@ import kz.innlab.starter.authentication.service.AccountManagementService
 import kz.innlab.starter.authentication.service.AuthTokenIssuer
 import kz.innlab.starter.authentication.service.EmailService
 import kz.innlab.starter.authentication.service.OtpDeliveryService
+import kz.innlab.starter.authentication.service.RefreshAccountCheck
 import kz.innlab.starter.authentication.service.RefreshTokenFamilyRevoker
 import kz.innlab.starter.authentication.service.RefreshTokenService
 import kz.innlab.starter.authentication.service.SmsService
@@ -192,8 +193,9 @@ class AuthCoreAutoConfiguration {
     fun authController(
         refreshTokenService: RefreshTokenService,
         tokenService: TokenService,
-        cookieWriter: ObjectProvider<AuthCookieWriter>
-    ): AuthController = AuthController(refreshTokenService, tokenService, cookieWriter)
+        cookieWriter: ObjectProvider<AuthCookieWriter>,
+        accountChecks: ObjectProvider<RefreshAccountCheck>
+    ): AuthController = AuthController(refreshTokenService, tokenService, cookieWriter, accountChecks)
 
     @Bean
     @ConditionalOnMissingBean

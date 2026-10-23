@@ -5,6 +5,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.dao.OptimisticLockingFailureException
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.security.access.AccessDeniedException
+import kz.innlab.starter.authentication.service.DirectoryUnavailableException
 import kz.innlab.starter.shared.error.ErrorResponse
 import kz.innlab.starter.shared.error.ForbiddenOperationException
 import kz.innlab.starter.shared.error.ResourceNotFoundException
@@ -96,6 +97,14 @@ class AuthExceptionHandler {
     fun handleConcurrentConflict(ex: Exception): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.CONFLICT).body(
             ErrorResponse(error = "Conflict", message = "The resource changed concurrently; retry", status = 409)
+        )
+
+    // Login cannot be decided while the directory is down; the client may retry. The cause (host
+    // names, LDAP result codes) stays in the log.
+    @ExceptionHandler(DirectoryUnavailableException::class)
+    fun handleDirectoryUnavailable(ex: DirectoryUnavailableException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(
+            ErrorResponse(error = "Service Unavailable", message = "Directory is unavailable", status = 503)
         )
 
     @ExceptionHandler(RateLimitExceededException::class)

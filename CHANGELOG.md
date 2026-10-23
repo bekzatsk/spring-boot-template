@@ -2,9 +2,30 @@
 
 ## Unreleased
 
-Adds migration `V17__telegram_session_phone.sql`.
+Adds migrations `V17__telegram_session_phone.sql` and `V18__user_directory_groups.sql`.
 
 ### Added
+
+- **Active Directory login** (`app.auth.active-directory.*`, off by default):
+  `POST /api/v1/auth/active-directory/login` checks a domain username and password over LDAP(S);
+  `POST /api/v1/auth/active-directory/kerberos` signs in browsers on domain-joined machines with
+  their Kerberos ticket (SPNEGO, `kerberos.enabled`). Users are linked by `objectGUID` and created
+  on first login. `access.required-groups` limits who may sign in, `access.admin-groups` grants
+  `ADMIN`. Before every refresh the account is looked up again: a deleted, disabled, expired or
+  ungrouped account loses every session; a directory outage answers 503 without spending the
+  refresh token. Wrong passwords are limited by the new `app.auth.rate-limit.directory-login`
+  (3 per 15 min). A production profile refuses `ldap://` URLs unless `allow-plaintext` is set.
+  Uses the JDK's JNDI and GSS-API; no new runtime dependency.
+- **Microsoft Entra ID / ADFS login** (`app.auth.microsoft.*`, off by default):
+  `POST /api/v1/auth/microsoft` with an OIDC ID token, pinned to one tenant (`tenant-id` must be a
+  GUID) or to an ADFS issuer. Users are linked by `oid`; group and app-role claims drive the same
+  `access` settings.
+- The access token carries a `groups` claim with the user's directory groups (only when there are
+  any). `access.published-groups` limits which groups are stored and published. `TokenService.generateAccessToken` gains an optional `groups` parameter.
+- `AuthProvider.ACTIVE_DIRECTORY` and `AuthProvider.MICROSOFT`; `User.directoryGroups`.
+- Ports `DirectoryClient`, `KerberosTicketValidator` and `RefreshAccountCheck` (asked before each
+  refresh; every bean of the type runs). `AuthController` takes the checks as a fourth constructor
+  argument.
 
 - **Telegram login can require the user's phone number** (`app.auth.telegram.require-phone`, off by
   default). After `/start` the bot shows a `request_contact` button instead of the code; the code

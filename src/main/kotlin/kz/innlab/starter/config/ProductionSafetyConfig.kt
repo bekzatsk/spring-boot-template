@@ -22,6 +22,7 @@ import org.springframework.context.annotation.Conditional
  * Refuses to start under a production profile ([ProductionProfiles]: `prod` or `production` by default) when:
  * - any `app.auth.*.dev-code` fixed-OTP override is set (account-takeover backdoor),
  * - Telegram auth is enabled without a webhook secret (webhook would accept forged updates),
+ * - Active Directory login uses a plain `ldap://` URL (domain passwords in clear text),
  * - a console fallback bean is serving a channel the application actually uses (verification codes
  *   would go to the log instead of to users).
  *
@@ -56,7 +57,8 @@ class ProductionSafetyConfig {
         @Value("\${app.auth.telegram.enabled:false}") telegramEnabled: Boolean,
         @Value("\${app.auth.cookie.enabled:false}") cookieEnabled: Boolean,
         @Value("\${app.auth.cookie.secure:true}") cookieSecure: Boolean,
-        @Value("\${app.auth.telegram.webhook-secret:}") telegramWebhookSecret: String
+        @Value("\${app.auth.telegram.webhook-secret:}") telegramWebhookSecret: String,
+        activeDirectory: ObjectProvider<ActiveDirectoryProperties>
     ): InitializingBean = InitializingBean {
         val problems = mutableListOf<String>()
 
@@ -81,6 +83,14 @@ class ProductionSafetyConfig {
         if (telegramEnabled && telegramWebhookSecret.isBlank()) {
             problems += "app.auth.telegram.enabled=true but app.auth.telegram.webhook-secret is blank — " +
                 "the webhook endpoint would accept forged updates from anyone"
+        }
+        activeDirectory.ifAvailable?.takeIf { it.enabled && !it.allowPlaintext }?.let { ad ->
+            val plaintext = ad.urls.filter { it.trim().startsWith("ldap://", ignoreCase = true) }
+            if (plaintext.isNotEmpty()) {
+                problems += "app.auth.active-directory.urls contains ldap:// ($plaintext) — domain passwords " +
+                    "would cross the network in clear text; use ldaps://, or set " +
+                    "app.auth.active-directory.allow-plaintext=true if the link is otherwise encrypted"
+            }
         }
         if (!allowConsoleFallbacks && !consoleFallbacks.allowSms && smsService.ifAvailable is ConsoleSmsService) {
             problems += "SmsService is the console fallback — OTP codes for phone login and " +
