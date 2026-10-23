@@ -1,5 +1,6 @@
 package kz.innlab.starter.config
 
+import java.time.Duration
 import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties(prefix = "app.mail")
@@ -36,7 +37,14 @@ data class MailProperties(
 
     data class ExternalProperties(
         val baseUrl: String = "",
-        val masterKey: String = ""
+        val masterKey: String = "",
+        val connectTimeout: Duration = Duration.ofSeconds(5),
+        /**
+         * How long to wait for the service's answer. A mail service that delivers over SMTP
+         * before answering takes several seconds; at the old fixed 15 s, mail that was sent got
+         * reported as failed.
+         */
+        val readTimeout: Duration = Duration.ofSeconds(30)
     )
 
     /**

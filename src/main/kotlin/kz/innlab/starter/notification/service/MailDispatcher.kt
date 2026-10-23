@@ -102,4 +102,16 @@ open class MailDispatcher(
         message.text = textBody
         javaMailSender.send(message)
     }
+
+    /** Sends [htmlBody] with [textBody] as the plain-text alternative; plain text only when null. */
+    open fun sendDirect(to: String, subject: String, textBody: String, htmlBody: String?) {
+        if (htmlBody == null) return sendDirect(to, subject, textBody)
+        val message = javaMailSender.createMimeMessage()
+        val helper = MimeMessageHelper(message, true, "UTF-8")
+        helper.setFrom(mailProperties.smtp.from)
+        helper.setTo(to)
+        helper.setSubject(subject)
+        helper.setText(textBody, htmlBody)
+        javaMailSender.send(message)
+    }
 }

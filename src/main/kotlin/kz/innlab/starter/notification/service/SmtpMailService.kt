@@ -1,7 +1,9 @@
 package kz.innlab.starter.notification.service
 
 import kz.innlab.starter.shared.util.maskEmail
+import kz.innlab.starter.authentication.service.DefaultVerificationEmailMessages
 import kz.innlab.starter.authentication.service.EmailService
+import kz.innlab.starter.authentication.service.VerificationEmailMessages
 import kz.innlab.starter.config.MailProperties
 import kz.innlab.starter.notification.model.MailHistory
 import kz.innlab.starter.notification.repository.MailHistoryRepository
@@ -13,7 +15,8 @@ class SmtpMailService(
     private val mailProperties: MailProperties,
     private val mailHistoryRepository: MailHistoryRepository,
     private val mailDispatcher: MailDispatcher,
-    private val afterCommitRunner: AfterCommitRunner
+    private val afterCommitRunner: AfterCommitRunner,
+    private val verificationEmailMessages: VerificationEmailMessages = DefaultVerificationEmailMessages()
 ) : MailService, EmailService {
 
     companion object {
@@ -55,8 +58,10 @@ class SmtpMailService(
         // SMTP round-trip is deferred to after commit so it never blocks the transaction. Failures
         // are logged, not propagated — the flow has already committed and the user can re-request.
         afterCommitRunner.run {
+            val email = verificationEmailMessages.compose(purpose, code)
             try {
-                mailDispatcher.sendDirect(to, "$purpose Verification Code", "Your $purpose code is: $code")
+                mailDispatcher.sendDirect(to, email.subject, email.text, email.html)
+                logger.info("{} code email sent over SMTP to {}", purpose, maskEmail(to))
             } catch (e: Exception) {
                 logger.error("Failed to send {} code email to {}: {}", purpose, maskEmail(to), e.message, e)
             }
