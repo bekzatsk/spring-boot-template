@@ -96,6 +96,17 @@ class RefreshTokenService(
         return RotatedRefreshToken(stored.user, newRawToken, stored.authenticatedAt)
     }
 
+    /**
+     * The owner of [rawToken] if it could still be rotated, without rotating it — for the checks
+     * that must run before rotation. Null for unknown, expired or used tokens; [rotate] reports those.
+     */
+    @Transactional(readOnly = true)
+    fun findRotatableOwner(rawToken: String): User? {
+        val stored = refreshTokenRepository.findByTokenHash(hashToken(rawToken)) ?: return null
+        if (stored.revoked || stored.expiresAt.isBefore(Instant.now())) return null
+        return stored.user
+    }
+
     /** Revoke a refresh token (logout). Idempotent — silently succeeds if token not found. */
     @Transactional
     fun revoke(rawToken: String) {

@@ -225,6 +225,59 @@ class UserService(
         )
     }
 
+    /**
+     * Find or create the user behind a directory account (Active Directory, Entra ID, ADFS) and
+     * bring it up to date with the directory: name, email, [groups] and the `ADMIN` role. Directory
+     * logins are not gated by `registration.enabled`: the directory and its required groups decide
+     * who gets in.
+     *
+     * [admin] grants `ADMIN`; when it is false, [syncRoles] takes `ADMIN` away. A matching email on
+     * an account the directory id is not linked to is refused, as for Google and Apple — the
+     * directory proves the account, not that whoever registered the address in this application
+     * is the same person.
+     */
+    @Transactional
+    fun syncDirectoryUser(
+        provider: AuthProvider,
+        providerId: String,
+        email: String,
+        name: String?,
+        groups: Set<String>,
+        admin: Boolean,
+        syncRoles: Boolean
+    ): User {
+        val existing = userRepository.findByProviderId(provider, providerId)
+        if (existing != null) {
+            if (email.isNotBlank() && !existing.email.equals(email, ignoreCase = true)) {
+                // The directory renamed the mailbox. Follow it unless another account holds the address.
+                val holder = userRepository.findByEmailIgnoreCase(email)
+                if (holder == null) existing.email = email
+            }
+            if (name != null) existing.name = name
+            applyDirectoryState(existing, groups, admin, syncRoles)
+            return userRepository.save(existing)
+        }
+        if (email.isNotBlank() && userRepository.findByEmailIgnoreCase(email) != null) {
+            throw IllegalStateException("Account already exists; sign in to link a provider")
+        }
+        return userRepository.save(
+            User(email = email).also {
+                it.linkProvider(provider, providerId)
+                it.name = name
+                applyDirectoryState(it, groups, admin, syncRoles)
+            }
+        )
+    }
+
+    private fun applyDirectoryState(user: User, groups: Set<String>, admin: Boolean, syncRoles: Boolean) {
+        user.roles.add(Role.USER)
+        if (admin) user.roles.add(Role.ADMIN) else if (syncRoles) user.roles.remove(Role.ADMIN)
+        if (groups != user.directoryGroups) {
+            user.directoryGroups.clear()
+            user.directoryGroups.addAll(groups)
+        }
+    }
+
     @Transactional(readOnly = true)
     fun telegramUserHasPhone(telegramUserId: Long): Boolean =
         !userRepository.findByTelegramUserId(telegramUserId)?.phone.isNullOrBlank()

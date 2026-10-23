@@ -3,6 +3,7 @@ package kz.innlab.starter.user.repository
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.Lock
 import kz.innlab.starter.user.dto.UserSummaryResponse
+import kz.innlab.starter.user.model.AuthProvider
 import kz.innlab.starter.user.model.User
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -24,6 +25,9 @@ interface UserRepository : JpaRepository<User, UUID> {
     @Query("SELECT u FROM User u JOIN u.providerIds pid WHERE KEY(pid) = 'APPLE' AND VALUE(pid) = :sub")
     fun findByAppleProviderId(@Param("sub") sub: String): User?
 
+    @Query("SELECT u FROM User u JOIN u.providerIds pid WHERE KEY(pid) = :provider AND VALUE(pid) = :providerId")
+    fun findByProviderId(@Param("provider") provider: AuthProvider, @Param("providerId") providerId: String): User?
+
     fun findByTelegramUserId(telegramUserId: Long): User?
 
     @Query(
@@ -39,7 +43,7 @@ interface UserRepository : JpaRepository<User, UUID> {
 
     /**
      * Projection for the admin user list: selects only the summary columns so none of User's
-     * four eager @ElementCollection tables are queried at all.
+     * five eager @ElementCollection tables are queried at all.
      */
     @Query(
         """

@@ -1,13 +1,21 @@
 package kz.innlab.consumer
 
+import kz.innlab.starter.authentication.controller.ActiveDirectoryAuthController
 import kz.innlab.starter.authentication.controller.AppleAuthController
+import kz.innlab.starter.authentication.controller.KerberosAuthController
+import kz.innlab.starter.authentication.controller.MicrosoftAuthController
 import kz.innlab.starter.authentication.controller.EmailOtpController
 import kz.innlab.starter.authentication.controller.GoogleAuthController
 import kz.innlab.starter.authentication.controller.LocalAuthController
 import kz.innlab.starter.authentication.controller.PhoneAuthController
 import kz.innlab.starter.authentication.controller.TelegramAuthController
 import kz.innlab.starter.authentication.cookie.AuthCookieWriter
+import kz.innlab.starter.authentication.service.ActiveDirectoryAuthService
 import kz.innlab.starter.authentication.service.AppleOAuth2Service
+import kz.innlab.starter.authentication.service.DirectoryClient
+import kz.innlab.starter.authentication.service.KerberosTicketValidator
+import kz.innlab.starter.authentication.service.MicrosoftOAuth2Service
+import kz.innlab.starter.authentication.service.RefreshAccountCheck
 import kz.innlab.starter.authentication.service.EmailOtpService
 import kz.innlab.starter.authentication.service.GoogleOAuth2Service
 import kz.innlab.starter.authentication.service.LocalAuthService
@@ -120,6 +128,122 @@ class ConditionalBeanContractTest {
             assertThat(it).doesNotHaveBean(EmailOtpService::class.java)
             assertThat(it).doesNotHaveBean(EmailOtpController::class.java)
         }
+    }
+
+    @Test
+    fun `active directory beans follow the active directory flag`() {
+        consumerContextRunner(*ACTIVE_DIRECTORY_PROPERTIES).run {
+            assertThat(it).hasSingleBean(DirectoryClient::class.java)
+            assertThat(it).hasSingleBean(ActiveDirectoryAuthService::class.java)
+            assertThat(it).hasSingleBean(ActiveDirectoryAuthController::class.java)
+            assertThat(it).doesNotHaveBean(KerberosAuthController::class.java)
+            assertThat(it).doesNotHaveBean(KerberosTicketValidator::class.java)
+            assertThat(it.containsBean("directoryClient")).isTrue()
+            assertThat(it.containsBean("activeDirectoryAuthService")).isTrue()
+            assertThat(it.containsBean("activeDirectoryAuthController")).isTrue()
+        }
+        consumerContextRunner().run {
+            assertThat(it).doesNotHaveBean(DirectoryClient::class.java)
+            assertThat(it).doesNotHaveBean(ActiveDirectoryAuthService::class.java)
+            assertThat(it).doesNotHaveBean(ActiveDirectoryAuthController::class.java)
+        }
+    }
+
+    /**
+     * AuthController reads the refresh-time checks through ObjectProvider: without this bean a
+     * disabled directory account would keep refreshing, with nothing failing.
+     */
+    @Test
+    fun `active directory registers its refresh-time account check`() {
+        consumerContextRunner(*ACTIVE_DIRECTORY_PROPERTIES).run {
+            assertThat(it.getBeanProvider(RefreshAccountCheck::class.java).orderedStream().toList())
+                .singleElement()
+                .isInstanceOf(ActiveDirectoryAuthService::class.java)
+        }
+        consumerContextRunner().run {
+            assertThat(it).doesNotHaveBean(RefreshAccountCheck::class.java)
+        }
+    }
+
+    @Test
+    fun `kerberos beans follow the kerberos flag, and password login can be switched off`() {
+        consumerContextRunner(
+            *ACTIVE_DIRECTORY_PROPERTIES,
+            "app.auth.active-directory.password-login.enabled=false",
+            "app.auth.active-directory.kerberos.enabled=true",
+            "app.auth.active-directory.kerberos.service-principal=HTTP/app.test@TEST",
+            "app.auth.active-directory.kerberos.keytab=${keytab()}"
+        ).run {
+            assertThat(it).hasSingleBean(KerberosTicketValidator::class.java)
+            assertThat(it).hasSingleBean(KerberosAuthController::class.java)
+            assertThat(it.containsBean("kerberosTicketValidator")).isTrue()
+            assertThat(it.containsBean("kerberosAuthController")).isTrue()
+            assertThat(it).doesNotHaveBean(ActiveDirectoryAuthController::class.java)
+            assertThat(it).hasSingleBean(ActiveDirectoryAuthService::class.java)
+        }
+    }
+
+    @Test
+    fun `kerberos refuses to start without a readable keytab`() {
+        consumerContextRunner(
+            *ACTIVE_DIRECTORY_PROPERTIES,
+            "app.auth.active-directory.kerberos.enabled=true",
+            "app.auth.active-directory.kerberos.service-principal=HTTP/app.test@TEST",
+            "app.auth.active-directory.kerberos.keytab=/nonexistent/app.keytab"
+        ).run {
+            assertThat(it).hasFailed()
+            assertThat(it.startupFailure).hasStackTraceContaining("is not a readable file")
+        }
+    }
+
+    @Test
+    fun `active directory refuses to start without a service account`() {
+        consumerContextRunner("app.auth.active-directory.enabled=true", "app.auth.active-directory.base-dn=dc=test").run {
+            assertThat(it).hasFailed()
+            assertThat(it.startupFailure).hasStackTraceContaining("base-dn, bind-dn and bind-password are required")
+        }
+    }
+
+    @Test
+    fun `microsoft provider beans follow the microsoft flag`() {
+        consumerContextRunner(
+            "app.auth.microsoft.enabled=true",
+            "app.auth.microsoft.tenant-id=9188040d-6c67-4c5b-b112-36a304b66dad",
+            "app.auth.microsoft.client-id=test"
+        ).run {
+            assertThat(it).hasSingleBean(MicrosoftOAuth2Service::class.java)
+            assertThat(it).hasSingleBean(MicrosoftAuthController::class.java)
+            assertThat(it.containsBean("microsoftJwtDecoder")).isTrue()
+            assertThat(it.containsBean("microsoftOAuth2Service")).isTrue()
+        }
+        consumerContextRunner().run {
+            assertThat(it).doesNotHaveBean(MicrosoftOAuth2Service::class.java)
+            assertThat(it).doesNotHaveBean(MicrosoftAuthController::class.java)
+        }
+    }
+
+    @Test
+    fun `microsoft refuses a multi-tenant endpoint`() {
+        listOf("common", "organizations", "contoso.com").forEach { tenant ->
+            consumerContextRunner(
+                "app.auth.microsoft.enabled=true",
+                "app.auth.microsoft.tenant-id=$tenant",
+                "app.auth.microsoft.client-id=test"
+            ).run {
+                assertThat(it).hasFailed()
+                assertThat(it.startupFailure).hasStackTraceContaining("tenant-id must be the tenant's directory id")
+            }
+        }
+    }
+
+    @Test
+    fun `microsoft accepts ADFS through an explicit issuer and key set`() {
+        consumerContextRunner(
+            "app.auth.microsoft.enabled=true",
+            "app.auth.microsoft.issuer-uri=https://adfs.corp.local/adfs",
+            "app.auth.microsoft.jwk-set-uri=https://adfs.corp.local/adfs/discovery/keys",
+            "app.auth.microsoft.client-id=test"
+        ).run { assertThat(it).hasSingleBean(MicrosoftOAuth2Service::class.java) }
     }
 
     @Test

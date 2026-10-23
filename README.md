@@ -135,6 +135,9 @@ The starter auto-registers these endpoints:
 | `POST /api/v1/auth/local/login` | Login with email + password |
 | `POST /api/v1/auth/google` | Google ID token auth |
 | `POST /api/v1/auth/apple` | Apple ID token auth |
+| `POST /api/v1/auth/microsoft` | Microsoft Entra ID / ADFS ID token auth |
+| `POST /api/v1/auth/active-directory/login` | Active Directory username + password |
+| `POST /api/v1/auth/active-directory/kerberos` | Active Directory Kerberos single sign-on (SPNEGO) |
 | `POST /api/v1/auth/email/request` | Request passwordless email OTP |
 | `POST /api/v1/auth/email/verify` | Verify email OTP |
 | `POST /api/v1/auth/phone/request` | Request SMS OTP |
@@ -357,6 +360,73 @@ be set through its standard environment variable (`app.auth.local.enabled` →
 | `app.auth.refresh-token.expiry-days` | `30` | Refresh token TTL |
 | `app.auth.email-verification.enabled` | `false` | Gate new LOCAL registrations behind email confirmation (see below) |
 
+### Active Directory and Microsoft Entra ID
+
+Corporate accounts, for applications whose users already have one: the same login as Windows, 1C or
+Teams. Three ways in, each switched on separately; all of them create the user on first login
+(`app.auth.registration.enabled` does not apply — the directory decides) and refuse with `409` an
+email that already belongs to an account not linked to that directory id.
+
+| Way in | Endpoint | When |
+|---|---|---|
+| Domain username + password over LDAP | `POST /api/v1/auth/active-directory/login` `{"username","password"}` | On-premises AD reachable from the server |
+| Kerberos (SPNEGO), no form | `POST /api/v1/auth/active-directory/kerberos` | Browsers on domain-joined machines |
+| Microsoft ID token (OIDC) | `POST /api/v1/auth/microsoft` `{"idToken"}` | Entra ID (Teams / Microsoft 365 tenant), or on-premises ADFS |
+
+```yaml
+app:
+  auth:
+    active-directory:
+      enabled: true
+      urls: [ldaps://dc1.corp.local:636, ldaps://dc2.corp.local:636]
+      base-dn: DC=corp,DC=local
+      bind-dn: CN=svc-app,OU=Service,DC=corp,DC=local   # read-only service account
+      bind-password: ${AD_BIND_PASSWORD}
+      access:
+        required-groups: [App Users]                      # empty = every enabled account
+        admin-groups: ["CN=App Admins,OU=Groups,DC=corp,DC=local"]
+      kerberos:                                           # optional
+        enabled: true
+        service-principal: HTTP/app.corp.local@CORP.LOCAL
+        keytab: /etc/app/app.keytab
+    microsoft:
+      enabled: true
+      tenant-id: 00000000-0000-0000-0000-000000000000     # directory id GUID, never "common"
+      client-id: 11111111-1111-1111-1111-111111111111
+      access:
+        required-groups: [22222222-2222-2222-2222-222222222222]   # group object ids or app roles
+```
+
+- **Groups and roles.** A group entry containing `=` matches a group DN, any other entry matches the
+  group name (or, for Entra ID, the object id / app role value). Members of `admin-groups` get
+  `ADMIN`; with `access.sync-roles: true` (default) leaving the group takes it away again. All the
+  user's groups go into the access token's `groups` claim, for the application's own checks —
+  limit them with `access.published-groups`: nested AD membership can reach hundreds of groups,
+  which bloats every token and overflows the 4 KB cookie in cookie mode. A DN
+  contains commas, so give it as a YAML list item, or by index in an environment variable
+  (`APP_AUTH_ACTIVEDIRECTORY_ACCESS_ADMINGROUPS_0`) — a comma-separated value is split at its commas.
+- **Leavers.** Before every refresh the AD account is looked up again
+  (`active-directory.refresh-check.enabled`, default on): deleted, disabled (`userAccountControl`),
+  expired (`accountExpires`) or removed from the required groups ends every session of the user.
+  While the directory is unreachable a refresh answers `503` and the refresh token stays valid.
+  Entra ID / ADFS users have no such check — keep `refresh-token.expiry-days` short for them.
+- **Lockout.** Wrong passwords are limited per login by `app.auth.rate-limit.directory-login`
+  (3 per 15 min by default). Keep it below the domain's lockout threshold: every wrong password
+  here also counts there.
+- **Transport.** A production profile refuses `ldap://` URLs (passwords in clear text) unless
+  `allow-plaintext: true`. Import the domain CA into the JVM trust store for `ldaps://`.
+- **Kerberos** needs an SPN for the application's host name and a keytab from the domain admin
+  (`setspn`, `ktpass`), and the browser must treat the site as intranet (Edge/Chrome
+  `AuthServerAllowlist`, Firefox `network.negotiate-auth.trusted-uris`). The page calls the endpoint
+  with `fetch(url, {method: "POST", credentials: "include"})`; the browser answers the `401 Negotiate`
+  challenge by itself. Kerberos uses the LDAP settings to look the user up.
+- **ADFS** instead of Entra ID: set `microsoft.issuer-uri` (`https://adfs.corp.local/adfs`) and
+  `microsoft.jwk-set-uri` (`https://adfs.corp.local/adfs/discovery/keys`) instead of `tenant-id`,
+  and `group-claims: [group]`.
+- **Not AD?** Any LDAP directory works with `user-search-filter`, `attributes.*` and
+  `nested-groups: false` changed — see `ActiveDirectoryProperties`. Replace the `DirectoryClient`
+  or `KerberosTicketValidator` bean to plug in another implementation.
+
 ### Security and Limits
 
 | Property | Default | Description |
@@ -501,15 +571,16 @@ keystore, outside production profiles, RSA keys are generated in-memory and chan
 
 ## Database Schema
 
-The starter's Flyway migrations (`classpath:db/migration-auth`, V1 through V17) create these tables
+The starter's Flyway migrations (`classpath:db/migration-auth`, V1 through V18) create these tables
 in the `auth` schema:
 
 ```
 users                    — id, email, name, picture, password_hash, phone, email_verified, telegram ids, version
-user_providers           — user_id, provider (GOOGLE|APPLE|LOCAL|TELEGRAM)
+user_providers           — user_id, provider (GOOGLE|APPLE|LOCAL|TELEGRAM|ACTIVE_DIRECTORY|MICROSOFT)
 user_provider_ids        — user_id, provider, provider_id (unique per provider)
 user_roles               — user_id, role (USER|ADMIN)
 user_required_actions    — user_id, action (VERIFY_EMAIL|UPDATE_PASSWORD|VERIFY_PHONE)
+user_directory_groups    — user_id, group_name (from Active Directory / Entra ID)
 refresh_tokens           — id, user_id, token_hash, expires_at, revoked, used_at, authenticated_at
 verification_codes       — id, user_id, identifier, purpose, code_hash, expires_at, attempts
 telegram_auth_sessions   — Telegram login sessions
@@ -552,7 +623,7 @@ identifiers are compared without letter case.
 
 ## Account Linking
 
-Google and Apple returning users are identified by their provider subject. A new provider identity whose email matches an existing account receives 409; email matching alone never links credentials. Local registration also returns 409 for an existing email. Implement an explicit owner-verified linking flow if the product needs multi-provider accounts. Existing linked accounts remain usable by their saved provider IDs.
+Google, Apple, Active Directory and Microsoft returning users are identified by their provider subject (for the directories: `objectGUID`, Entra `oid`). A new provider identity whose email matches an existing account receives 409; email matching alone never links credentials. Local registration also returns 409 for an existing email. Implement an explicit owner-verified linking flow if the product needs multi-provider accounts. Existing linked accounts remain usable by their saved provider IDs.
 
 Phone-only users have `email = ""` with a partial unique index.
 

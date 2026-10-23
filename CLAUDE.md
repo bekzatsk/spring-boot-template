@@ -66,6 +66,7 @@ Cross-cutting concerns:
 - **Token issuance goes through `AuthTokenIssuer`** — every provider (local, Google, Apple, phone, Telegram) delegates there, so JWT contents change in one place.
 - **External I/O never runs inside a transaction.** SMTP, FCM, Telegram and SMS calls are deferred with `AfterCommitRunner`; token verification (Google certs, Apple JWKS) happens before the transactional work starts.
 - **`@Async` uses the bounded `authStarterTaskExecutor`** (`AsyncConfig`), not Spring's unbounded default.
+- **Directory logins (Active Directory over LDAP/Kerberos, Entra ID/ADFS over OIDC) sync the user on every login** through `UserService.syncDirectoryUser`: groups land in `user_directory_groups` and the `groups` JWT claim, `admin-groups` drive `ADMIN`. LDAP goes through the JDK's JNDI (`JndiDirectoryClient`), not Spring LDAP — Boot's LDAP auto-configuration would add a health indicator that reports DOWN in every consumer without a directory. AD accounts are re-checked before each refresh through the `RefreshAccountCheck` port, which runs **before** rotation and outside a transaction so a directory outage (503) does not spend the client's refresh token.
 - **SMS/Email services are interfaces** with console-logging defaults. Real providers plug in via `@Bean` (the default uses `@ConditionalOnMissingBean`). The console fallbacks never log the code itself.
 - **Virtual threads** are enabled (`spring.threads.virtual.enabled: true`).
 - **Dev profile** uses in-memory RSA keys, `dev-code` OTP overrides, and console logging for SMS/email/push.
@@ -84,6 +85,7 @@ Cross-cutting concerns:
 - **`src/main/resources/application*.yaml` are for this repo's runnable app only** and are excluded from the jar (`maven-jar-plugin`); CI fails if they ship. Starter defaults belong in the `@ConfigurationProperties` classes.
 - **Admin-only endpoints**: `/api/v1/admin/**`, `POST /api/v1/notifications/send/topic` (broadcast), `/api/v1/mail/inbox/**` (shared org mailbox), `/api/v1/mail/send/**` (outbound mail from the app domain), `/actuator/**` except health.
 - **Ownership checks**: push send/multicast and topic subscribe only accept FCM tokens registered to the caller. An FCM token is unique; registering one another user holds takes it over.
+- **AD password login is limited below the domain lockout threshold** (`rate-limit.directory-login`): every wrong password also counts against the AD account, so a looser limit lets anyone lock colleagues out of Windows. An empty password is refused before the bind — an LDAP simple bind with an empty password is "unauthenticated" and succeeds. A production profile refuses `ldap://` URLs unless `allow-plaintext`. Entra `tenant-id` must be a GUID: `common`/`organizations` would accept tokens from every tenant.
 - **Rate limits**: Telegram resend has a server-side cooldown plus a per-session cap; mail send has a per-user hourly quota and attachment caps (`app.mail.limits.*`).
 - **Code sends are limited per client address and per purpose** (`VerificationCodeService.checkSendAllowed`, against SMS toll fraud). Flows that pretend to send a code to hide whether an account exists must call it too. The client address is `request.remoteAddr`: behind a proxy, `server.forward-headers-strategy` must be set.
 - **`InMemoryRateLimiter` evicts lowest-count entries at capacity** rather than refusing new keys, which let a flood of fresh keys lock everyone else out.
@@ -95,7 +97,7 @@ Tests use H2 in-memory DB with Flyway disabled and `create-drop` DDL. External d
 
 ## Database Migrations
 
-Flyway migrations in `src/main/resources/db/migration-auth/` (V1 through V17), applied to the `auth` schema by the starter's own Flyway bean (`AuthFlywayConfig`). Dev profile has `clean-on-validation-error: true`; prod uses strict validation. **Never edit a migration that shipped in a release** — every database that applied it fails checksum validation; add a new version instead.
+Flyway migrations in `src/main/resources/db/migration-auth/` (V1 through V18), applied to the `auth` schema by the starter's own Flyway bean (`AuthFlywayConfig`). Dev profile has `clean-on-validation-error: true`; prod uses strict validation. **Never edit a migration that shipped in a release** — every database that applied it fails checksum validation; add a new version instead.
 
 The test suite never executes migrations (H2 `create-drop`), so a broken migration passes `./mvnw test`. CI (`.github/workflows/ci.yml`) has a separate job that applies every migration to PostgreSQL 18 and fails if any entity table lacks a `version` column — when adding a new entity, add its table to that job's `entity_tables` list.
 

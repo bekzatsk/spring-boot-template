@@ -4,6 +4,8 @@ import kz.innlab.starter.autoconfigure.AuthCoreAutoConfiguration
 import kz.innlab.starter.autoconfigure.AuthProvidersAutoConfiguration
 import kz.innlab.starter.autoconfigure.NotificationAutoConfiguration
 import kz.innlab.starter.autoconfigure.UserAutoConfiguration
+import kz.innlab.starter.config.ActiveDirectoryConfig
+import kz.innlab.starter.config.ActiveDirectoryProperties
 import kz.innlab.starter.config.AppleAuthConfig
 import kz.innlab.starter.config.AsyncConfig
 import kz.innlab.starter.config.AuthCookieProperties
@@ -23,6 +25,8 @@ import kz.innlab.starter.config.RateLimitProperties
 import kz.innlab.starter.config.NotificationConfig
 import kz.innlab.starter.config.OpenApiConfig
 import kz.innlab.starter.config.MethodSecurityConfig
+import kz.innlab.starter.config.MicrosoftAuthConfig
+import kz.innlab.starter.config.MicrosoftAuthProperties
 import kz.innlab.starter.config.ProductionSafetyConfig
 import kz.innlab.starter.config.RsaKeyConfig
 import kz.innlab.starter.config.SecurityConfig
@@ -62,7 +66,9 @@ import org.springframework.context.annotation.Import
     AuthSecurityProperties::class,
     AuthCookieProperties::class,
     JwtIdentityProperties::class,
-    ConsoleFallbackProperties::class
+    ConsoleFallbackProperties::class,
+    ActiveDirectoryProperties::class,
+    MicrosoftAuthProperties::class
 )
 @Import(
     // feature beans
@@ -86,6 +92,8 @@ import org.springframework.context.annotation.Import
     TelegramConfig::class,
     GoogleAuthConfig::class,
     AppleAuthConfig::class,
+    MicrosoftAuthConfig::class,
+    ActiveDirectoryConfig::class,
     LocalAuthConfig::class
 )
 class AuthAutoConfiguration

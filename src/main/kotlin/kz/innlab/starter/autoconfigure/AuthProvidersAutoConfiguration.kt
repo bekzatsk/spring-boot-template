@@ -1,22 +1,29 @@
 package kz.innlab.starter.autoconfigure
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier
+import kz.innlab.starter.authentication.controller.ActiveDirectoryAuthController
 import kz.innlab.starter.authentication.controller.AppleAuthController
 import kz.innlab.starter.authentication.controller.EmailOtpController
 import kz.innlab.starter.authentication.controller.GoogleAuthController
+import kz.innlab.starter.authentication.controller.KerberosAuthController
 import kz.innlab.starter.authentication.controller.LocalAuthController
+import kz.innlab.starter.authentication.controller.MicrosoftAuthController
 import kz.innlab.starter.authentication.controller.PhoneAuthController
 import kz.innlab.starter.authentication.controller.TelegramAuthController
 import kz.innlab.starter.authentication.controller.TelegramWebhookController
 import kz.innlab.starter.authentication.repository.TelegramAuthSessionRepository
 import kz.innlab.starter.authentication.service.AccountManagementService
+import kz.innlab.starter.authentication.service.ActiveDirectoryAuthService
+import kz.innlab.starter.authentication.service.DirectoryClient
 import kz.innlab.starter.authentication.service.AppleOAuth2Service
 import kz.innlab.starter.authentication.service.AuthTokenIssuer
 import kz.innlab.starter.authentication.service.EmailService
 import kz.innlab.starter.authentication.service.EmailOtpService
 import kz.innlab.starter.authentication.service.GoogleOAuth2Service
+import kz.innlab.starter.authentication.service.KerberosTicketValidator
 import kz.innlab.starter.authentication.service.LocalAuthService
 import kz.innlab.starter.authentication.service.LocalUserDetailsService
+import kz.innlab.starter.authentication.service.MicrosoftOAuth2Service
 import kz.innlab.starter.authentication.service.OtpDeliveryService
 import kz.innlab.starter.authentication.service.PhoneOtpService
 import kz.innlab.starter.authentication.service.TelegramAuthService
@@ -25,7 +32,9 @@ import kz.innlab.starter.authentication.service.TelegramBotMessages
 import kz.innlab.starter.authentication.service.TelegramBotService
 import kz.innlab.starter.authentication.service.VerificationCodeService
 import kz.innlab.starter.authentication.repository.RefreshTokenRepository
+import kz.innlab.starter.config.ActiveDirectoryProperties
 import kz.innlab.starter.config.AuthTokenProperties
+import kz.innlab.starter.config.MicrosoftAuthProperties
 import kz.innlab.starter.config.RateLimitProperties
 import kz.innlab.starter.shared.ratelimit.RateLimiter
 import kz.innlab.starter.config.TelegramAuthProperties
@@ -201,5 +210,63 @@ class AuthProvidersAutoConfiguration {
             telegramAuthService: TelegramAuthService,
             telegramProperties: TelegramAuthProperties
         ): TelegramWebhookController = TelegramWebhookController(telegramAuthService, telegramProperties)
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnProperty(name = ["app.auth.microsoft.enabled"], havingValue = "true")
+    class MicrosoftAuth {
+
+        @Bean
+        @ConditionalOnMissingBean
+        fun microsoftOAuth2Service(
+            @Qualifier("microsoftJwtDecoder") microsoftJwtDecoder: JwtDecoder,
+            userService: UserService,
+            authTokenIssuer: AuthTokenIssuer,
+            properties: MicrosoftAuthProperties
+        ): MicrosoftOAuth2Service = MicrosoftOAuth2Service(microsoftJwtDecoder, userService, authTokenIssuer, properties)
+
+        @Bean
+        @ConditionalOnMissingBean
+        fun microsoftAuthController(microsoftOAuth2Service: MicrosoftOAuth2Service): MicrosoftAuthController =
+            MicrosoftAuthController(microsoftOAuth2Service)
+    }
+
+    /**
+     * The service is also the refresh-time account check, which is why it exists whenever the
+     * directory is on, even with both login endpoints switched off.
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnProperty(name = ["app.auth.active-directory.enabled"], havingValue = "true")
+    class ActiveDirectoryAuth {
+
+        @Bean
+        @ConditionalOnMissingBean
+        fun activeDirectoryAuthService(
+            directoryClient: DirectoryClient,
+            userService: UserService,
+            authTokenIssuer: AuthTokenIssuer,
+            properties: ActiveDirectoryProperties,
+            rateLimiter: RateLimiter,
+            rateLimitProperties: RateLimitProperties
+        ): ActiveDirectoryAuthService = ActiveDirectoryAuthService(
+            directoryClient, userService, authTokenIssuer, properties, rateLimiter, rateLimitProperties
+        )
+
+        @Bean
+        @ConditionalOnMissingBean
+        @ConditionalOnProperty(
+            name = ["app.auth.active-directory.password-login.enabled"], havingValue = "true", matchIfMissing = true
+        )
+        fun activeDirectoryAuthController(
+            activeDirectoryAuthService: ActiveDirectoryAuthService
+        ): ActiveDirectoryAuthController = ActiveDirectoryAuthController(activeDirectoryAuthService)
+
+        @Bean
+        @ConditionalOnMissingBean
+        @ConditionalOnProperty(name = ["app.auth.active-directory.kerberos.enabled"], havingValue = "true")
+        fun kerberosAuthController(
+            kerberosTicketValidator: KerberosTicketValidator,
+            activeDirectoryAuthService: ActiveDirectoryAuthService
+        ): KerberosAuthController = KerberosAuthController(kerberosTicketValidator, activeDirectoryAuthService)
     }
 }

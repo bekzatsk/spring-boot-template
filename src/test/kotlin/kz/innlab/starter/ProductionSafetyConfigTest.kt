@@ -5,6 +5,7 @@ import kz.innlab.starter.authentication.service.ConsoleTelegramBotService
 import kz.innlab.starter.authentication.service.ConsoleSmsService
 import kz.innlab.starter.authentication.service.EmailService
 import kz.innlab.starter.authentication.service.SmsService
+import kz.innlab.starter.config.ActiveDirectoryProperties
 import kz.innlab.starter.config.ProductionSafetyConfig
 import kz.innlab.starter.notification.service.ConsoleEmailService
 import kz.innlab.starter.notification.service.ConsoleMailService
@@ -12,6 +13,7 @@ import kz.innlab.starter.notification.service.EmailAttachment
 import kz.innlab.starter.notification.service.MailService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -54,9 +56,12 @@ class ProductionSafetyConfigTest {
 
     private fun runner(vararg properties: String) = runnerFor("prod", *properties)
 
+    @EnableConfigurationProperties(ActiveDirectoryProperties::class)
+    class DirectoryPropertiesConfig
+
     private fun runnerFor(profile: String, vararg properties: String) = ApplicationContextRunner()
         .withInitializer { it.environment.setActiveProfiles(profile) }
-        .withUserConfiguration(ProductionSafetyConfig::class.java)
+        .withUserConfiguration(ProductionSafetyConfig::class.java, DirectoryPropertiesConfig::class.java)
         .withBean(SmsService::class.java, { RealSmsService() })
         .withBean(EmailService::class.java, { RealEmailService() })
         .withBean(MailService::class.java, { RealMailService() })
@@ -72,6 +77,33 @@ class ProductionSafetyConfigTest {
             assertThat(context).hasNotFailed()
             assertThat(context).hasBean("productionSafetyGuard")
         }
+    }
+
+    private val directory = arrayOf(
+        "app.auth.active-directory.enabled=true",
+        "app.auth.active-directory.base-dn=dc=corp,dc=local",
+        "app.auth.active-directory.bind-dn=cn=svc,dc=corp,dc=local",
+        "app.auth.active-directory.bind-password=secret"
+    )
+
+    @Test
+    fun `refuses active directory over plain ldap`() {
+        runner(*directory, "app.auth.active-directory.urls=ldap://dc1.corp.local:389").run { context ->
+            assertThat(context).hasFailed()
+            assertThat(context.startupFailure).hasStackTraceContaining("domain passwords would cross the network in clear text")
+        }
+    }
+
+    @Test
+    fun `allows active directory over ldaps, or plain ldap when explicitly waived`() {
+        runner(*directory, "app.auth.active-directory.urls=ldaps://dc1.corp.local:636").run { context ->
+            assertThat(context).hasNotFailed()
+        }
+        runner(
+            *directory,
+            "app.auth.active-directory.urls=ldap://dc1.corp.local:389",
+            "app.auth.active-directory.allow-plaintext=true"
+        ).run { context -> assertThat(context).hasNotFailed() }
     }
 
     @Test

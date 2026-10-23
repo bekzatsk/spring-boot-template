@@ -19,7 +19,7 @@ import org.hibernate.annotations.UpdateTimestamp
 import java.time.Instant
 
 /**
- * The four @ElementCollection fields stay EAGER because callers read them outside the loading
+ * The five @ElementCollection fields stay EAGER because callers read them outside the loading
  * transaction (token issuance runs after the provider services' DB work, and open-in-view is off).
  * Hibernate cannot join several bag collections in one query, so each would otherwise cost one
  * extra SELECT per user; @BatchSize collapses those into batched IN queries per page.
@@ -101,6 +101,22 @@ class User(
     )
     @Column(name = "action")
     var requiredActions: MutableSet<RequiredAction> = mutableSetOf()
+
+    /**
+     * Group names from the directory the user last signed in through (Active Directory, Entra ID),
+     * replaced on every directory login. Published in the access token's `groups` claim so the
+     * application can authorize by group without a role per group in the starter.
+     */
+    @BatchSize(size = 100)
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+        name = "user_directory_groups",
+        schema = "auth",
+        joinColumns = [JoinColumn(name = "user_id")],
+        uniqueConstraints = [UniqueConstraint(columnNames = ["user_id", "group_name"])]
+    )
+    @Column(name = "group_name", length = 512)
+    var directoryGroups: MutableSet<String> = mutableSetOf()
 
     /**
      * Links a login provider to this account, optionally recording the provider's own user id.
