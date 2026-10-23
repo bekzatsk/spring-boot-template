@@ -1,8 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.8 — 2026-10-23
 
-Adds migration `V17__telegram_session_phone.sql`.
+Bug fix release: 0.1.7 and earlier never delivered one-time-code emails through the built-in
+SMTP or external mail service. Also Google account linking and Telegram phone sharing. Adds
+migration `V17__telegram_session_phone.sql`. No breaking changes for applications that only
+configure the starter; see **Changed** if you construct its classes yourself.
 
 ### Added
 
@@ -53,6 +56,17 @@ Adds migration `V17__telegram_session_phone.sql`.
   instead of `FAILED`.
 - Successful sends through `ExternalMailService`, and code emails over SMTP, are logged at INFO
   with a masked address; before, success was visible only at DEBUG.
+
+### Changed
+
+- Code email copy: subjects such as "Your sign-in code" replace "EMAIL_LOGIN Verification Code",
+  and SMTP code emails are multipart (text + HTML).
+- The external mail service read timeout defaults to 30 s (was a fixed 15 s).
+- For code that constructs or calls starter classes directly (Kotlin source compatible, not binary
+  compatible — recompile): `ExternalMailService`, `SmtpMailService` and `GoogleOAuth2Service` take
+  one more constructor argument with a default, and `UserService.findOrCreateGoogleUser` takes a
+  `linkByVerifiedEmail` argument with a default. `ExternalMailService.send` can throw
+  `MailOutcomeUnknownException` when the service answers too late.
 
 ## 0.1.7 — 2026-10-06
 
