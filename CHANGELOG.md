@@ -23,6 +23,17 @@ Adds migration `V17__telegram_session_phone.sql`.
   bean of this type to translate or rebrand them.
 - `app.mail.external.connect-timeout` (default 5 s) and `app.mail.external.read-timeout`
   (default 30 s, was a fixed 15 s).
+- **Linking Google to an existing account.** `POST /api/v1/users/me/providers/google` with
+  `{ "idToken": … }` links a Google account to the signed-in user when Google has verified its
+  email and the email equals the user's (case-insensitive); a different email answers 403, a
+  Google account linked to another user or a second Google account 409. A matching link also
+  marks the user's email verified. The 409 on Google sign-in said "sign in to link a provider",
+  but there was no way to do so, so invite-only applications (`registration.enabled=false`) could
+  not let anyone in through Google.
+- `app.auth.google.link-by-verified-email` (off by default): Google sign-in links an existing
+  account with the same Google-verified email instead of answering 409. It does not apply to an
+  account whose email is unverified, to an admin, or to an account with another Google account
+  linked.
 
 ### Fixed
 

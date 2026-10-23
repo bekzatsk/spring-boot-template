@@ -4,6 +4,7 @@ import kz.innlab.starter.authentication.controller.AccountManagementController
 import kz.innlab.starter.authentication.controller.AppleAuthController
 import kz.innlab.starter.authentication.controller.AuthController
 import kz.innlab.starter.authentication.controller.EmailOtpController
+import kz.innlab.starter.authentication.controller.GoogleAccountLinkController
 import kz.innlab.starter.authentication.controller.GoogleAuthController
 import kz.innlab.starter.authentication.controller.LocalAuthController
 import kz.innlab.starter.authentication.controller.PhoneAuthController
@@ -116,6 +117,7 @@ class AutoConfigurationContractTest {
     private val enabledByTestConfig: List<KClass<*>> = listOf(
         GoogleOAuth2Service::class,
         GoogleAuthController::class,
+        GoogleAccountLinkController::class,
         AppleOAuth2Service::class,
         AppleAuthController::class,
         TelegramAuthService::class,

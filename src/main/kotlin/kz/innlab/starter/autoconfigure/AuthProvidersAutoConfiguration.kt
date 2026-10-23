@@ -3,6 +3,7 @@ package kz.innlab.starter.autoconfigure
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier
 import kz.innlab.starter.authentication.controller.AppleAuthController
 import kz.innlab.starter.authentication.controller.EmailOtpController
+import kz.innlab.starter.authentication.controller.GoogleAccountLinkController
 import kz.innlab.starter.authentication.controller.GoogleAuthController
 import kz.innlab.starter.authentication.controller.LocalAuthController
 import kz.innlab.starter.authentication.controller.PhoneAuthController
@@ -15,6 +16,7 @@ import kz.innlab.starter.authentication.service.AuthTokenIssuer
 import kz.innlab.starter.authentication.service.EmailService
 import kz.innlab.starter.authentication.service.EmailOtpService
 import kz.innlab.starter.authentication.service.GoogleOAuth2Service
+import kz.innlab.starter.config.GoogleAuthProperties
 import kz.innlab.starter.authentication.service.LocalAuthService
 import kz.innlab.starter.authentication.service.LocalUserDetailsService
 import kz.innlab.starter.authentication.service.OtpDeliveryService
@@ -93,13 +95,20 @@ class AuthProvidersAutoConfiguration {
         fun googleOAuth2Service(
             googleIdTokenVerifier: GoogleIdTokenVerifier,
             userService: UserService,
-            authTokenIssuer: AuthTokenIssuer
-        ): GoogleOAuth2Service = GoogleOAuth2Service(googleIdTokenVerifier, userService, authTokenIssuer)
+            authTokenIssuer: AuthTokenIssuer,
+            googleAuthProperties: GoogleAuthProperties
+        ): GoogleOAuth2Service =
+            GoogleOAuth2Service(googleIdTokenVerifier, userService, authTokenIssuer, googleAuthProperties)
 
         @Bean
         @ConditionalOnMissingBean
         fun googleAuthController(googleOAuth2Service: GoogleOAuth2Service): GoogleAuthController =
             GoogleAuthController(googleOAuth2Service)
+
+        @Bean
+        @ConditionalOnMissingBean
+        fun googleAccountLinkController(googleOAuth2Service: GoogleOAuth2Service): GoogleAccountLinkController =
+            GoogleAccountLinkController(googleOAuth2Service)
     }
 
     @Configuration(proxyBeanMethods = false)
