@@ -1,7 +1,9 @@
 package kz.innlab.starter.config
 
 import kz.innlab.starter.shared.transaction.AfterCommitRunner
+import kz.innlab.starter.authentication.service.DefaultVerificationEmailMessages
 import kz.innlab.starter.authentication.service.EmailService
+import kz.innlab.starter.authentication.service.VerificationEmailMessages
 import kz.innlab.starter.notification.repository.MailHistoryRepository
 import kz.innlab.starter.notification.service.ConsoleEmailService
 import kz.innlab.starter.notification.service.ConsoleMailService
@@ -21,6 +23,10 @@ import org.springframework.mail.javamail.JavaMailSenderImpl
 @EnableConfigurationProperties(MailProperties::class)
 class MailConfig {
 
+    @Bean
+    @ConditionalOnMissingBean(VerificationEmailMessages::class)
+    fun verificationEmailMessages(): VerificationEmailMessages = DefaultVerificationEmailMessages()
+
     // --- External mail service (HTTP API) ---
 
     @Bean
@@ -28,8 +34,10 @@ class MailConfig {
     fun externalMailService(
         mailProperties: MailProperties,
         mailHistoryRepository: MailHistoryRepository,
-        afterCommitRunner: AfterCommitRunner
-    ): ExternalMailService = ExternalMailService(mailProperties, mailHistoryRepository, afterCommitRunner)
+        afterCommitRunner: AfterCommitRunner,
+        verificationEmailMessages: VerificationEmailMessages
+    ): ExternalMailService =
+        ExternalMailService(mailProperties, mailHistoryRepository, afterCommitRunner, verificationEmailMessages)
 
     // --- Direct SMTP (only when external is not configured) ---
 
@@ -64,8 +72,10 @@ class MailConfig {
         mailProperties: MailProperties,
         mailHistoryRepository: MailHistoryRepository,
         mailDispatcher: MailDispatcher,
-        afterCommitRunner: kz.innlab.starter.shared.transaction.AfterCommitRunner
-    ): SmtpMailService = SmtpMailService(mailProperties, mailHistoryRepository, mailDispatcher, afterCommitRunner)
+        afterCommitRunner: kz.innlab.starter.shared.transaction.AfterCommitRunner,
+        verificationEmailMessages: VerificationEmailMessages
+    ): SmtpMailService =
+        SmtpMailService(mailProperties, mailHistoryRepository, mailDispatcher, afterCommitRunner, verificationEmailMessages)
 
     // --- Fallback (console logging) ---
     // Two single-interface beans: mocking EmailService in tests replaces only consoleEmailService

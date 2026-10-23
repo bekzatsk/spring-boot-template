@@ -19,6 +19,29 @@ Adds migration `V17__telegram_session_phone.sql`.
   `TelegramBotMessages.phoneRequest` / `phoneButton` / `phoneRejected`. All have default
   implementations, so existing custom beans keep compiling; a custom `TelegramBotService` must
   override `requestContact` to show the button.
+- `VerificationEmailMessages`: subject, plain text and HTML of one-time-code emails. Declare a
+  bean of this type to translate or rebrand them.
+- `app.mail.external.connect-timeout` (default 5 s) and `app.mail.external.read-timeout`
+  (default 30 s, was a fixed 15 s).
+
+### Fixed
+
+- **Code emails were never sent by the starter's own mail services.** `EmailOtpService` and
+  `LocalAuthService` defer `sendCode` until after commit, and `SmtpMailService` /
+  `ExternalMailService` deferred the send a second time. Spring runs `afterCommit` over a snapshot
+  of the registered synchronizations, so the second registration never ran: the request answered
+  200, the code was stored, and no email left — with no log line, even at DEBUG. The dev profile's
+  `ConsoleEmailService` and the test suite's mocked `EmailService` both hid it.
+  `AfterCommitRunner` now runs an action at once when it is called from an action it is already
+  running after commit.
+- **Code emails showed the internal purpose name** ("EMAIL_LOGIN Verification Code"). The default
+  copy is now readable English with an HTML version.
+- **`ExternalMailService` reported mail that was sent as failed** when the service answered after
+  the read timeout. A late answer is now logged as a warning ("the email may have been sent"),
+  `send` throws `MailOutcomeUnknownException`, and `sendEmail` leaves the history row `PENDING`
+  instead of `FAILED`.
+- Successful sends through `ExternalMailService`, and code emails over SMTP, are logged at INFO
+  with a masked address; before, success was visible only at DEBUG.
 
 ## 0.1.7 — 2026-10-06
 

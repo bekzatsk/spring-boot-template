@@ -278,6 +278,19 @@ class MyServicesConfig {
 
 Similarly, `PushService` and `MailService` can be overridden.
 
+The wording of code emails sent by the built-in SMTP and external mail services comes from the
+`VerificationEmailMessages` bean (English by default). Replace it to translate or rebrand:
+
+```kotlin
+@Bean
+fun verificationEmailMessages(): VerificationEmailMessages = object : VerificationEmailMessages {
+    override fun compose(purpose: String, code: String) = when (purpose) {
+        "EMAIL_LOGIN" -> VerificationEmail("Код для входа", "Ваш код для входа: $code")
+        else -> VerificationEmail("Код подтверждения", "Ваш код подтверждения: $code")
+    }
+}
+```
+
 ### Adding Your Own Secured Endpoints
 
 The starter configures Spring Security with JWT. Your endpoints are secured by default. To allow
@@ -484,6 +497,7 @@ keystore, outside production profiles, RSA keys are generated in-memory and chan
 | `app.mail.imap.username` / `password` | — | IMAP credentials |
 | `app.mail.imap.ssl-enabled` | `true` | SSL for IMAP |
 | `app.mail.external.base-url` / `master-key` | — | Use an external mail HTTP service instead of SMTP |
+| `app.mail.external.connect-timeout` / `read-timeout` | `5s` / `30s` | Timeouts for the external mail service. A late answer is logged as "may have been sent", not as a failure |
 | `app.mail.limits.per-user-per-hour` | `20` | Send quota per sender |
 | `app.mail.limits.max-attachments` | `10` | Attachments per message |
 | `app.mail.limits.max-attachment-bytes` | `5 MB` | Per attachment |

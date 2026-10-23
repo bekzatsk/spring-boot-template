@@ -32,6 +32,7 @@ import kz.innlab.starter.authentication.service.TelegramAuthService
 import kz.innlab.starter.authentication.service.TokenService
 import kz.innlab.starter.authentication.service.VerificationAttemptRecorder
 import kz.innlab.starter.authentication.service.VerificationCodeService
+import kz.innlab.starter.authentication.service.VerificationEmailMessages
 import kz.innlab.starter.authentication.service.EmailService
 import kz.innlab.starter.notification.controller.MailController
 import kz.innlab.starter.notification.controller.NotificationController
@@ -80,6 +81,7 @@ class AutoConfigurationContractTest {
         TokenService::class,
         VerificationAttemptRecorder::class,
         VerificationCodeService::class,
+        VerificationEmailMessages::class,
         AccountManagementController::class,
         AuthController::class,
         AuthResponseCookieAdvice::class,
