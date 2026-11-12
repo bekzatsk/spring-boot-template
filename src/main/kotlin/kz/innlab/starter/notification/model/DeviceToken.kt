@@ -23,7 +23,12 @@ class DeviceToken(
     var fcmToken: String,
 
     @Column(name = "device_id", nullable = false)
-    val deviceId: String
+    val deviceId: String,
+
+    /** Whether [fcmToken] holds a registration token or a Firebase Installation ID. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "target_type", nullable = false, length = 16)
+    var targetType: PushTargetType = PushTargetType.TOKEN
 ) : BaseEntity() {
 
     @Column(name = "created_at", nullable = false, updatable = false)

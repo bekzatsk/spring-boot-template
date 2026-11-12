@@ -8,20 +8,28 @@ import kz.innlab.starter.notification.model.NotificationStatus
 import kz.innlab.starter.notification.model.NotificationTopic
 import kz.innlab.starter.notification.model.NotificationType
 import kz.innlab.starter.notification.model.Platform
+import kz.innlab.starter.notification.model.PushTargetType
 import kz.innlab.starter.notification.repository.DeviceTokenRepository
 import kz.innlab.starter.notification.repository.NotificationHistoryRepository
 import kz.innlab.starter.notification.repository.NotificationTopicRepository
 import kz.innlab.starter.notification.service.PushService
+import kz.innlab.starter.notification.service.PushTarget
 import kz.innlab.starter.user.model.AuthProvider
 import kz.innlab.starter.user.model.Role
 import kz.innlab.starter.user.model.User
 import kz.innlab.starter.user.repository.UserRepository
+import org.awaitility.kotlin.atMost
+import org.awaitility.kotlin.await
+import org.awaitility.kotlin.until
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.anyList
 import org.mockito.Mockito.anyMap
 import org.mockito.Mockito.anyString
 import org.mockito.Mockito.`when`
+import org.mockito.Mockito.never
+import org.mockito.Mockito.verify
+import org.mockito.ArgumentMatchers.anyList as anyListOf
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -33,6 +41,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.Duration
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -68,7 +77,9 @@ class NotificationIntegrationTest {
 
     @BeforeEach
     fun setUp() {
-        notificationHistoryRepository.deleteAll()
+        // Bulk delete: a dispatch still running from the previous test bumps the row's version,
+        // and the entity-by-entity deleteAll() then fails its optimistic-lock check.
+        notificationHistoryRepository.deleteAllInBatch()
         deviceTokenRepository.deleteAll()
         notificationTopicRepository.deleteAll()
         refreshTokenRepository.deleteAll()
@@ -85,6 +96,8 @@ class NotificationIntegrationTest {
         // Stub PushService methods
         `when`(pushService.sendToToken(anyString(), anyString(), anyString(), anyMap())).thenReturn("mock-message-id")
         `when`(pushService.sendMulticast(anyList(), anyString(), anyString(), anyMap())).thenReturn(emptyList())
+        `when`(pushService.sendToFid(anyString(), anyString(), anyString(), anyMap())).thenReturn("mock-message-id")
+        `when`(pushService.sendMulticastToTargets(anyListOf(), anyString(), anyString(), anyMap())).thenReturn(emptyList())
         `when`(pushService.sendToTopic(anyString(), anyString(), anyString(), anyMap())).thenReturn("mock-message-id")
     }
 
@@ -244,8 +257,12 @@ class NotificationIntegrationTest {
 
     // --- Send Endpoints ---
 
-    private fun registerDeviceToken(fcmToken: String, deviceId: String) {
-        deviceTokenRepository.save(DeviceToken(testUser.id, Platform.ANDROID, fcmToken, deviceId))
+    private fun registerDeviceToken(
+        fcmToken: String,
+        deviceId: String,
+        targetType: PushTargetType = PushTargetType.TOKEN
+    ) {
+        deviceTokenRepository.save(DeviceToken(testUser.id, Platform.ANDROID, fcmToken, deviceId, targetType))
     }
 
     @Test
@@ -476,5 +493,115 @@ class NotificationIntegrationTest {
         )
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.message").value("Invalid request"))
+    }
+
+    // --- Firebase Installation IDs ---
+
+    // Dispatch is async and saves the history row last; waiting for that keeps it from racing
+    // the next test's cleanup.
+    private fun awaitDispatched() {
+        await atMost Duration.ofSeconds(5) until {
+            notificationHistoryRepository.findAll().all { it.status != NotificationStatus.PENDING }
+        }
+    }
+
+    @Test
+    fun `registerToken defaults to a registration token and records an FID when told`() {
+        mockMvc.perform(
+            post("/api/v1/notifications/tokens")
+                .header("Authorization", authHeader())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"platform": "ANDROID", "fcmToken": "plain-token", "deviceId": "device-1"}""")
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.tokenType").value("TOKEN"))
+
+        mockMvc.perform(
+            post("/api/v1/notifications/tokens")
+                .header("Authorization", authHeader())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"platform": "IOS", "fcmToken": "installation-id", "deviceId": "device-2", "tokenType": "fid"}""")
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.tokenType").value("FID"))
+
+        val stored = deviceTokenRepository.findByFcmToken("installation-id")!!
+        kotlin.test.assertEquals(PushTargetType.FID, stored.targetType)
+    }
+
+    @Test
+    fun `registerToken rejects an unknown token type`() {
+        mockMvc.perform(
+            post("/api/v1/notifications/tokens")
+                .header("Authorization", authHeader())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"platform": "ANDROID", "fcmToken": "t", "deviceId": "d", "tokenType": "APNS"}""")
+        ).andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `sendToToken sends to a registered FID as an FID`() {
+        registerDeviceToken("installation-id", "device-1", PushTargetType.FID)
+
+        mockMvc.perform(
+            post("/api/v1/notifications/send/token")
+                .header("Authorization", authHeader())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"token": "installation-id", "title": "T", "body": "B"}""")
+        ).andExpect(status().isAccepted)
+
+        awaitDispatched()
+        verify(pushService).sendToFid("installation-id", "T", "B", emptyMap())
+        verify(pushService, never()).sendToToken(anyString(), anyString(), anyString(), anyMap())
+    }
+
+    @Test
+    fun `sendMulticast to tokens and FIDs passes each with its type`() {
+        registerDeviceToken("t1", "device-1")
+        registerDeviceToken("installation-id", "device-2", PushTargetType.FID)
+
+        mockMvc.perform(
+            post("/api/v1/notifications/send/multicast")
+                .header("Authorization", authHeader())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"tokens": ["t1", "installation-id"], "title": "T", "body": "B"}""")
+        ).andExpect(status().isAccepted)
+
+        awaitDispatched()
+        verify(pushService).sendMulticastToTargets(
+            listOf(PushTarget("t1", PushTargetType.TOKEN), PushTarget("installation-id", PushTargetType.FID)),
+            "T", "B", emptyMap()
+        )
+    }
+
+    @Test
+    fun `a token-only multicast still goes through sendMulticast`() {
+        registerDeviceToken("t1", "device-1")
+        registerDeviceToken("t2", "device-2")
+
+        mockMvc.perform(
+            post("/api/v1/notifications/send/multicast")
+                .header("Authorization", authHeader())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"tokens": ["t1", "t2"], "title": "T", "body": "B"}""")
+        ).andExpect(status().isAccepted)
+
+        awaitDispatched()
+        verify(pushService).sendMulticast(listOf("t1", "t2"), "T", "B", emptyMap())
+    }
+
+    @Test
+    fun `an FID cannot subscribe to a topic`() {
+        notificationTopicRepository.save(NotificationTopic("news"))
+        registerDeviceToken("installation-id", "device-1", PushTargetType.FID)
+
+        mockMvc.perform(
+            post("/api/v1/notifications/topics/news/subscribe")
+                .header("Authorization", authHeader())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"token": "installation-id"}""")
+        ).andExpect(status().isBadRequest)
+
+        verify(pushService, never()).subscribeToTopic(anyList(), anyString())
     }
 }

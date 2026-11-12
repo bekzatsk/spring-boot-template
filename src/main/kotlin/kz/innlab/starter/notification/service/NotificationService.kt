@@ -23,7 +23,7 @@ class NotificationService(
 
     @Transactional
     fun sendToToken(userId: UUID, token: String, title: String, body: String, data: Map<String, String>): UUID? {
-        assertTokensOwnedBy(userId, listOf(token))
+        val target = ownedTargets(userId, listOf(token)).single()
         if (!notificationPreferenceService.isChannelEnabled(userId, NotificationChannel.PUSH)) {
             return null
         }
@@ -34,13 +34,13 @@ class NotificationService(
 
         // After commit: the @Async dispatcher re-reads the history row by id and must not race
         // an uncommitted insert.
-        afterCommitRunner.run { notificationDispatcher.dispatchToToken(history.id, token, title, body, data) }
+        afterCommitRunner.run { notificationDispatcher.dispatchToToken(history.id, target, title, body, data) }
         return history.id
     }
 
     @Transactional
     fun sendMulticast(userId: UUID, tokens: List<String>, title: String, body: String, data: Map<String, String>): UUID? {
-        assertTokensOwnedBy(userId, tokens)
+        val targets = ownedTargets(userId, tokens)
         if (!notificationPreferenceService.isChannelEnabled(userId, NotificationChannel.PUSH)) {
             return null
         }
@@ -51,7 +51,7 @@ class NotificationService(
         history.data = data.toString()
         notificationHistoryRepository.save(history)
 
-        afterCommitRunner.run { notificationDispatcher.dispatchMulticast(history.id, tokens, title, body, data) }
+        afterCommitRunner.run { notificationDispatcher.dispatchMulticast(history.id, targets, title, body, data) }
         return history.id
     }
 
@@ -71,12 +71,15 @@ class NotificationService(
 
     /**
      * A caller may only push to FCM tokens registered as their own devices; otherwise any
-     * authenticated user could send app-branded notifications to arbitrary victims.
+     * authenticated user could send app-branded notifications to arbitrary victims. The
+     * registration also says whether each identifier is a registration token or an FID.
      */
-    private fun assertTokensOwnedBy(userId: UUID, tokens: Collection<String>) {
-        val owned = deviceTokenRepository.findByUserId(userId).mapTo(mutableSetOf()) { it.fcmToken }
-        if (tokens.any { it !in owned }) {
-            throw ForbiddenOperationException("One or more tokens are not registered to the current user")
+    private fun ownedTargets(userId: UUID, tokens: List<String>): List<PushTarget> {
+        val owned = deviceTokenRepository.findByUserId(userId).associate { it.fcmToken to it.targetType }
+        return tokens.map { token ->
+            val type = owned[token]
+                ?: throw ForbiddenOperationException("One or more tokens are not registered to the current user")
+            PushTarget(token, type)
         }
     }
 

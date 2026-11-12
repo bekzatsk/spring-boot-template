@@ -1,5 +1,43 @@
 # Changelog
 
+## Unreleased
+
+Dependency update to Spring Boot 4.1.2 and Kotlin 2.4, and push to Firebase Installation IDs.
+Adds migration `V18__device_token_target_type.sql`. No breaking changes for applications that
+only configure the starter; see **Changed** if you call the notification classes yourself.
+
+### Added
+
+- **Push to Firebase Installation IDs (FIDs).** firebase-admin 9.12 deprecates addressing a device
+  by its FCM registration token in favour of its FID. The two are different values, so
+  `POST /api/v1/notifications/tokens` takes an optional `tokenType`: `TOKEN` (default, as
+  before) or `FID`. The registration stores it (`device_tokens.target_type`), sends route each
+  device by its type, and `DeviceTokenResponse` returns it. Topic subscription stays
+  token-only, as FCM has no FID variant; subscribing an FID answers 400.
+- `PushService.sendToFid` and `PushService.sendMulticastToTargets`, both with default
+  implementations, so an existing custom `PushService` keeps compiling. It is only called for
+  FIDs, and its defaults refuse them; override both to deliver to FIDs. Token-only multicasts
+  still go through `sendMulticast`.
+
+### Changed
+
+- `NotificationDispatcher.dispatchToToken` / `dispatchMulticast` take `PushTarget` instead of
+  `String`, and `DeviceToken` / `DeviceTokenService.register` take an optional
+  `PushTargetType` (default `TOKEN`).
+
+### Dependencies
+
+- Spring Boot 4.1.1 → 4.1.2 (Spring Framework 7.0.10, Spring Security 7.1.2, Hibernate
+  7.4.13). Boot now manages Tomcat 11.0.27 and Jackson 3.1.7 / 2.21.7, so the
+  `tomcat.version`, `jackson-bom.version` and `jackson-2-bom.version` overrides are gone.
+- Kotlin 2.3.21 → 2.4.21; the `-Xannotation-default-target=param-property` flag is dropped, as
+  it is the default from 2.4.
+- firebase-admin 9.4.3 → 9.12.0, google-api-client 2.9.0 → 2.9.2, libraries-bom 26.88.1 →
+  26.93.0, springdoc-openapi 3.0.2 → 3.2.0, twilio 11.3.3 → 13.2.0, libphonenumber 8.13.52 →
+  9.0.43, jsoup 1.23.2 → 1.24.1, greenmail 2.1.3 → 2.1.15.
+- Release plugins: maven-source-plugin 3.4.0, maven-jar-plugin 3.5.1, maven-gpg-plugin 3.2.8,
+  central-publishing-maven-plugin 0.12.0.
+
 ## 0.1.8 — 2026-10-23
 
 Bug fix release: 0.1.7 and earlier never delivered one-time-code emails through the built-in

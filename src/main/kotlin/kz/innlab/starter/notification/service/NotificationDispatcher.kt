@@ -4,6 +4,7 @@ import com.google.firebase.messaging.FirebaseMessagingException
 import com.google.firebase.messaging.MessagingErrorCode
 import kz.innlab.starter.config.AsyncConfig
 import kz.innlab.starter.notification.model.NotificationStatus
+import kz.innlab.starter.notification.model.PushTargetType
 import kz.innlab.starter.notification.repository.NotificationHistoryRepository
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Async
@@ -24,17 +25,20 @@ class NotificationDispatcher(
 
     @Async(AsyncConfig.STARTER_EXECUTOR)
     @Transactional
-    fun dispatchToToken(historyId: UUID, token: String, title: String, body: String, data: Map<String, String>) {
+    fun dispatchToToken(historyId: UUID, target: PushTarget, title: String, body: String, data: Map<String, String>) {
         val history = notificationHistoryRepository.findById(historyId).orElseThrow()
         try {
-            pushService.sendToToken(token, title, body, data)
+            when (target.type) {
+                PushTargetType.TOKEN -> pushService.sendToToken(target.value, title, body, data)
+                PushTargetType.FID -> pushService.sendToFid(target.value, title, body, data)
+            }
             history.status = NotificationStatus.SENT
         } catch (e: Exception) {
             logger.error("Failed to dispatch notification {}: {}", historyId, e.message)
             if (e is FirebaseMessagingException) {
                 val errorCode = e.messagingErrorCode
                 if (errorCode == MessagingErrorCode.UNREGISTERED || errorCode == MessagingErrorCode.INVALID_ARGUMENT) {
-                    deviceTokenService.cleanupStaleTokens(listOf(token))
+                    deviceTokenService.cleanupStaleTokens(listOf(target.value))
                 }
             }
             history.status = NotificationStatus.FAILED
@@ -45,10 +49,16 @@ class NotificationDispatcher(
 
     @Async(AsyncConfig.STARTER_EXECUTOR)
     @Transactional
-    fun dispatchMulticast(historyId: UUID, tokens: List<String>, title: String, body: String, data: Map<String, String>) {
+    fun dispatchMulticast(historyId: UUID, targets: List<PushTarget>, title: String, body: String, data: Map<String, String>) {
         val history = notificationHistoryRepository.findById(historyId).orElseThrow()
         try {
-            val staleTokens = pushService.sendMulticast(tokens, title, body, data)
+            // Token-only sends keep going through sendMulticast, so a PushService written before
+            // FIDs existed handles them as it always did.
+            val staleTokens = if (targets.all { it.type == PushTargetType.TOKEN }) {
+                pushService.sendMulticast(targets.map { it.value }, title, body, data)
+            } else {
+                pushService.sendMulticastToTargets(targets, title, body, data)
+            }
             deviceTokenService.cleanupStaleTokens(staleTokens)
             history.status = NotificationStatus.SENT
         } catch (e: Exception) {

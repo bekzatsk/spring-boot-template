@@ -1,6 +1,7 @@
 package kz.innlab.starter.notification.service
 
 import kz.innlab.starter.notification.model.NotificationTopic
+import kz.innlab.starter.notification.model.PushTargetType
 import kz.innlab.starter.notification.repository.DeviceTokenRepository
 import kz.innlab.starter.notification.repository.NotificationTopicRepository
 import kz.innlab.starter.shared.error.ForbiddenOperationException
@@ -50,9 +51,11 @@ class TopicService(
 
     // A caller may only manage topic subscriptions for their own registered devices.
     private fun assertTokenOwnedBy(userId: UUID, token: String) {
-        val owned = deviceTokenRepository.findByUserId(userId).any { it.fcmToken == token }
-        if (!owned) {
-            throw ForbiddenOperationException("Token is not registered to the current user")
+        val registration = deviceTokenRepository.findByUserId(userId).firstOrNull { it.fcmToken == token }
+            ?: throw ForbiddenOperationException("Token is not registered to the current user")
+        // FCM topic management takes registration tokens only.
+        require(registration.targetType == PushTargetType.TOKEN) {
+            "Topic subscriptions need an FCM registration token; a Firebase Installation ID cannot subscribe"
         }
     }
 }
