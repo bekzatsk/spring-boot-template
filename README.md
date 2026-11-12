@@ -333,17 +333,30 @@ app:
       enabled: true
       token: ${TELEGRAM_GATEWAY_TOKEN}
       sender-username: ""        # optional, a verified channel to send from
-      callback-url: ""           # optional, delivery reports (not processed by the starter yet)
+      callback-url: ""           # optional, https://<your-api>/api/v1/auth/telegram-gateway/callback
       ttl-seconds: 300           # 30..300 — not longer than the phone code lives
+      fallback-on-undelivered: false  # true needs ttl-seconds < 300, e.g. 120
+      callback-max-age: 5m       # reports with an older/newer X-Request-Timestamp are refused
       connect-timeout: 5s
       read-timeout: 10s
 ```
 
 A listed channel that is not configured is skipped; an order with no configured channel fails at
 startup. Telegram only delivers: the code is generated and checked by the starter, and
-`ok=true` from the Gateway means the message was accepted, not read — there is no fallback after
-that. Under a production profile `ProductionSafetyConfig` refuses to start when the gateway is
-enabled without a token. An application's own channel is any `OtpDeliveryChannel` bean, used
+`ok=true` from the Gateway means the message was accepted, not read. Under a production profile
+`ProductionSafetyConfig` refuses to start when the gateway is enabled without a token, or with a
+`callback-url` that is not `https://`.
+
+**Delivery reports.** With `callback-url` set, the Gateway posts a report to it, and the starter
+receives it at `POST /api/v1/auth/telegram-gateway/callback` (public — no JWT, no CSRF — and only
+accepted with a valid `X-Request-Signature` made with the gateway token and an
+`X-Request-Timestamp` within `callback-max-age`; no token configured — nothing is accepted).
+Reports are logged with the number masked. With `fallback-on-undelivered: true`, a report that
+Telegram gave up (`expired`, after `ttl-seconds`) replaces the code with a new one, sent through
+the channels after `telegram` in `delivery-order`; the old code stops working and the client keeps
+its `verificationId`. The new code expires when the old one would have, so this only makes sense
+with `ttl-seconds` **below the phone code lifetime (300 s)** — the application refuses to start
+otherwise. An application's own channel is any `OtpDeliveryChannel` bean, used
 under its `name`; one named `sms` or `whatsapp` replaces the built-in one.
 
 ### Adding Your Own Secured Endpoints

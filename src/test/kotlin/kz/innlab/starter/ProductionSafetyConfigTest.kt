@@ -182,6 +182,27 @@ class ProductionSafetyConfigTest {
     }
 
     @Test
+    fun `refuses to start when the Telegram Gateway callback-url is not https`() {
+        runner(
+            "app.auth.telegram-gateway.enabled=true",
+            "app.auth.telegram-gateway.token=gw-test-token",
+            "app.auth.telegram-gateway.callback-url=http://api.example.test/api/v1/auth/telegram-gateway/callback"
+        ).run { context ->
+            assertThat(context).hasFailed()
+            assertThat(context.startupFailure).hasStackTraceContaining("app.auth.telegram-gateway.callback-url")
+        }
+    }
+
+    @Test
+    fun `starts when the Telegram Gateway callback-url is https`() {
+        runner(
+            "app.auth.telegram-gateway.enabled=true",
+            "app.auth.telegram-gateway.token=gw-test-token",
+            "app.auth.telegram-gateway.callback-url=https://api.example.test/api/v1/auth/telegram-gateway/callback"
+        ).run { context -> assertThat(context).hasNotFailed() }
+    }
+
+    @Test
     fun `a Telegram Gateway token without the flag is not a problem`() {
         runner("app.auth.telegram-gateway.enabled=false").run { context -> assertThat(context).hasNotFailed() }
     }

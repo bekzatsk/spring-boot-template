@@ -47,6 +47,9 @@ class VerificationCodeService(
         private const val RATE_LIMIT_SECONDS = 60L
         private const val MAX_ATTEMPTS = 3
 
+        /** Redraws allowed for a reissued code that equals the old one (each repeat is 10^-length). */
+        private const val REISSUE_DRAWS = 10
+
         /** Purposes whose identifier is an email address. */
         private val EMAIL_PURPOSES = setOf(
             VerificationPurpose.FORGOT_PASSWORD,
@@ -150,7 +153,9 @@ class VerificationCodeService(
 
         // Burn the code independently too: if the caller's transaction later rolls back, a
         // one-time code must not become reusable.
-        if (!attemptRecorder.markUsed(record.id, MAX_ATTEMPTS)) {
+        // Against the hash just checked: if reissueCode replaced the code meanwhile, the old one
+        // must not be redeemed.
+        if (!attemptRecorder.markUsed(record.id, record.codeHash, MAX_ATTEMPTS)) {
             throw BadCredentialsException("Invalid verification code")
         }
 
@@ -159,15 +164,70 @@ class VerificationCodeService(
     }
 
     /**
+     * Replaces the code of a verification whose message the Telegram Gateway could not deliver
+     * (request [gatewayRequestId]) with a new one, for delivery through another channel.
+     *
+     * The record keeps its id — the client already holds it as `verificationId` — as well as its
+     * expiry and attempt count: a reissue grants neither more time nor more guesses. The old code
+     * stops working because its hash is replaced. The send counts against the per-purpose limit;
+     * not against the per-client one, since the HTTP client here is the Gateway, not the user.
+     *
+     * Returns null, changing nothing, when the verification is unknown, used, expired, out of
+     * attempts, or no longer carried by that request (already reissued). Throws
+     * RateLimitExceededException when the send limit is spent.
+     */
+    @Transactional
+    fun reissueCode(verificationId: UUID, gatewayRequestId: String): IssuedCode? {
+        val record = verificationCodeRepository.findById(verificationId).orElse(null) ?: return null
+        val now = Instant.now()
+        if (record.gatewayRequestId != gatewayRequestId || record.used ||
+            record.expiresAt <= now || record.attempts >= MAX_ATTEMPTS
+        ) {
+            return null
+        }
+        checkSendAllowed(record.purpose, client = null)
+
+        val code = newCodeUnlike(record.codeHash, record.purpose)
+        val hash = requireNotNull(passwordEncoder.encode(code)) { "PasswordEncoder returned null hash" }
+        if (verificationCodeRepository.replaceCodeIfActive(record.id, gatewayRequestId, hash, now, MAX_ATTEMPTS) != 1) {
+            return null
+        }
+        return IssuedCode(
+            verificationId = record.id,
+            code = code,
+            resendAvailableAt = now.plusSeconds(RATE_LIMIT_SECONDS),
+            retryAfterSeconds = RATE_LIMIT_SECONDS
+        )
+    }
+
+    /**
+     * A code that does not match [oldHash]. The dev override is used only when it differs from the
+     * old code — with a fixed dev code it never does, and a "new" code equal to the undelivered one
+     * would leave the old code working. A random code repeats the old one with probability 10^-length;
+     * that is redrawn too.
+     */
+    private fun newCodeUnlike(oldHash: String, purpose: VerificationPurpose): String {
+        val length = codeLengthFor(purpose)
+        val devCode = devCodeFor(purpose)
+        if (devCode.isNotBlank() && !passwordEncoder.matches(devCode, oldHash)) return devCode
+        repeat(REISSUE_DRAWS) {
+            val code = OneTimeCodes.generate("", length)
+            if (!passwordEncoder.matches(code, oldHash)) return code
+        }
+        error("could not draw a code different from the previous one")
+    }
+
+    /**
      * Counts one outgoing code against the per-client and per-purpose send limits; throws 429 once
      * either is spent. [createCode] calls it; a flow that answers as if it sent a code without
      * sending one (to hide whether an account exists) must call it too, or the limit itself
      * would tell the two cases apart.
      */
-    fun checkSendAllowed(purpose: VerificationPurpose) {
+    fun checkSendAllowed(purpose: VerificationPurpose) = checkSendAllowed(purpose, currentClientAddress())
+
+    private fun checkSendAllowed(purpose: VerificationPurpose, client: String?) {
         if (!rateLimitProperties.enabled) return
         val perClient = rateLimitProperties.codeSendPerClient
-        val client = currentClientAddress()
         if (client != null &&
             !rateLimiter.tryAcquire("code-send:client:$client", perClient.maxAttempts, perClient.windowSeconds)
         ) {

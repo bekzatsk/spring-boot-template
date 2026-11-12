@@ -228,7 +228,7 @@ class AccountManagementService(
         val (verificationId, code) = verificationCodeService.createCode(
             userId.toString(), VerificationPurpose.CHANGE_PHONE, newValue = phoneE164, userId = userId
         )
-        otpDeliveryService.sendCode(phoneE164, code)
+        otpDeliveryService.sendCode(phoneE164, code, verificationId)
         return verificationId
     }
 
@@ -280,7 +280,7 @@ class AccountManagementService(
             userId.toString(), VerificationPurpose.REAUTH, userId = userId
         )
         if (channel == "EMAIL") emailService.sendCode(user.email, code, "REAUTH")
-        else otpDeliveryService.sendCode(phone!!, code)
+        else otpDeliveryService.sendCode(phone!!, code, verificationId)
         return ReauthCodeResponse(verificationId, channel)
     }
 

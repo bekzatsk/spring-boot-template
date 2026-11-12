@@ -808,6 +808,9 @@ app:
   #   telegram-gateway:
   #     enabled: ${TELEGRAM_GATEWAY_ENABLED:false}
   #     token: ${TELEGRAM_GATEWAY_TOKEN:}
+  #     callback-url: https://api.example.com/api/v1/auth/telegram-gateway/callback
+  #     ttl-seconds: 120
+  #     fallback-on-undelivered: true
 ```
 
 > **Конфиг starter-а.** С 0.1.5 starter не везёт `application*.yaml` — всё, что не задано в твоих файлах, берёт дефолты из кода (таблицы в §4). В 0.1.4 и ниже внутри jar был `application-dev.yaml` с кодами `123456`: на этих версиях свой `application-dev.yml` обязателен.
@@ -996,8 +999,10 @@ app:
       enabled: ${TELEGRAM_GATEWAY_ENABLED:false}
       token: ${TELEGRAM_GATEWAY_TOKEN:}
       sender-username: ""   # необязательно: верифицированный канал-отправитель
-      callback-url: ""      # необязательно: отчёты о доставке (стартер их пока не обрабатывает)
-      ttl-seconds: 300
+      callback-url: ""      # необязательно: https://<ваш-api>/api/v1/auth/telegram-gateway/callback
+      ttl-seconds: 300      # при fallback-on-undelivered — меньше 300, например 120
+      fallback-on-undelivered: false
+      callback-max-age: 5m
 ```
 
 | Property | Env | Type | Default | Description |
@@ -1006,14 +1011,18 @@ app:
 | `app.auth.telegram-gateway.enabled` | `TELEGRAM_GATEWAY_ENABLED` | boolean | `false` | Регистрирует `TelegramGatewayService` (канал `telegram`). |
 | `app.auth.telegram-gateway.token` | `TELEGRAM_GATEWAY_TOKEN` | string | `""` | Токен Gateway API, уходит в `Authorization: Bearer`. Под prod-профилем пустой токен при `enabled=true` валит старт; вне prod каждая отправка падает и код уходит следующим каналом. |
 | `app.auth.telegram-gateway.sender-username` | — | string | `""` | `sender_username`: верифицированный канал, от имени которого идёт сообщение. Пустой — не передаётся. |
-| `app.auth.telegram-gateway.callback-url` | — | string | `""` | `callback_url` для отчётов о доставке. Пустой — не передаётся. Подпись отчётов (`X-Request-Timestamp`, `X-Request-Signature`) стартер пока не проверяет — эндпоинт за приложением. |
-| `app.auth.telegram-gateway.ttl-seconds` | — | int | `300` | `ttl`: сколько Telegram пытается доставить (и после чего возвращает деньги). 30…300: не дольше, чем живёт phone-код (5 мин). |
+| `app.auth.telegram-gateway.callback-url` | — | string | `""` | `callback_url` для отчётов о доставке — публичный адрес `POST /api/v1/auth/telegram-gateway/callback`. Пустой — не передаётся, отчётов нет. Под prod-профилем не-`https://` адрес валит старт. |
+| `app.auth.telegram-gateway.ttl-seconds` | — | int | `300` | `ttl`: сколько Telegram пытается доставить (и после чего возвращает деньги). 30…300: не дольше, чем живёт phone-код (5 мин). При `fallback-on-undelivered=true` — строго меньше 300, иначе старт падает. |
+| `app.auth.telegram-gateway.fallback-on-undelivered` | — | boolean | `false` | Отчёт `expired` (Telegram не доставил за `ttl`) → новый код каналами после `telegram` в `delivery-order`, старый перестаёт действовать. |
+| `app.auth.telegram-gateway.callback-max-age` | — | duration | `5m` | Отчёт с `X-Request-Timestamp` дальше этого от текущего времени (в любую сторону) отклоняется — защита от повтора. |
 | `app.auth.telegram-gateway.connect-timeout` / `read-timeout` | — | duration | `5s` / `10s` | Таймауты HTTP-вызова. |
 | `app.auth.telegram-gateway.base-url` | — | string | `https://gatewayapi.telegram.org` | Для тестов/прокси. |
 
 > **Код — наш.** Стартер сам генерирует и проверяет код (`VerificationCodeService`) и передаёт его в `code`; `checkVerificationStatus` / `code_length` не используются. `checkSendAbility` не вызывается — он платный, а номер без Telegram и так даёт `ok=false` на `sendVerificationMessage`.
-> **Что считается успехом.** `ok=true` — Telegram принял сообщение, но не значит, что пользователь его прочёл; перехода на следующий канал после этого нет. `ok=false`, HTTP-ошибка или таймаут — `TelegramGatewayException`, следующий канал.
-> **Логи.** Ни код, ни полный номер не логируются — только маска (`+77***67`).
+> **Что считается успехом.** `ok=true` — Telegram принял сообщение, но не значит, что пользователь его прочёл. `ok=false`, HTTP-ошибка или таймаут — `TelegramGatewayException`, следующий канал. Что было дальше, Gateway сообщает отчётом на `callback-url`.
+> **Отчёты о доставке.** `POST /api/v1/auth/telegram-gateway/callback` — публичный (без JWT, без CSRF), принимает отчёт только с верной подписью: `X-Request-Signature` = hex(HMAC-SHA256(ключ `SHA256(token)`, `X-Request-Timestamp` + `\n` + сырое тело)), и с `X-Request-Timestamp` в пределах `callback-max-age`. Иначе 401; без `token` — 403 на всё. Верно подписанный отчёт — всегда 200, даже с неизвестным `request_id` (иначе Gateway повторяет до 10 раз). `request_id` каждой отправки хранится в `verification_codes.gateway_request_id` (миграция V19).
+> **Переход на следующий канал.** При `fallback-on-undelivered=true` и отчёте `delivery_status.status = expired`, если код не использован, не истёк и попытки не исчерпаны, стартер выпускает новый код на той же verification-записи (тот же `verificationId` у клиента, тот же срок жизни и счётчик попыток; старый код больше не принимается) и после коммита отправляет его каналами, идущими после `telegram`. Отправка учитывается в лимите `code-send-per-purpose`. Новый код живёт лишь остаток срока старого (5 мин − `ttl`), поэтому `ttl-seconds` должен быть меньше 300 — иначе приложение не стартует. Каналов после `telegram` нет — в лог `warn`, код не меняется.
+> **Логи.** Ни код, ни полный номер, ни `code_entered` из отчёта не логируются — только маска (`+77***67`).
 > **Свой канал.** Любой bean `OtpDeliveryChannel` — канал под своим `name`; bean с именем `sms` или `whatsapp` заменяет встроенный. Два bean'а с одним именем — ошибка на старте.
 
 ### Twilio (WhatsApp + SMS OTP)

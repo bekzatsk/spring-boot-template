@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 import org.springframework.web.client.RestClientResponseException
+import java.util.UUID
 
 /** The Gateway did not accept the message. The message never carries the code or the phone number. */
 class TelegramGatewayException(message: String) : RuntimeException(message)
@@ -29,8 +30,11 @@ class TelegramGatewayException(message: String) : RuntimeException(message)
  * OtpDeliveryService moves on to the next channel.
  *
  * `ok=true` means Telegram accepted the message (a RequestStatus comes back), not that it was
- * delivered or read: the DeliveryStatus arrives later, at `callback-url`, and nothing falls back
- * on it. Delivery reports are not processed by the starter yet.
+ * delivered or read: the DeliveryStatus arrives later, at `callback-url`. So the `request_id` is
+ * stored on the verification record ([VerificationAttemptRecorder.recordGatewayRequest]), where
+ * TelegramGatewayReportService finds it when the report comes in. Failing to store it is logged and
+ * not thrown — the message is already on its way, and throwing would send the code a second time
+ * through the next channel.
  *
  * Called by OtpDeliveryService after the transaction commits, never inside it.
  */
@@ -38,7 +42,8 @@ class TelegramGatewayException(message: String) : RuntimeException(message)
 @ConditionalOnProperty(name = ["app.auth.telegram-gateway.enabled"], havingValue = "true")
 class TelegramGatewayService(
     private val properties: TelegramGatewayProperties,
-    private val restClient: RestClient = defaultRestClient(properties)
+    private val restClient: RestClient = defaultRestClient(properties),
+    private val requestRecorder: VerificationAttemptRecorder? = null
 ) : OtpDeliveryChannel {
 
     companion object {
@@ -61,7 +66,9 @@ class TelegramGatewayService(
 
     override val name: String = CHANNEL_NAME
 
-    override fun sendCode(phone: String, code: String) {
+    override fun sendCode(phone: String, code: String) = sendCode(phone, code, null)
+
+    override fun sendCode(phone: String, code: String, verificationId: UUID?) {
         if (properties.token.isBlank()) {
             throw TelegramGatewayException(
                 "Telegram Gateway is enabled but app.auth.telegram-gateway.token is not set"
@@ -89,8 +96,18 @@ class TelegramGatewayService(
                 "Telegram Gateway refused the message: ${response?.get("error") ?: "no error given"}"
             )
         }
-        val requestId = (response["result"] as? Map<*, *>)?.get("request_id")
+        val requestId = (response["result"] as? Map<*, *>)?.get("request_id") as? String
         logger.debug("[TELEGRAM-GATEWAY] verification message accepted for {}: request_id={}", maskPhone(phone), requestId)
+        if (verificationId != null && requestId != null && requestRecorder != null) {
+            try {
+                requestRecorder.recordGatewayRequest(verificationId, requestId)
+            } catch (ex: RuntimeException) {
+                logger.warn(
+                    "[TELEGRAM-GATEWAY] request_id={} for {} not stored, its delivery report will be ignored: {}",
+                    requestId, maskPhone(phone), ex.javaClass.name
+                )
+            }
+        }
     }
 
     private fun requestBody(phone: String, code: String): Map<String, Any> = buildMap {

@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Qualifier
 import tools.jackson.databind.ObjectMapper
 import kz.innlab.starter.authentication.controller.AccountManagementController
 import kz.innlab.starter.authentication.controller.AuthController
+import kz.innlab.starter.authentication.controller.TelegramGatewayCallbackController
 import kz.innlab.starter.authentication.cookie.AuthCookieWriter
 import kz.innlab.starter.authentication.exception.AuthExceptionHandler
 import kz.innlab.starter.authentication.exception.NotFoundExceptionHandler
@@ -22,6 +23,7 @@ import kz.innlab.starter.authentication.service.OtpDeliveryService
 import kz.innlab.starter.authentication.service.RefreshTokenFamilyRevoker
 import kz.innlab.starter.authentication.service.RefreshTokenService
 import kz.innlab.starter.authentication.service.SmsService
+import kz.innlab.starter.authentication.service.TelegramGatewayReportService
 import kz.innlab.starter.authentication.service.TelegramGatewayService
 import kz.innlab.starter.authentication.service.TokenService
 import kz.innlab.starter.authentication.service.VerificationAttemptRecorder
@@ -142,8 +144,33 @@ class AuthCoreAutoConfiguration {
 
         @Bean
         @ConditionalOnMissingBean
-        fun telegramGatewayService(properties: TelegramGatewayProperties): TelegramGatewayService =
-            TelegramGatewayService(properties, TelegramGatewayService.defaultRestClient(properties))
+        fun telegramGatewayService(
+            properties: TelegramGatewayProperties,
+            verificationAttemptRecorder: VerificationAttemptRecorder
+        ): TelegramGatewayService = TelegramGatewayService(
+            properties, TelegramGatewayService.defaultRestClient(properties), verificationAttemptRecorder
+        )
+
+        @Bean
+        @ConditionalOnMissingBean
+        fun telegramGatewayReportService(
+            properties: TelegramGatewayProperties,
+            verificationCodeRepository: VerificationCodeRepository,
+            verificationCodeService: VerificationCodeService,
+            otpDeliveryService: OtpDeliveryService,
+            afterCommitRunner: AfterCommitRunner
+        ): TelegramGatewayReportService = TelegramGatewayReportService(
+            properties, verificationCodeRepository, verificationCodeService, otpDeliveryService, afterCommitRunner
+        )
+
+        /** Delivery reports at `callback-url`; public, authenticated by the report signature. */
+        @Bean
+        @ConditionalOnMissingBean
+        fun telegramGatewayCallbackController(
+            properties: TelegramGatewayProperties,
+            reportService: TelegramGatewayReportService,
+            objectMapper: ObjectMapper
+        ): TelegramGatewayCallbackController = TelegramGatewayCallbackController(properties, reportService, objectMapper)
     }
 
     @Bean

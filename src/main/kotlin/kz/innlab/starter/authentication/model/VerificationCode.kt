@@ -44,6 +44,13 @@ class VerificationCode(
     @Column(nullable = false)
     var attempts: Int = 0
 
+    /**
+     * Telegram Gateway `request_id` of the message carrying the current code; links a delivery
+     * report back to this record. Cleared when the code is reissued.
+     */
+    @Column(name = "gateway_request_id", length = 128)
+    var gatewayRequestId: String? = null
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant? = null
