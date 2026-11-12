@@ -29,9 +29,10 @@ class VerificationAttemptRecorder(
         ) == 1
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    fun markUsed(verificationId: UUID, maxAttempts: Int): Boolean =
+    /** [codeHash]: the hash the code was checked against; a replaced code is not burned. */
+    fun markUsed(verificationId: UUID, codeHash: String, maxAttempts: Int): Boolean =
         verificationCodeRepository.markUsedIfActive(
-            verificationId, Instant.now(), maxAttempts
+            verificationId, codeHash, Instant.now(), maxAttempts
         ) == 1
 
     /**

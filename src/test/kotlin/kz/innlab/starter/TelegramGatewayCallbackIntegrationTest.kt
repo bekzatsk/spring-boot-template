@@ -34,7 +34,11 @@ import java.security.MessageDigest
 import java.time.Instant
 import java.util.Collections
 import java.util.UUID
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -147,6 +151,33 @@ class TelegramGatewayCallbackIntegrationTest : TelegramGatewayCallbackTestBase()
         @JvmStatic
         @DynamicPropertySource
         fun gateway(registry: DynamicPropertyRegistry) = GatewayStub.register(registry)
+    }
+
+    @MockitoSpyBean private lateinit var passwordEncoder: PasswordEncoder
+
+    @Test
+    fun `a verification of the old code that started before the replacement is refused`() {
+        val phone = "+77011230006"
+        val (verificationId, requestId) = requestCode(phone)
+        val oldCode = GatewayStub.sent.getValue(requestId)
+        val oldHash = verificationCodeRepository.findById(UUID.fromString(verificationId)).orElseThrow().codeHash
+
+        // The verification has read the record and is checking the old code when the expired
+        // report replaces it — in another thread, committed before the check returns.
+        doAnswer { invocation ->
+            val pool = Executors.newSingleThreadExecutor()
+            try {
+                pool.submit { report(requestId, phone, "expired").andExpect(status().isOk) }.get(15, TimeUnit.SECONDS)
+            } finally {
+                pool.shutdownNow()
+            }
+            invocation.callRealMethod()
+        }.`when`(passwordEncoder).matches(oldCode, oldHash)
+
+        verify(verificationId, phone, oldCode).andExpect(status().isUnauthorized)
+
+        assertThat(smsCodes).describedAs("the replacement happened").hasSize(1)
+        verify(verificationId, phone, smsCodes.single()).andExpect(status().isOk)
     }
 
     @Test
@@ -265,5 +296,40 @@ class TelegramGatewayCallbackFallbackOffIntegrationTest : TelegramGatewayCallbac
 
         verify(smsService, never()).sendCode(anyString(), anyString())
         verify(verificationId, phone, GatewayStub.sent.getValue(requestId)).andExpect(status().isOk)
+    }
+}
+
+/** With a fixed dev code the generator would hand out the very code that was not delivered. */
+@SpringBootTest(
+    properties = [
+        "app.auth.telegram-gateway.enabled=true",
+        "app.auth.telegram-gateway.token=gw-test-token",
+        "app.auth.telegram-gateway.ttl-seconds=60",
+        "app.auth.telegram-gateway.fallback-on-undelivered=true",
+        "app.auth.otp.delivery-order=telegram,sms",
+        "app.auth.sms.dev-code=123456"
+    ]
+)
+@AutoConfigureMockMvc
+class TelegramGatewayCallbackDevCodeIntegrationTest : TelegramGatewayCallbackTestBase() {
+
+    companion object {
+        @JvmStatic
+        @DynamicPropertySource
+        fun gateway(registry: DynamicPropertyRegistry) = GatewayStub.register(registry)
+    }
+
+    @Test
+    fun `the reissued code differs from the undelivered one even with a dev code`() {
+        val phone = "+77011230021"
+        val (verificationId, requestId) = requestCode(phone)
+        assertThat(GatewayStub.sent.getValue(requestId)).isEqualTo("123456")
+
+        report(requestId, phone, "expired").andExpect(status().isOk)
+
+        assertThat(smsCodes).hasSize(1)
+        assertThat(smsCodes.single()).isNotEqualTo("123456")
+        verify(verificationId, phone, "123456").andExpect(status().isUnauthorized)
+        verify(verificationId, phone, smsCodes.single()).andExpect(status().isOk)
     }
 }

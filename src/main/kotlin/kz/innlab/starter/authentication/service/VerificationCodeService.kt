@@ -47,6 +47,9 @@ class VerificationCodeService(
         private const val RATE_LIMIT_SECONDS = 60L
         private const val MAX_ATTEMPTS = 3
 
+        /** Redraws allowed for a reissued code that equals the old one (each repeat is 10^-length). */
+        private const val REISSUE_DRAWS = 10
+
         /** Purposes whose identifier is an email address. */
         private val EMAIL_PURPOSES = setOf(
             VerificationPurpose.FORGOT_PASSWORD,
@@ -150,7 +153,9 @@ class VerificationCodeService(
 
         // Burn the code independently too: if the caller's transaction later rolls back, a
         // one-time code must not become reusable.
-        if (!attemptRecorder.markUsed(record.id, MAX_ATTEMPTS)) {
+        // Against the hash just checked: if reissueCode replaced the code meanwhile, the old one
+        // must not be redeemed.
+        if (!attemptRecorder.markUsed(record.id, record.codeHash, MAX_ATTEMPTS)) {
             throw BadCredentialsException("Invalid verification code")
         }
 
@@ -182,7 +187,7 @@ class VerificationCodeService(
         }
         checkSendAllowed(record.purpose, client = null)
 
-        val code = OneTimeCodes.generate(devCodeFor(record.purpose), codeLengthFor(record.purpose))
+        val code = newCodeUnlike(record.codeHash, record.purpose)
         val hash = requireNotNull(passwordEncoder.encode(code)) { "PasswordEncoder returned null hash" }
         if (verificationCodeRepository.replaceCodeIfActive(record.id, gatewayRequestId, hash, now, MAX_ATTEMPTS) != 1) {
             return null
@@ -193,6 +198,23 @@ class VerificationCodeService(
             resendAvailableAt = now.plusSeconds(RATE_LIMIT_SECONDS),
             retryAfterSeconds = RATE_LIMIT_SECONDS
         )
+    }
+
+    /**
+     * A code that does not match [oldHash]. The dev override is used only when it differs from the
+     * old code — with a fixed dev code it never does, and a "new" code equal to the undelivered one
+     * would leave the old code working. A random code repeats the old one with probability 10^-length;
+     * that is redrawn too.
+     */
+    private fun newCodeUnlike(oldHash: String, purpose: VerificationPurpose): String {
+        val length = codeLengthFor(purpose)
+        val devCode = devCodeFor(purpose)
+        if (devCode.isNotBlank() && !passwordEncoder.matches(devCode, oldHash)) return devCode
+        repeat(REISSUE_DRAWS) {
+            val code = OneTimeCodes.generate("", length)
+            if (!passwordEncoder.matches(code, oldHash)) return code
+        }
+        error("could not draw a code different from the previous one")
     }
 
     /**
