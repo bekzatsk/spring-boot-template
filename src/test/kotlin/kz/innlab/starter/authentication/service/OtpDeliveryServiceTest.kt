@@ -31,6 +31,33 @@ class OtpDeliveryServiceTest {
     }
 
     @Test
+    fun `a failing channel's message does not put the code or the full phone into the log`() {
+        val logger = org.slf4j.LoggerFactory.getLogger(OtpDeliveryService::class.java) as ch.qos.logback.classic.Logger
+        val appender = ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            val whatsApp = mock(WhatsAppService::class.java)
+            val sms = mock(SmsService::class.java)
+            // Provider exceptions echo the request: Twilio's ApiException names the "To" number.
+            doThrow(RuntimeException("Unable to deliver $code to $phone (${phone.removePrefix("+")})"))
+                .`when`(whatsApp).sendCode(phone, code)
+
+            service(whatsApp, sms).sendCode(phone, code)
+
+            verify(sms).sendCode(phone, code)
+            val logged = appender.list.map { it.formattedMessage }
+            assertEquals(true, logged.isNotEmpty(), "the fallback is still logged")
+            logged.forEach { line ->
+                assertEquals(false, line.contains(code), "code in log: $line")
+                assertEquals(false, line.contains(phone.removePrefix("+")), "full phone in log: $line")
+            }
+            assertEquals(true, appender.list.all { it.throwableProxy == null }, "no stack trace carrying the message")
+        } finally {
+            logger.detachAppender(appender)
+        }
+    }
+
+    @Test
     fun `default order is whatsapp then sms`() {
         assertEquals(listOf("whatsapp", "sms"), OtpDeliveryProperties().deliveryOrder)
     }

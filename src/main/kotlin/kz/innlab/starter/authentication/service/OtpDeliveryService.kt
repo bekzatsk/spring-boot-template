@@ -92,13 +92,15 @@ class OtpDeliveryService(
                 return
             } catch (ex: RuntimeException) {
                 if (index == ordered.lastIndex) throw ex
-                // Don't log code or full phone — keep PII out of logs.
+                // Only the exception class: a provider's message echoes its request (Twilio's
+                // ApiException names the "To" number) and may carry the code, in formats no mask
+                // would reliably catch. The phone is logged masked.
                 logger.warn(
                     "OTP delivery via {} failed for {}, falling back to {}: {}",
                     activeChannels[index],
                     maskPhone(phoneE164),
                     activeChannels[index + 1],
-                    ex.message
+                    ex.javaClass.name
                 )
             }
         }
