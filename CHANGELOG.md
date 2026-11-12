@@ -29,13 +29,19 @@ only configure the starter; see **Changed** if you call the notification classes
   not processed yet.
 - **Configurable OTP channel order.** `app.auth.otp.delivery-order` (default `[whatsapp, sms]` —
   unchanged behaviour) lists the channels `telegram`, `whatsapp`, `sms` in the order they are
-  tried; a failing channel hands over to the next, the last one's exception reaches the caller.
+  tried; a failing channel hands over to the next. When the last one fails too, the caller gets
+  `OtpDeliveryException` (500), which names the channels and exception classes but not the
+  provider's message — that text can carry the code and the full number.
   A listed channel without a bean is skipped; an order with no available channel fails at
   startup. New `OtpDeliveryChannel` interface: every bean of it is a channel under its `name`,
   one named `sms` / `whatsapp` replaces the built-in channel.
 
 ### Changed
 
+- When every phone OTP channel fails, `OtpDeliveryService` throws `OtpDeliveryException` instead
+  of the SMS provider's own exception, so the provider's text (code, full number) reaches neither
+  the log nor the response. An `IllegalStateException` from an SMS provider used to answer 409;
+  it now answers 500, like any other delivery failure.
 - `OtpDeliveryService`'s constructor takes the channel beans and `OtpDeliveryProperties`
   besides `Optional<WhatsAppService>` and `SmsService`; only code that constructs it by hand is
   affected.

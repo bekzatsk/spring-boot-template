@@ -977,7 +977,7 @@ Set the `FIREBASE_CREDENTIALS_JSON` env variable to the service-account JSON, **
 
 ### Каналы доставки phone OTP и Telegram Gateway
 
-`OtpDeliveryService` пробует каналы в порядке `app.auth.otp.delivery-order`: при `RuntimeException` канала — следующий, исключение последнего уходит вызывающему (как раньше ошибка SMS). `Error` (OOM и пр.) не перехватывается.
+`OtpDeliveryService` пробует каналы в порядке `app.auth.otp.delivery-order`: при `RuntimeException` канала — следующий, если упал и последний — вызывающему уходит `OtpDeliveryException` (500): каналы и классы исключений, без текста провайдера, где бывают код и полный номер (раньше уходило само исключение SMS). `Error` (OOM и пр.) не перехватывается.
 
 | Канал | Доступен, когда | Реализация |
 |-------|-----------------|------------|

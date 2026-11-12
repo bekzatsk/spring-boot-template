@@ -18,3 +18,4 @@ interface OtpDeliveryChannel {
 
     fun sendCode(phone: String, code: String)
 }
+

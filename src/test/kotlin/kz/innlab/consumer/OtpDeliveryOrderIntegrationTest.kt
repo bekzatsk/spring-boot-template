@@ -1,6 +1,7 @@
 package kz.innlab.consumer
 
 import kz.innlab.starter.authentication.service.OtpDeliveryChannel
+import kz.innlab.starter.authentication.service.OtpDeliveryException
 import kz.innlab.starter.authentication.service.OtpDeliveryService
 import kz.innlab.starter.authentication.service.SmsService
 import kz.innlab.starter.authentication.service.WhatsAppService
@@ -89,8 +90,11 @@ class OtpDeliveryOrderIntegrationTest {
             .run { context ->
                 val service = context.getBean(OtpDeliveryService::class.java)
                 assertThatThrownBy { service.sendCode(phone, code) }
-                    .isInstanceOf(IllegalStateException::class.java)
-                    .hasMessage("telegram down")
+                    .isInstanceOf(OtpDeliveryException::class.java)
+                    .hasMessageContaining("sms (java.lang.IllegalStateException)")
+                    .hasMessageContaining("telegram (java.lang.IllegalStateException)")
+                    .hasMessageNotContaining(code)
+                    .hasMessageNotContaining(phone.removePrefix("+"))
                 assertThat(attempts).containsExactly("sms!", "telegram!")
             }
     }

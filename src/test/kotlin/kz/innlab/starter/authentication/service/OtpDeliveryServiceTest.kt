@@ -58,6 +58,22 @@ class OtpDeliveryServiceTest {
     }
 
     @Test
+    fun `the last channel's failure reaches the caller without the code or the full phone`() {
+        val sms = mock(SmsService::class.java)
+        doThrow(IllegalStateException("Unable to deliver $code to $phone")).`when`(sms).sendCode(phone, code)
+
+        val ex = assertThrows<OtpDeliveryException> { service(null, sms).sendCode(phone, code) }
+
+        // Handlers log the whole chain with its stack trace: nothing in it may carry the provider's text.
+        val chain = generateSequence<Throwable>(ex) { it.cause }.toList() + ex.suppressed
+        chain.forEach { t ->
+            assertEquals(false, t.toString().contains(code), "code in: $t")
+            assertEquals(false, t.toString().contains(phone.removePrefix("+")), "full phone in: $t")
+        }
+        assertEquals(true, ex.message!!.contains("+15***67"), ex.message)
+    }
+
+    @Test
     fun `default order is whatsapp then sms`() {
         assertEquals(listOf("whatsapp", "sms"), OtpDeliveryProperties().deliveryOrder)
     }
@@ -157,8 +173,9 @@ class OtpDeliveryServiceTest {
         doThrow(IllegalStateException("sms also down")).`when`(sms).sendCode(phone, code)
         val service = service(whatsApp, sms)
 
-        val ex = assertThrows<IllegalStateException> { service.sendCode(phone, code) }
-        assertEquals("sms also down", ex.message)
+        val ex = assertThrows<OtpDeliveryException> { service.sendCode(phone, code) }
+        assertEquals(true, ex.message!!.contains("whatsapp (java.lang.RuntimeException)"), ex.message)
+        assertEquals(true, ex.message!!.contains("sms (java.lang.IllegalStateException)"), ex.message)
         verify(whatsApp).sendCode(phone, code)
         verify(sms).sendCode(phone, code)
     }
@@ -169,7 +186,7 @@ class OtpDeliveryServiceTest {
         doThrow(IllegalStateException("sms down")).`when`(sms).sendCode(phone, code)
         val service = service(null, sms)
 
-        assertThrows<IllegalStateException> { service.sendCode(phone, code) }
+        assertThrows<OtpDeliveryException> { service.sendCode(phone, code) }
         verify(sms).sendCode(phone, code)
     }
 

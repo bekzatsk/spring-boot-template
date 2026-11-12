@@ -12,8 +12,9 @@ import java.util.Optional
  *
  * Tries the channels named in `app.auth.otp.delivery-order` (default `[whatsapp, sms]`, the
  * behaviour from before the order was configurable) one after another. A RuntimeException from a
- * channel moves on to the next one; the last channel's exception bubbles up to the caller, so
- * upstream rate-limiting / 5xx behavior stays as it was with SMS last.
+ * channel moves on to the next one; when the last one fails too, [OtpDeliveryException] reaches the
+ * caller (500 through the exception handler). It names the channels and exception classes, never
+ * the provider's message, which can carry the code and the full number.
  *
  * Channels:
  *  - `whatsapp` — the WhatsAppService bean, if there is one (Optional, absent by default);
@@ -86,23 +87,31 @@ class OtpDeliveryService(
     }
 
     fun sendCode(phoneE164: String, code: String) {
+        val failures = mutableListOf<String>()
         ordered.forEachIndexed { index, channel ->
             try {
                 channel.sendCode(phoneE164, code)
                 return
             } catch (ex: RuntimeException) {
-                if (index == ordered.lastIndex) throw ex
                 // Only the exception class: a provider's message echoes its request (Twilio's
                 // ApiException names the "To" number) and may carry the code, in formats no mask
                 // would reliably catch. The phone is logged masked.
-                logger.warn(
-                    "OTP delivery via {} failed for {}, falling back to {}: {}",
-                    activeChannels[index],
-                    maskPhone(phoneE164),
-                    activeChannels[index + 1],
-                    ex.javaClass.name
-                )
+                failures += "${activeChannels[index]} (${ex.javaClass.name})"
+                if (index < ordered.lastIndex) {
+                    logger.warn(
+                        "OTP delivery via {} failed for {}, falling back to {}: {}",
+                        activeChannels[index],
+                        maskPhone(phoneE164),
+                        activeChannels[index + 1],
+                        ex.javaClass.name
+                    )
+                }
             }
         }
+        // Not the last channel's own exception: it would reach the exception handler's log, and
+        // the client's response, with its text. See OtpDeliveryException.
+        throw OtpDeliveryException(
+            "OTP delivery failed on every channel for ${maskPhone(phoneE164)}: ${failures.joinToString(", ")}"
+        )
     }
 }
