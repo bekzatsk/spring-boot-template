@@ -17,10 +17,12 @@ import kz.innlab.starter.authentication.repository.VerificationCodeRepository
 import kz.innlab.starter.authentication.service.AccountManagementService
 import kz.innlab.starter.authentication.service.AuthTokenIssuer
 import kz.innlab.starter.authentication.service.EmailService
+import kz.innlab.starter.authentication.service.OtpDeliveryChannel
 import kz.innlab.starter.authentication.service.OtpDeliveryService
 import kz.innlab.starter.authentication.service.RefreshTokenFamilyRevoker
 import kz.innlab.starter.authentication.service.RefreshTokenService
 import kz.innlab.starter.authentication.service.SmsService
+import kz.innlab.starter.authentication.service.TelegramGatewayService
 import kz.innlab.starter.authentication.service.TokenService
 import kz.innlab.starter.authentication.service.VerificationAttemptRecorder
 import kz.innlab.starter.authentication.service.VerificationCodeService
@@ -30,6 +32,8 @@ import kz.innlab.starter.config.AuthCookieProperties
 import kz.innlab.starter.config.AuthSecurityProperties
 import kz.innlab.starter.config.AuthTokenProperties
 import kz.innlab.starter.config.JwtIdentityProperties
+import kz.innlab.starter.config.OtpDeliveryProperties
+import kz.innlab.starter.config.TelegramGatewayProperties
 import kz.innlab.starter.config.RateLimitProperties
 import kz.innlab.starter.config.VerificationProperties
 import kz.innlab.starter.shared.ratelimit.InMemoryRateLimiter
@@ -122,8 +126,25 @@ class AuthCoreAutoConfiguration {
     @ConditionalOnMissingBean
     fun otpDeliveryService(
         whatsAppService: Optional<WhatsAppService>,
-        smsService: SmsService
-    ): OtpDeliveryService = OtpDeliveryService(whatsAppService, smsService)
+        smsService: SmsService,
+        channels: List<OtpDeliveryChannel>,
+        otpDeliveryProperties: OtpDeliveryProperties
+    ): OtpDeliveryService = OtpDeliveryService(whatsAppService, smsService, channels, otpDeliveryProperties)
+
+    /**
+     * Phone OTP through the Telegram Gateway — channel `telegram` in `app.auth.otp.delivery-order`.
+     * OtpDeliveryService collects it as one of its List<OtpDeliveryChannel>, so a missing bean is
+     * silent: "telegram" is then skipped (ConditionalBeanContractTest pins presence).
+     */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnProperty(name = ["app.auth.telegram-gateway.enabled"], havingValue = "true")
+    class TelegramGateway {
+
+        @Bean
+        @ConditionalOnMissingBean
+        fun telegramGatewayService(properties: TelegramGatewayProperties): TelegramGatewayService =
+            TelegramGatewayService(properties, TelegramGatewayService.defaultRestClient(properties))
+    }
 
     @Bean
     @ConditionalOnMissingBean

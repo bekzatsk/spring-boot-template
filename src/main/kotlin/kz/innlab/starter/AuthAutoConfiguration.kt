@@ -22,6 +22,7 @@ import kz.innlab.starter.config.MailProperties
 import kz.innlab.starter.config.RateLimitProperties
 import kz.innlab.starter.config.NotificationConfig
 import kz.innlab.starter.config.OpenApiConfig
+import kz.innlab.starter.config.OtpDeliveryProperties
 import kz.innlab.starter.config.MethodSecurityConfig
 import kz.innlab.starter.config.ProductionSafetyConfig
 import kz.innlab.starter.config.RsaKeyConfig
@@ -30,6 +31,7 @@ import kz.innlab.starter.config.SmsSchedulerConfig
 import kz.innlab.starter.config.GoogleAuthProperties
 import kz.innlab.starter.config.TelegramAuthProperties
 import kz.innlab.starter.config.TelegramConfig
+import kz.innlab.starter.config.TelegramGatewayProperties
 import kz.innlab.starter.config.TwilioConfig
 import kz.innlab.starter.config.VerificationProperties
 import org.springframework.boot.autoconfigure.AutoConfiguration
@@ -64,7 +66,9 @@ import org.springframework.context.annotation.Import
     AuthSecurityProperties::class,
     AuthCookieProperties::class,
     JwtIdentityProperties::class,
-    ConsoleFallbackProperties::class
+    ConsoleFallbackProperties::class,
+    OtpDeliveryProperties::class,
+    TelegramGatewayProperties::class
 )
 @Import(
     // feature beans

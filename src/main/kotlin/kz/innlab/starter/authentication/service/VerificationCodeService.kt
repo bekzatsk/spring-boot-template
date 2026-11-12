@@ -42,7 +42,7 @@ class VerificationCodeService(
         private const val DEFAULT_EXPIRY_MINUTES = 15L
 
         /** Phone OTPs are short-lived: they are read off a screen and typed in immediately. */
-        private const val PHONE_EXPIRY_MINUTES = 5L
+        const val PHONE_EXPIRY_MINUTES = 5L
 
         private const val RATE_LIMIT_SECONDS = 60L
         private const val MAX_ATTEMPTS = 3

@@ -13,6 +13,7 @@ import kz.innlab.starter.authentication.service.GoogleOAuth2Service
 import kz.innlab.starter.authentication.service.LocalAuthService
 import kz.innlab.starter.authentication.service.PhoneOtpService
 import kz.innlab.starter.authentication.service.TelegramAuthService
+import kz.innlab.starter.authentication.service.TelegramGatewayService
 import kz.innlab.starter.notification.service.FirebasePushService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -142,5 +143,29 @@ class ConditionalBeanContractTest {
 
         consumerContextRunner("app.firebase.enabled=false")
             .run { assertThat(it).doesNotHaveBean(FirebasePushService::class.java) }
+    }
+
+    /**
+     * OtpDeliveryService collects channels as a List<OtpDeliveryChannel>: a missing gateway bean is
+     * an empty list, not a failure — and "telegram" in delivery-order is then silently skipped.
+     */
+    @Test
+    fun `telegram gateway channel follows the telegram-gateway flag`() {
+        consumerContextRunner(
+            "app.auth.telegram-gateway.enabled=true",
+            "app.auth.telegram-gateway.token=gw-test-token"
+        ).run { assertThat(it).hasSingleBean(TelegramGatewayService::class.java) }
+
+        consumerContextRunner("app.auth.telegram-gateway.enabled=false")
+            .run { assertThat(it).doesNotHaveBean(TelegramGatewayService::class.java) }
+
+        consumerContextRunner()
+            .run { assertThat(it).doesNotHaveBean(TelegramGatewayService::class.java) }
+    }
+
+    @Test
+    fun `telegram gateway ttl outside the code lifetime fails startup`() {
+        consumerContextRunner("app.auth.telegram-gateway.ttl-seconds=10").run { assertThat(it).hasFailed() }
+        consumerContextRunner("app.auth.telegram-gateway.ttl-seconds=900").run { assertThat(it).hasFailed() }
     }
 }

@@ -295,6 +295,40 @@ fun verificationEmailMessages(): VerificationEmailMessages = object : Verificati
 }
 ```
 
+### Phone OTP Delivery Channels
+
+Phone codes (`/auth/phone/request`, change-phone) go through `OtpDeliveryService`, which tries
+the channels in `app.auth.otp.delivery-order` until one accepts the code. A failing channel
+(any `RuntimeException`) hands over to the next; the last channel's exception reaches the caller.
+
+| Channel | Available when | Implementation |
+|---------|----------------|----------------|
+| `telegram` | `app.auth.telegram-gateway.enabled=true` | `TelegramGatewayService` — [Telegram Gateway API](https://core.telegram.org/gateway/api) |
+| `whatsapp` | a `WhatsAppService` bean exists (`app.twilio.whatsapp.enabled=true`) | `TwilioWhatsAppService` |
+| `sms` | always — `ConsoleSmsService` unless a real `SmsService` is configured | `TwilioSmsService` / your own |
+
+```yaml
+app:
+  auth:
+    otp:
+      delivery-order: [telegram, whatsapp, sms]   # default: [whatsapp, sms]
+    telegram-gateway:
+      enabled: true
+      token: ${TELEGRAM_GATEWAY_TOKEN}
+      sender-username: ""        # optional, a verified channel to send from
+      callback-url: ""           # optional, delivery reports (not processed by the starter yet)
+      ttl-seconds: 300           # 30..300 — not longer than the phone code lives
+      connect-timeout: 5s
+      read-timeout: 10s
+```
+
+A listed channel that is not configured is skipped; an order with no configured channel fails at
+startup. Telegram only delivers: the code is generated and checked by the starter, and
+`ok=true` from the Gateway means the message was accepted, not read — there is no fallback after
+that. Under a production profile `ProductionSafetyConfig` refuses to start when the gateway is
+enabled without a token. An application's own channel is any `OtpDeliveryChannel` bean, used
+under its `name`; one named `sms` or `whatsapp` replaces the built-in one.
+
 ### Adding Your Own Secured Endpoints
 
 The starter configures Spring Security with JWT. Your endpoints are secured by default. To allow
@@ -515,6 +549,8 @@ keystore, outside production profiles, RSA keys are generated in-memory and chan
 | `app.cors.allowed-origins` | — (none) | Allowed CORS origins; required in production |
 | `app.notification.token.max-per-user` | `5` | Max device tokens per user |
 | `app.auth.telegram.trust-forwarded-headers` | `false` | Honour `X-Forwarded-For` for Telegram session limits — only behind a trusted proxy |
+| `app.auth.otp.delivery-order` | `[whatsapp, sms]` | Phone OTP channels in the order they are tried — see [Phone OTP Delivery Channels](#phone-otp-delivery-channels) |
+| `app.auth.telegram-gateway.*` | disabled | Telegram Gateway as the `telegram` OTP channel — same section |
 
 ---
 
