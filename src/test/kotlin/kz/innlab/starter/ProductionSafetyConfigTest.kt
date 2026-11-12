@@ -165,6 +165,27 @@ class ProductionSafetyConfigTest {
             }
     }
 
+    @Test
+    fun `refuses to start when the Telegram Gateway is enabled without a token`() {
+        runner("app.auth.telegram-gateway.enabled=true").run { context ->
+            assertThat(context).hasFailed()
+            assertThat(context.startupFailure).hasStackTraceContaining("app.auth.telegram-gateway.token")
+        }
+    }
+
+    @Test
+    fun `starts when the Telegram Gateway is enabled with a token`() {
+        runner(
+            "app.auth.telegram-gateway.enabled=true",
+            "app.auth.telegram-gateway.token=gw-test-token"
+        ).run { context -> assertThat(context).hasNotFailed() }
+    }
+
+    @Test
+    fun `a Telegram Gateway token without the flag is not a problem`() {
+        runner("app.auth.telegram-gateway.enabled=false").run { context -> assertThat(context).hasNotFailed() }
+    }
+
     /** Console fallback on the named channels, real providers everywhere else. */
     private fun runnerWithConsole(vararg channels: Channel) = ApplicationContextRunner()
         .withInitializer { it.environment.setActiveProfiles("prod") }

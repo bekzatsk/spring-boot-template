@@ -32,6 +32,8 @@ class AutoConfigurationCoverageTest {
         "app.auth.apple.enabled=true",
         "app.auth.phone.enabled=true",
         "app.auth.telegram.enabled=true",
+        "app.auth.telegram-gateway.enabled=true",
+        "app.auth.telegram-gateway.token=gw-test-token",
         "app.firebase.enabled=true",
         "app.mail.enabled=true",
         "app.mail.smtp.host=localhost"

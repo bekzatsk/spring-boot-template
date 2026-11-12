@@ -30,6 +30,7 @@ import kz.innlab.starter.authentication.service.PhoneOtpService
 import kz.innlab.starter.authentication.service.RefreshTokenFamilyRevoker
 import kz.innlab.starter.authentication.service.RefreshTokenService
 import kz.innlab.starter.authentication.service.TelegramAuthService
+import kz.innlab.starter.authentication.service.TelegramGatewayService
 import kz.innlab.starter.authentication.service.TokenService
 import kz.innlab.starter.authentication.service.VerificationAttemptRecorder
 import kz.innlab.starter.authentication.service.VerificationCodeService
@@ -188,6 +189,19 @@ class AutoConfigurationContractTest {
             assertThat(unsatisfied.map { it.simpleName })
                 .describedAs("no default implementation — injected optionally, so absence is silent")
                 .isEmpty()
+        }
+    }
+
+    /** Off in the shared test configuration; switched on here so its name is pinned too. */
+    @Test
+    fun `telegram gateway is registered under its conventional name when enabled`() {
+        consumerContextRunner(
+            "app.auth.telegram-gateway.enabled=true",
+            "app.auth.telegram-gateway.token=gw-test-token"
+        ).run { context ->
+            assertThat(context.getBean(conventionalName(TelegramGatewayService::class)))
+                .isInstanceOf(TelegramGatewayService::class.java)
+            assertThat(context.getBeanNamesForType(TelegramGatewayService::class.java)).hasSize(1)
         }
     }
 

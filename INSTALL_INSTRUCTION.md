@@ -797,6 +797,15 @@ app:
   # Starter (≥ 0.1.5) не везёт yaml: задай ключи здесь (можно через ${TWILIO_...})
   # или стандартными env-именами APP_TWILIO_ENABLED, APP_TWILIO_ACCOUNT_SID, ...
   # См. §4 «Twilio (WhatsApp + SMS OTP)».
+
+  # --- Порядок каналов phone OTP и Telegram Gateway ---
+  # См. §4 «Каналы доставки phone OTP и Telegram Gateway».
+  # auth:
+  #   otp:
+  #     delivery-order: [telegram, whatsapp, sms]
+  #   telegram-gateway:
+  #     enabled: ${TELEGRAM_GATEWAY_ENABLED:false}
+  #     token: ${TELEGRAM_GATEWAY_TOKEN:}
 ```
 
 > **Конфиг starter-а.** С 0.1.5 starter не везёт `application*.yaml` — всё, что не задано в твоих файлах, берёт дефолты из кода (таблицы в §4). В 0.1.4 и ниже внутри jar был `application-dev.yaml` с кодами `123456`: на этих версиях свой `application-dev.yml` обязателен.
@@ -966,9 +975,48 @@ Set the `FIREBASE_CREDENTIALS_JSON` env variable to the service-account JSON, **
 
 Все три bean реализуют `MailService` + `EmailService` — код потребителя не меняется при переключении.
 
+### Каналы доставки phone OTP и Telegram Gateway
+
+`OtpDeliveryService` пробует каналы в порядке `app.auth.otp.delivery-order`: при `RuntimeException` канала — следующий, если упал и последний — вызывающему уходит `OtpDeliveryException` (500): каналы и классы исключений, без текста провайдера, где бывают код и полный номер (раньше уходило само исключение SMS). `Error` (OOM и пр.) не перехватывается.
+
+| Канал | Доступен, когда | Реализация |
+|-------|-----------------|------------|
+| `telegram` | `app.auth.telegram-gateway.enabled=true` | `TelegramGatewayService` — [Telegram Gateway API](https://core.telegram.org/gateway/api) |
+| `whatsapp` | есть bean `WhatsAppService` (`app.twilio.whatsapp.enabled=true` или свой) | `TwilioWhatsAppService` |
+| `sms` | всегда (`ConsoleSmsService`, если реального `SmsService` нет) | `TwilioSmsService` или свой |
+
+```yaml
+app:
+  auth:
+    otp:
+      delivery-order: [telegram, whatsapp, sms]   # по умолчанию [whatsapp, sms] — как было до настройки
+    telegram-gateway:
+      enabled: ${TELEGRAM_GATEWAY_ENABLED:false}
+      token: ${TELEGRAM_GATEWAY_TOKEN:}
+      sender-username: ""   # необязательно: верифицированный канал-отправитель
+      callback-url: ""      # необязательно: отчёты о доставке (стартер их пока не обрабатывает)
+      ttl-seconds: 300
+```
+
+| Property | Env | Type | Default | Description |
+|----------|-----|------|---------|-------------|
+| `app.auth.otp.delivery-order` | `APP_AUTH_OTP_DELIVERY_ORDER` | list | `[whatsapp, sms]` | Имена каналов по порядку, без учёта регистра. Канал без bean'а пропускается (в лог — `info`). Ни одного доступного — ошибка на старте. Пустой список — ошибка на старте. |
+| `app.auth.telegram-gateway.enabled` | `TELEGRAM_GATEWAY_ENABLED` | boolean | `false` | Регистрирует `TelegramGatewayService` (канал `telegram`). |
+| `app.auth.telegram-gateway.token` | `TELEGRAM_GATEWAY_TOKEN` | string | `""` | Токен Gateway API, уходит в `Authorization: Bearer`. Под prod-профилем пустой токен при `enabled=true` валит старт; вне prod каждая отправка падает и код уходит следующим каналом. |
+| `app.auth.telegram-gateway.sender-username` | — | string | `""` | `sender_username`: верифицированный канал, от имени которого идёт сообщение. Пустой — не передаётся. |
+| `app.auth.telegram-gateway.callback-url` | — | string | `""` | `callback_url` для отчётов о доставке. Пустой — не передаётся. Подпись отчётов (`X-Request-Timestamp`, `X-Request-Signature`) стартер пока не проверяет — эндпоинт за приложением. |
+| `app.auth.telegram-gateway.ttl-seconds` | — | int | `300` | `ttl`: сколько Telegram пытается доставить (и после чего возвращает деньги). 30…300: не дольше, чем живёт phone-код (5 мин). |
+| `app.auth.telegram-gateway.connect-timeout` / `read-timeout` | — | duration | `5s` / `10s` | Таймауты HTTP-вызова. |
+| `app.auth.telegram-gateway.base-url` | — | string | `https://gatewayapi.telegram.org` | Для тестов/прокси. |
+
+> **Код — наш.** Стартер сам генерирует и проверяет код (`VerificationCodeService`) и передаёт его в `code`; `checkVerificationStatus` / `code_length` не используются. `checkSendAbility` не вызывается — он платный, а номер без Telegram и так даёт `ok=false` на `sendVerificationMessage`.
+> **Что считается успехом.** `ok=true` — Telegram принял сообщение, но не значит, что пользователь его прочёл; перехода на следующий канал после этого нет. `ok=false`, HTTP-ошибка или таймаут — `TelegramGatewayException`, следующий канал.
+> **Логи.** Ни код, ни полный номер не логируются — только маска (`+77***67`).
+> **Свой канал.** Любой bean `OtpDeliveryChannel` — канал под своим `name`; bean с именем `sms` или `whatsapp` заменяет встроенный. Два bean'а с одним именем — ошибка на старте.
+
 ### Twilio (WhatsApp + SMS OTP)
 
-OTP delivery идёт через `OtpDeliveryService`: сначала WhatsApp, при ошибке (`RuntimeException` от Twilio) — fallback на SMS. Если `app.twilio.whatsapp.enabled=false` или bean не зарегистрирован — звонят сразу в `SmsService` (`TwilioSmsService` при `app.twilio.sms.enabled=true`, иначе `ConsoleSmsService`).
+OTP delivery идёт через `OtpDeliveryService`: по умолчанию (`app.auth.otp.delivery-order: [whatsapp, sms]`) сначала WhatsApp, при ошибке (`RuntimeException` от Twilio) — fallback на SMS; порядок настраивается, см. «Каналы доставки phone OTP и Telegram Gateway». Если `app.twilio.whatsapp.enabled=false` или bean не зарегистрирован — звонят сразу в `SmsService` (`TwilioSmsService` при `app.twilio.sms.enabled=true`, иначе `ConsoleSmsService`).
 
 **Связка с env.** С 0.1.5 starter не везёт yaml, поэтому `TWILIO_*`-переменные работают, только если связать их в своём `application-prod.yml` (дефолты в коде — всё выключено):
 
@@ -1060,7 +1108,7 @@ class MyOverrides {
 
 Ниже — частный случай: console-logging defaults для SMS, email и push.
 
-OTP delivery теперь идёт через `OtpDeliveryService` — оркестратор с цепочкой **WhatsApp → SMS**:
+OTP delivery теперь идёт через `OtpDeliveryService` — оркестратор каналов в порядке `app.auth.otp.delivery-order`, по умолчанию **WhatsApp → SMS** (см. §4 «Каналы доставки phone OTP и Telegram Gateway»):
 - если зарегистрирован bean `WhatsAppService` — пытаемся послать через WhatsApp;
 - если он бросает `RuntimeException` — fallback на `SmsService`;
 - если WhatsApp bean отсутствует — звонок сразу в SMS.

@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-Dependency update to Spring Boot 4.1.2 and Kotlin 2.4, and push to Firebase Installation IDs.
+Dependency update to Spring Boot 4.1.2 and Kotlin 2.4, push to Firebase Installation IDs, and
+the Telegram Gateway as a phone OTP channel with a configurable channel order.
 Adds migration `V18__device_token_target_type.sql`. No breaking changes for applications that
 only configure the starter; see **Changed** if you call the notification classes yourself.
 
@@ -18,9 +19,32 @@ only configure the starter; see **Changed** if you call the notification classes
   implementations, so an existing custom `PushService` keeps compiling. It is only called for
   FIDs, and its defaults refuse them; override both to deliver to FIDs. Token-only multicasts
   still go through `sendMulticast`.
+- **Telegram Gateway as a phone OTP channel.** `TelegramGatewayService` sends the starter's own
+  code through `POST https://gatewayapi.telegram.org/sendVerificationMessage` (Bearer token,
+  `phone_number`, `code`, `ttl`, optional `sender_username` / `callback_url`); `ok=false`, an HTTP
+  error or a timeout throws `TelegramGatewayException`. Settings under
+  `app.auth.telegram-gateway.*` (`TelegramGatewayProperties`, validated: `ttl-seconds` 30–300, the
+  phone code lifetime). Off by default. `ProductionSafetyConfig` refuses to start under a
+  production profile when it is enabled without a token. Delivery reports at `callback-url` are
+  not processed yet.
+- **Configurable OTP channel order.** `app.auth.otp.delivery-order` (default `[whatsapp, sms]` —
+  unchanged behaviour) lists the channels `telegram`, `whatsapp`, `sms` in the order they are
+  tried; a failing channel hands over to the next. When the last one fails too, the caller gets
+  `OtpDeliveryException` (500), which names the channels and exception classes but not the
+  provider's message — that text can carry the code and the full number.
+  A listed channel without a bean is skipped; an order with no available channel fails at
+  startup. New `OtpDeliveryChannel` interface: every bean of it is a channel under its `name`,
+  one named `sms` / `whatsapp` replaces the built-in channel.
 
 ### Changed
 
+- When every phone OTP channel fails, `OtpDeliveryService` throws `OtpDeliveryException` instead
+  of the SMS provider's own exception, so the provider's text (code, full number) reaches neither
+  the log nor the response. An `IllegalStateException` from an SMS provider used to answer 409;
+  it now answers 500, like any other delivery failure.
+- `OtpDeliveryService`'s constructor takes the channel beans and `OtpDeliveryProperties`
+  besides `Optional<WhatsAppService>` and `SmsService`; only code that constructs it by hand is
+  affected.
 - `NotificationDispatcher.dispatchToToken` / `dispatchMulticast` take `PushTarget` instead of
   `String`, and `DeviceToken` / `DeviceTokenService.register` take an optional
   `PushTargetType` (default `TOKEN`).

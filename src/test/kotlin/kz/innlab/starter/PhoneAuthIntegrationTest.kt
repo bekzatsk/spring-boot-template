@@ -6,6 +6,7 @@ import kz.innlab.starter.authentication.service.SmsService
 import kz.innlab.starter.user.model.AuthProvider
 import kz.innlab.starter.user.model.User
 import kz.innlab.starter.user.repository.UserRepository
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.anyString
@@ -76,6 +77,40 @@ class PhoneAuthIntegrationTest {
         val mapper = JsonMapper.builder().build()
         val tree = mapper.readTree(body)
         return tree.get("verificationId").asString()
+    }
+
+    @Test
+    fun `a failed delivery reaches neither the log nor the response with the code or the full phone`() {
+        // Provider exceptions echo the request — the number and the message text with the code.
+        var sentCode: String? = null
+        doAnswer { invocation ->
+            sentCode = invocation.arguments[1] as String
+            // Thrown from the provider's code, as Twilio's ApiException (a RuntimeException) is.
+            throw RuntimeException("Unable to deliver '${invocation.arguments[1]}' to ${invocation.arguments[0]}")
+                .apply { stackTrace = arrayOf(StackTraceElement("com.example.sms.ProviderClient", "send", null, 1)) }
+        }.`when`(smsService).sendCode(anyString(), anyString())
+        val logger = org.slf4j.LoggerFactory.getLogger("kz.innlab.starter") as ch.qos.logback.classic.Logger
+        val appender = ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            val body = mockMvc.perform(
+                post("/api/v1/auth/phone/request")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"phone": "$testPhone"}""")
+            ).andReturn().response.contentAsString
+
+            val code = sentCode ?: error("smsService.sendCode was not called")
+            val logged = appender.list.flatMap { event ->
+                generateSequence(event.throwableProxy) { it.cause }
+                    .flatMap { sequenceOf(it.message.orEmpty()) + it.suppressed.map { s -> s.message.orEmpty() } }
+                    .toList() + event.formattedMessage
+            }
+            assertThat(appender.list).describedAs("the failure is still logged").isNotEmpty
+            assertThat(logged).noneMatch { it.contains(code) || it.contains(testPhone.removePrefix("+")) }
+            assertThat(body).doesNotContain(code).doesNotContain(testPhone.removePrefix("+"))
+        } finally {
+            logger.detachAppender(appender)
+        }
     }
 
     @Test

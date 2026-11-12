@@ -22,6 +22,7 @@ import org.springframework.context.annotation.Conditional
  * Refuses to start under a production profile ([ProductionProfiles]: `prod` or `production` by default) when:
  * - any `app.auth.*.dev-code` fixed-OTP override is set (account-takeover backdoor),
  * - Telegram auth is enabled without a webhook secret (webhook would accept forged updates),
+ * - the Telegram Gateway OTP channel is enabled without a token (every send would fail over),
  * - a console fallback bean is serving a channel the application actually uses (verification codes
  *   would go to the log instead of to users).
  *
@@ -56,7 +57,9 @@ class ProductionSafetyConfig {
         @Value("\${app.auth.telegram.enabled:false}") telegramEnabled: Boolean,
         @Value("\${app.auth.cookie.enabled:false}") cookieEnabled: Boolean,
         @Value("\${app.auth.cookie.secure:true}") cookieSecure: Boolean,
-        @Value("\${app.auth.telegram.webhook-secret:}") telegramWebhookSecret: String
+        @Value("\${app.auth.telegram.webhook-secret:}") telegramWebhookSecret: String,
+        @Value("\${app.auth.telegram-gateway.enabled:false}") telegramGatewayEnabled: Boolean,
+        @Value("\${app.auth.telegram-gateway.token:}") telegramGatewayToken: String
     ): InitializingBean = InitializingBean {
         val problems = mutableListOf<String>()
 
@@ -81,6 +84,10 @@ class ProductionSafetyConfig {
         if (telegramEnabled && telegramWebhookSecret.isBlank()) {
             problems += "app.auth.telegram.enabled=true but app.auth.telegram.webhook-secret is blank — " +
                 "the webhook endpoint would accept forged updates from anyone"
+        }
+        if (telegramGatewayEnabled && telegramGatewayToken.isBlank()) {
+            problems += "app.auth.telegram-gateway.enabled=true but app.auth.telegram-gateway.token is blank — " +
+                "every Telegram Gateway send would fail and phone codes would silently go through the next channel"
         }
         if (!allowConsoleFallbacks && !consoleFallbacks.allowSms && smsService.ifAvailable is ConsoleSmsService) {
             problems += "SmsService is the console fallback — OTP codes for phone login and " +
