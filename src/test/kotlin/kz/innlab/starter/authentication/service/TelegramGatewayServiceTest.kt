@@ -141,4 +141,38 @@ class TelegramGatewayServiceTest {
     fun `the channel is named telegram for delivery-order`() {
         assertThat(TelegramGatewayService(props()).name).isEqualTo("telegram")
     }
+
+    @Test
+    fun `stores the request_id on the verification the code belongs to`() {
+        val recorder = org.mockito.Mockito.mock(VerificationAttemptRecorder::class.java)
+        val properties = props()
+        val builder = RestClient.builder().baseUrl(properties.baseUrl)
+        val server = MockRestServiceServer.bindTo(builder).build()
+        val service = TelegramGatewayService(properties, builder.build(), recorder)
+        val verificationId = java.util.UUID.randomUUID()
+        server.expect(requestTo("https://gatewayapi.telegram.org/sendVerificationMessage"))
+            .andRespond(withSuccess(okResponse, MediaType.APPLICATION_JSON))
+
+        service.sendCode(phone, code, verificationId)
+
+        org.mockito.Mockito.verify(recorder).recordGatewayRequest(verificationId, "req-1")
+    }
+
+    @Test
+    fun `failing to store the request_id does not fail the send`() {
+        // Throwing would make OtpDeliveryService send the code again through the next channel.
+        val recorder = org.mockito.Mockito.mock(VerificationAttemptRecorder::class.java)
+        val verificationId = java.util.UUID.randomUUID()
+        org.mockito.Mockito.doThrow(IllegalStateException("db down"))
+            .`when`(recorder).recordGatewayRequest(verificationId, "req-1")
+        val properties = props()
+        val builder = RestClient.builder().baseUrl(properties.baseUrl)
+        val server = MockRestServiceServer.bindTo(builder).build()
+        server.expect(requestTo("https://gatewayapi.telegram.org/sendVerificationMessage"))
+            .andRespond(withSuccess(okResponse, MediaType.APPLICATION_JSON))
+
+        TelegramGatewayService(properties, builder.build(), recorder).sendCode(phone, code, verificationId)
+
+        server.verify()
+    }
 }

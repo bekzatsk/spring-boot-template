@@ -1,5 +1,7 @@
 package kz.innlab.starter.authentication.service
 
+import java.util.UUID
+
 /**
  * One way of getting a one-time code to a phone: Telegram Gateway, WhatsApp, SMS, or one of the
  * application's own.
@@ -17,5 +19,12 @@ interface OtpDeliveryChannel {
     val name: String
 
     fun sendCode(phone: String, code: String)
+
+    /**
+     * Same as [sendCode], with the id of the verification record the code belongs to — for a
+     * channel that reports delivery later and has to link the report back (the Telegram Gateway).
+     * Null when the caller has no record. Defaults to [sendCode].
+     */
+    fun sendCode(phone: String, code: String, verificationId: UUID?) = sendCode(phone, code)
 }
 

@@ -202,4 +202,46 @@ class OtpDeliveryServiceTest {
         assertThrows<OutOfMemoryError> { service.sendCode(phone, code) }
         verify(sms, never()).sendCode(phone, code)
     }
+
+    @Test
+    fun `sendCodeAfter skips the named channel and those before it`() {
+        val whatsApp = mock(WhatsAppService::class.java)
+        val telegram = channel("telegram")
+        val sms = mock(SmsService::class.java)
+        val service = service(whatsApp, sms, listOf(telegram), listOf("whatsapp", "telegram", "sms"))
+        val verificationId = java.util.UUID.randomUUID()
+
+        assertEquals(listOf("sms"), service.channelsAfter("telegram"))
+        service.sendCodeAfter("telegram", phone, code, verificationId)
+
+        verify(sms).sendCode(phone, code)
+        verifyNoInteractions(whatsApp)
+        // name was read at construction; no send on either overload
+        verify(telegram, never()).sendCode(phone, code)
+        verify(telegram, never()).sendCode(phone, code, verificationId)
+    }
+
+    @Test
+    fun `the record id reaches a channel that asks for it`() {
+        val telegram = channel("telegram")
+        val service = service(null, mock(SmsService::class.java), listOf(telegram), listOf("telegram"))
+        val verificationId = java.util.UUID.randomUUID()
+
+        service.sendCode(phone, code, verificationId)
+
+        verify(telegram).sendCode(phone, code, verificationId)
+    }
+
+    @Test
+    fun `sendCodeAfter the last channel fails without sending`() {
+        val telegram = channel("telegram")
+        val sms = mock(SmsService::class.java)
+        val service = service(null, sms, listOf(telegram), listOf("sms", "telegram"))
+
+        assertEquals(emptyList(), service.channelsAfter("telegram"))
+        assertThrows<OtpDeliveryException> { service.sendCodeAfter("telegram", phone, code, null) }
+        verifyNoInteractions(sms)
+        verify(telegram, never()).sendCode(phone, code)
+        verify(telegram, never()).sendCode(phone, code, null)
+    }
 }

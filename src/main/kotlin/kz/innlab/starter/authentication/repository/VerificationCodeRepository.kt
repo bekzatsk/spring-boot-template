@@ -47,6 +47,31 @@ interface VerificationCodeRepository : JpaRepository<VerificationCode, UUID> {
         @Param("maxAttempts") maxAttempts: Int
     ): Int
 
+    fun findByGatewayRequestId(gatewayRequestId: String): VerificationCode?
+
+    @Modifying
+    @Query("UPDATE VerificationCode vc SET vc.gatewayRequestId = :requestId WHERE vc.id = :id")
+    fun setGatewayRequestId(@Param("id") id: UUID, @Param("requestId") requestId: String): Int
+
+    /**
+     * Swaps the code of a live verification for a new one, keeping its id (the client holds it),
+     * expiry and attempt count. Matching on the request id makes it a compare-and-set: a repeated
+     * delivery report finds the id already cleared and changes nothing.
+     */
+    @Modifying
+    @Query("""
+        UPDATE VerificationCode vc SET vc.codeHash = :codeHash, vc.gatewayRequestId = null
+        WHERE vc.id = :id AND vc.gatewayRequestId = :requestId AND vc.used = false
+          AND vc.expiresAt > :now AND vc.attempts < :maxAttempts
+    """)
+    fun replaceCodeIfActive(
+        @Param("id") id: UUID,
+        @Param("requestId") requestId: String,
+        @Param("codeHash") codeHash: String,
+        @Param("now") now: Instant,
+        @Param("maxAttempts") maxAttempts: Int
+    ): Int
+
     @Modifying
     @Transactional
     @Query("DELETE FROM VerificationCode vc WHERE vc.expiresAt < :cutoff OR vc.used = true")

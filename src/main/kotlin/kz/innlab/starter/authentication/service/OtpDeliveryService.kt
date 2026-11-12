@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.Locale
 import java.util.Optional
+import java.util.UUID
 
 /**
  * High-level OTP delivery orchestrator.
@@ -86,23 +87,54 @@ class OtpDeliveryService(
         return resolved
     }
 
-    fun sendCode(phoneE164: String, code: String) {
+    fun sendCode(phoneE164: String, code: String) = sendCode(phoneE164, code, null)
+
+    /** [verificationId] reaches channels that link a later delivery report to the code. */
+    fun sendCode(phoneE164: String, code: String, verificationId: UUID?) =
+        deliver(ordered.indices.toList(), phoneE164, code, verificationId)
+
+    /** Channels after [channel] in the delivery order; empty when it is last or not in the order. */
+    fun channelsAfter(channel: String): List<String> {
+        val index = activeChannels.indexOf(key(channel))
+        return if (index < 0) emptyList() else activeChannels.drop(index + 1)
+    }
+
+    /**
+     * Delivers through the channels after [channel] only — for a code the [channel] accepted but
+     * did not deliver. Throws [OtpDeliveryException] when there is none or all of them fail.
+     */
+    fun sendCodeAfter(channel: String, phoneE164: String, code: String, verificationId: UUID?) {
+        val index = activeChannels.indexOf(key(channel))
+        val rest = if (index < 0) emptyList() else (index + 1..ordered.lastIndex).toList()
+        if (rest.isEmpty()) {
+            throw OtpDeliveryException(
+                "OTP delivery for ${maskPhone(phoneE164)}: no channel after ${key(channel)} in $activeChannels"
+            )
+        }
+        deliver(rest, phoneE164, code, verificationId)
+    }
+
+    private fun deliver(indices: List<Int>, phoneE164: String, code: String, verificationId: UUID?) {
         val failures = mutableListOf<String>()
-        ordered.forEachIndexed { index, channel ->
+        indices.forEachIndexed { position, index ->
+            val channel = ordered[index]
             try {
-                channel.sendCode(phoneE164, code)
+                // The two-argument form when there is no record: a channel (or a test double of
+                // one) that implements only that keeps working exactly as before.
+                if (verificationId == null) channel.sendCode(phoneE164, code)
+                else channel.sendCode(phoneE164, code, verificationId)
                 return
             } catch (ex: RuntimeException) {
                 // Only the exception class: a provider's message echoes its request (Twilio's
                 // ApiException names the "To" number) and may carry the code, in formats no mask
                 // would reliably catch. The phone is logged masked.
                 failures += "${activeChannels[index]} (${ex.javaClass.name})"
-                if (index < ordered.lastIndex) {
+                if (position < indices.lastIndex) {
                     logger.warn(
                         "OTP delivery via {} failed for {}, falling back to {}: {}",
                         activeChannels[index],
                         maskPhone(phoneE164),
-                        activeChannels[index + 1],
+                        activeChannels[indices[position + 1]],
                         ex.javaClass.name
                     )
                 }

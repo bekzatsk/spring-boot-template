@@ -33,4 +33,13 @@ class VerificationAttemptRecorder(
         verificationCodeRepository.markUsedIfActive(
             verificationId, Instant.now(), maxAttempts
         ) == 1
+
+    /**
+     * Links a sent code to the Telegram Gateway request that carries it. Runs after the issuing
+     * transaction has committed, where joining it would write nothing — hence its own transaction.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    fun recordGatewayRequest(verificationId: UUID, requestId: String) {
+        verificationCodeRepository.setGatewayRequestId(verificationId, requestId)
+    }
 }

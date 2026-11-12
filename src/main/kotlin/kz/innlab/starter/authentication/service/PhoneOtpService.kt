@@ -37,7 +37,7 @@ class PhoneOtpService(
         val issued = verificationCodeService.createCode(phoneE164, VerificationPurpose.PHONE_LOGIN)
 
         // Deferred to after commit: the SMS provider HTTP call must not hold the DB transaction open.
-        afterCommitRunner.run { otpDeliveryService.sendCode(phoneE164, issued.code) }
+        afterCommitRunner.run { otpDeliveryService.sendCode(phoneE164, issued.code, issued.verificationId) }
 
         return OtpSendResult(
             verificationId = issued.verificationId,
