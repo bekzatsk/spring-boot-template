@@ -36,7 +36,7 @@ sed -i '' 's/0\.0\.PREV/0.0.X/g' INSTALL_INSTRUCTION.md
 ### 2. Environment
 
 ```bash
-export JAVA_HOME="$(/usr/libexec/java_home -v 25)"   # Project baseline: Java 25 + Kotlin 2.3.21
+export JAVA_HOME="$(/usr/libexec/java_home -v 25)"   # Project baseline: Java 25 + Kotlin 2.4.21
 export GPG_TTY=$(tty)                                 # needed for gpg pinentry loopback
 export MAVEN_GPG_PASSPHRASE="$(security find-generic-password -a gpg -s maven-gpg -w)"
 ```
@@ -95,7 +95,7 @@ git push && git push --tags
 | `Do not store passphrase in any file (disk or SCM repository)…` | `gpg.passphrase` is still in `~/.m2/settings.xml` (or `-Dgpg.passphrase` on the command line) | Remove it; export `MAVEN_GPG_PASSPHRASE` from the Keychain (step 2) |
 | `gpg: signing failed: Inappropriate ioctl for device` | Pinentry can't reach TTY | `export GPG_TTY=$(tty)` before deploy |
 | `Failed to deploy: version already exists` | Re-publishing same version | Bump patch — Maven Central forbids overwrite |
-| `Unsupported class file major version` | Java/Kotlin do not match project baseline | `export JAVA_HOME="$(/usr/libexec/java_home -v 25)"` and use Kotlin 2.3.21 |
+| `Unsupported class file major version` | Java/Kotlin do not match project baseline | `export JAVA_HOME="$(/usr/libexec/java_home -v 25)"` and use Kotlin 2.4.21 |
 | Sonatype validation: `missing javadoc` | Plugin not bound | Verify `release` profile has `maven-javadoc-plugin` |
 | Sonatype validation: `signature missing` | GPG sign step skipped | Check `maven-gpg-plugin` bound to `verify` phase in `release` profile |
 

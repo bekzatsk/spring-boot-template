@@ -110,7 +110,7 @@
 > **TL;DR — почему новый проект не стартует.**
 > 1. Не добавляй `spring-boot-starter-security` явно — он приходит транзитивно через `auth-spring-boot-starter`. Явное добавление ломает autoconfig в Boot 4.
 > 2. Свой `SecurityFilterChain` **не обязателен**: цепочка starter-а покрывает приложение (проверено тестом с приложением без своей цепочки). Добавляй свою с узким `securityMatcher` только для путей с другими правилами.
-> 3. JVM **25** с Kotlin **2.3.21**.
+> 3. JVM **25** с Kotlin **2.4.21**.
 > 4. Starter (≥ 0.1.5) не везёт `application*.yaml` — вся конфигурация твоя. Без своих файлов действуют дефолты из кода (порт 8080, БД не задана).
 > 5. У starter-а свой Flyway: схема `auth`, миграции `classpath:db/migration-auth`. Твои миграции — отдельно в `db/migration/`. Не перемешивай.
 > 6. `spring-boot-starter-actuator` идёт транзитивно → `/actuator/health` доступен из коробки, остальные actuator-эндпоинты — только `ROLE_ADMIN`.
@@ -134,7 +134,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.1</version>
+        <version>4.1.2</version>
         <relativePath/>
     </parent>
     <groupId>kz.innlab</groupId>
@@ -143,7 +143,7 @@
 
     <properties>
         <java.version>25</java.version>
-        <kotlin.version>2.3.21</kotlin.version>
+        <kotlin.version>2.4.21</kotlin.version>
         <uuid-creator.version>6.1.1</uuid-creator.version>
     </properties>
 
@@ -472,7 +472,7 @@ cd /path/to/{projectName}/backend && ./mvnw spring-boot:run
 
 4. **Bump version** в `pom.xml` (no `-SNAPSHOT` — Maven Central rejects snapshots).
 
-5. **Deploy** (JDK 25 required; Kotlin 2.3.21):
+5. **Deploy** (JDK 25 required; Kotlin 2.4.21):
    ```bash
    export JAVA_HOME="$(/usr/libexec/java_home -v 25)"
    ./mvnw clean deploy -P release -DskipTests
@@ -1349,7 +1349,7 @@ Generate the bcrypt hash with `org.springframework.security.crypto.bcrypt.BCrypt
 | Симптом | Причина | Фикс |
 |---------|---------|------|
 | `UnreachableFilterChainException` на старте | Своя цепочка без `securityMatcher` (тоже `anyRequest`) конфликтует с цепочкой starter-а | Дай своей цепочке узкий `securityMatcher` (§0) или убери её — она не обязательна |
-| `Unsupported class file major version` / Kotlin compile error | Java/Kotlin не совпадают с baseline проекта | Используй JVM 25 + Kotlin 2.3.21 |
+| `Unsupported class file major version` / Kotlin compile error | Java/Kotlin не совпадают с baseline проекта | Используй JVM 25 + Kotlin 2.4.21 |
 | Подключается к БД `template` с юзером `postgres` (starter ≤ 0.1.4) | Нет своего `application-dev.yml` → подхватился bundled из jar starter-а (вместе с кодами `123456`) | Обновись до 0.1.5 или создай `src/main/resources/application-dev.yml` |
 | Под prod не стартует: «Refusing to start under a production profile» | `ProductionSafetyConfig` нашёл dev-code, дефолтный issuer/audience, Telegram без токена/секрета, cookie без `Secure` или console-fallback | Исправь перечисленное в сообщении; console-fallback — waiver per channel (`app.security.console-fallbacks.allow-*`) |
 | Под prod не стартует: «Production JWT signing key is required» | Не задан keystore | `app.security.jwt.keystore-location` + `keystore-password` (`./scripts/generate-keystore.sh`) |
