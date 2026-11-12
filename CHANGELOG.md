@@ -3,8 +3,9 @@
 ## Unreleased
 
 Dependency update to Spring Boot 4.1.2 and Kotlin 2.4, push to Firebase Installation IDs, and
-the Telegram Gateway as a phone OTP channel with a configurable channel order.
-Adds migration `V18__device_token_target_type.sql`. No breaking changes for applications that
+the Telegram Gateway as a phone OTP channel with a configurable channel order, signed delivery
+reports and an optional fallback for undelivered codes.
+Adds migrations `V18__device_token_target_type.sql` and `V19__verification_gateway_request.sql`. No breaking changes for applications that
 only configure the starter; see **Changed** if you call the notification classes yourself.
 
 ### Added
@@ -25,8 +26,30 @@ only configure the starter; see **Changed** if you call the notification classes
   error or a timeout throws `TelegramGatewayException`. Settings under
   `app.auth.telegram-gateway.*` (`TelegramGatewayProperties`, validated: `ttl-seconds` 30–300, the
   phone code lifetime). Off by default. `ProductionSafetyConfig` refuses to start under a
-  production profile when it is enabled without a token. Delivery reports at `callback-url` are
-  not processed yet.
+  production profile when it is enabled without a token.
+- **Telegram Gateway delivery reports.** `POST /api/v1/auth/telegram-gateway/callback`
+  (`TelegramGatewayCallbackController`, registered with the gateway) receives the `RequestStatus`
+  the Gateway posts to `callback-url`. Public, no JWT, exempt from CSRF; instead the
+  `X-Request-Signature` HMAC (key `SHA256(token)`, data `X-Request-Timestamp` + `\n` + raw body)
+  is checked over the raw request bytes in constant time. A missing header, a wrong signature or a
+  timestamp outside `app.auth.telegram-gateway.callback-max-age` (default 5 min) answers 401; with
+  no token configured, 403 for everything. A validly signed report always gets 200, also for an
+  unknown `request_id`. Reports are logged with the phone masked, without the code or
+  `code_entered`. The `request_id` of each send is stored on the verification
+  (`verification_codes.gateway_request_id`, migration V19).
+- **Fallback for undelivered Telegram codes.** `app.auth.telegram-gateway.fallback-on-undelivered`
+  (default `false`): on `delivery_status.status = expired`, if the verification is not used,
+  expired or out of attempts, `VerificationCodeService.reissueCode` replaces its code — same
+  `verificationId`, expiry and attempt count, the old code stops working — and the new one goes,
+  after commit, through the channels after `telegram` in `app.auth.otp.delivery-order`. Counts
+  against the per-purpose send limit. The new code lives only what is left of the old one, so the
+  setting needs `ttl-seconds` below the 300 s phone code lifetime: otherwise startup fails.
+- `ProductionSafetyConfig` refuses to start under a production profile when the gateway is
+  enabled with a `callback-url` that is not `https://`.
+- `OtpDeliveryChannel.sendCode(phone, code, verificationId)` (default: the two-argument form) and
+  `OtpDeliveryService.sendCode(phone, code, verificationId)` / `sendCodeAfter` / `channelsAfter`.
+  The starter's phone flows now pass the verification id; a test double of `OtpDeliveryChannel`
+  that stubs only the two-argument method sees the three-argument call there.
 - **Configurable OTP channel order.** `app.auth.otp.delivery-order` (default `[whatsapp, sms]` —
   unchanged behaviour) lists the channels `telegram`, `whatsapp`, `sms` in the order they are
   tried; a failing channel hands over to the next. When the last one fails too, the caller gets
