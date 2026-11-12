@@ -13,6 +13,8 @@ Spring Boot 4.1.2 auth template in **Kotlin 2.4.21** (Java 25) with JWT authenti
 docker compose up -d
 
 # Run application (dev profile must be set explicitly — no default profile for safety)
+# Dev DB defaults (template/template) match docker-compose.yml; with a .env, run `set -a; source .env; set +a` first (Spring does not read .env)
+# A postgres_data volume created with other credentials needs `docker compose down -v`
 SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 
 # Run all tests (H2 in-memory, no Docker needed)

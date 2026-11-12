@@ -121,6 +121,21 @@ docker compose up -d
 ./mvnw spring-boot:run
 ```
 
+To run this repository's own app locally, use the dev profile: `SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run`.
+It connects to `template` / `template` on database `template`, the same defaults `docker-compose.yml`
+creates, so no environment variables are needed.
+
+If you copy `.env.example` to `.env`, Docker Compose reads it by itself but Spring does not. Export it
+before starting the app, or the passwords will differ:
+
+```bash
+set -a; source .env; set +a
+SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
+```
+
+The `postgres_data` volume keeps the credentials it was first created with. After changing
+`DB_USERNAME`/`DB_PASSWORD`/`DB_NAME`, recreate it with `docker compose down -v` (this deletes the data).
+
 Flyway migrations run automatically and create all required tables in the `auth` schema.
 
 ---

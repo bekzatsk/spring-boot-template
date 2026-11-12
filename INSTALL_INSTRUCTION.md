@@ -425,6 +425,8 @@ cd /path/to/auth-starter && ./mvnw clean install -DskipTests
 cd /path/to/{projectName}/backend && ./mvnw spring-boot:run
 ```
 
+Учётные данные БД в `docker-compose.yml` по умолчанию `template` / `template` (`DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`). Docker Compose читает `.env` сам, Spring — нет: для `spring-boot:run` выполни `set -a; source .env; set +a`. Том `postgres_data`, созданный с другими данными, сам не пересоздаётся: нужен `docker compose down -v` (данные удалятся).
+
 Приложение слушает `server.port` из твоего конфига (по умолчанию Spring — `:8080`). `/api/*` → 401 без JWT — это норма.
 
 ---

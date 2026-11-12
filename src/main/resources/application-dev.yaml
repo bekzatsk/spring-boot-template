@@ -5,8 +5,8 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/${DB_NAME:template}
     driver-class-name: org.postgresql.Driver
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    username: ${DB_USERNAME:template}
+    password: ${DB_PASSWORD:template}
   jpa:
     hibernate:
       ddl-auto: validate

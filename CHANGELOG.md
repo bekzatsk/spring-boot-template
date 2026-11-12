@@ -49,6 +49,17 @@ only configure the starter; see **Changed** if you call the notification classes
   `String`, and `DeviceToken` / `DeviceTokenService.register` take an optional
   `PushTargetType` (default `TOKEN`).
 
+### Dev environment
+
+- `application-dev.yaml` now defaults the database login to `template` / `template`, matching
+  `docker-compose.yml`; `docker compose up -d` followed by `SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run`
+  no longer fails with `password authentication failed`.
+- The compose healthcheck uses the container's `POSTGRES_USER`/`POSTGRES_DB` instead of a hard-coded
+  `template`, so it passes with an overridden `DB_USERNAME`.
+- README, `CLAUDE.md` and `INSTALL_INSTRUCTION.md`: Spring does not read `.env` (export it with
+  `set -a; source .env; set +a`), and a `postgres_data` volume made with other credentials needs
+  `docker compose down -v`. `application-prod.yaml` still has no defaults.
+
 ### Dependencies
 
 - Spring Boot 4.1.1 → 4.1.2 (Spring Framework 7.0.10, Spring Security 7.1.2, Hibernate
