@@ -297,7 +297,7 @@ fun verificationEmailMessages(): VerificationEmailMessages = object : Verificati
 
 ### Phone OTP Delivery Channels
 
-Phone codes (`/auth/phone/request`, change-phone) go through `OtpDeliveryService`, which tries
+Phone codes (`POST /api/v1/auth/phone/request`, change-phone) go through `OtpDeliveryService`, which tries
 the channels in `app.auth.otp.delivery-order` until one accepts the code. A failing channel
 (any `RuntimeException`) hands over to the next; the last channel's exception reaches the caller.
 
