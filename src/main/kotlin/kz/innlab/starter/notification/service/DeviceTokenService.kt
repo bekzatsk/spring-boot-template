@@ -3,6 +3,7 @@ package kz.innlab.starter.notification.service
 import kz.innlab.starter.user.service.DeviceRegistrationRevoker
 import kz.innlab.starter.notification.model.DeviceToken
 import kz.innlab.starter.notification.model.Platform
+import kz.innlab.starter.notification.model.PushTargetType
 import kz.innlab.starter.notification.repository.DeviceTokenRepository
 import org.slf4j.LoggerFactory
 import kz.innlab.starter.config.DeviceTokenProperties
@@ -22,7 +23,13 @@ class DeviceTokenService(
     }
 
     @Transactional
-    fun register(userId: UUID, platform: Platform, fcmToken: String, deviceId: String): DeviceToken {
+    fun register(
+        userId: UUID,
+        platform: Platform,
+        fcmToken: String,
+        deviceId: String,
+        targetType: PushTargetType = PushTargetType.TOKEN
+    ): DeviceToken {
         val existing = deviceTokenRepository.findByUserIdAndDeviceId(userId, deviceId)
 
         // A token is one app install; whoever registers it last owns it. Leaving the previous
@@ -37,6 +44,7 @@ class DeviceTokenService(
         if (existing != null) {
             existing.fcmToken = fcmToken
             existing.platform = platform
+            existing.targetType = targetType
             existing.updatedAt = Instant.now()
             return deviceTokenRepository.save(existing)
         }
@@ -46,7 +54,7 @@ class DeviceTokenService(
             throw IllegalStateException("Maximum device tokens (${deviceTokenProperties.maxPerUser}) reached for user")
         }
 
-        val token = DeviceToken(userId, platform, fcmToken, deviceId)
+        val token = DeviceToken(userId, platform, fcmToken, deviceId, targetType)
         return deviceTokenRepository.save(token)
     }
 

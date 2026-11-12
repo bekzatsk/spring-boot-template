@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Spring Boot 4.1.1 auth template in **Kotlin 2.3.21** (Java 25) with JWT authentication, multi-provider login (Google, Apple, email+password, email OTP, phone OTP), push notifications (Firebase), and email (SMTP/IMAP). Uses PostgreSQL 18 with Flyway migrations and UUID v7 primary keys.
+Spring Boot 4.1.2 auth template in **Kotlin 2.4.21** (Java 25) with JWT authentication, multi-provider login (Google, Apple, email+password, email OTP, phone OTP), push notifications (Firebase), and email (SMTP/IMAP). Uses PostgreSQL 18 with Flyway migrations and UUID v7 primary keys.
 
 ## Build & Run Commands
 
@@ -95,7 +95,7 @@ Tests use H2 in-memory DB with Flyway disabled and `create-drop` DDL. External d
 
 ## Database Migrations
 
-Flyway migrations in `src/main/resources/db/migration-auth/` (V1 through V17), applied to the `auth` schema by the starter's own Flyway bean (`AuthFlywayConfig`). Dev profile has `clean-on-validation-error: true`; prod uses strict validation. **Never edit a migration that shipped in a release** — every database that applied it fails checksum validation; add a new version instead.
+Flyway migrations in `src/main/resources/db/migration-auth/` (V1 through V18), applied to the `auth` schema by the starter's own Flyway bean (`AuthFlywayConfig`). Dev profile has `clean-on-validation-error: true`; prod uses strict validation. **Never edit a migration that shipped in a release** — every database that applied it fails checksum validation; add a new version instead.
 
 The test suite never executes migrations (H2 `create-drop`), so a broken migration passes `./mvnw test`. CI (`.github/workflows/ci.yml`) has a separate job that applies every migration to PostgreSQL 18 and fails if any entity table lacks a `version` column — when adding a new entity, add its table to that job's `entity_tables` list.
 

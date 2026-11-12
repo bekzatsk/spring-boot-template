@@ -9,6 +9,7 @@ data class DeviceTokenResponse(
     val platform: String,
     val fcmToken: String,
     val deviceId: String,
+    val tokenType: String,
     val createdAt: Instant,
     val updatedAt: Instant
 ) {
@@ -18,6 +19,7 @@ data class DeviceTokenResponse(
             platform = token.platform.name,
             fcmToken = token.fcmToken,
             deviceId = token.deviceId,
+            tokenType = token.targetType.name,
             createdAt = token.createdAt,
             updatedAt = token.updatedAt
         )

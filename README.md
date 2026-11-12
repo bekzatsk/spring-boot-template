@@ -2,7 +2,7 @@
 
 Ready-to-use Spring Boot starter for JWT authentication with multi-provider login (Google, Apple, email+password, email OTP, phone OTP), push notifications (Firebase), and email (SMTP/IMAP).
 
-**Stack:** Spring Boot 4.1.1 / Kotlin 2.3.21 / Java 25 / PostgreSQL 18 / Flyway / Firebase Admin SDK
+**Stack:** Spring Boot 4.1.2 / Kotlin 2.4.21 / Java 25 / PostgreSQL 18 / Flyway / Firebase Admin SDK
 
 ---
 
@@ -617,7 +617,7 @@ Production profiles are `prod` and `production` by default (`app.security.produc
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.1</version>
+        <version>4.1.2</version>
     </parent>
 
     <groupId>com.example</groupId>
@@ -626,7 +626,7 @@ Production profiles are `prod` and `production` by default (`app.security.produc
 
     <properties>
         <java.version>25</java.version>
-        <kotlin.version>2.3.21</kotlin.version>
+        <kotlin.version>2.4.21</kotlin.version>
     </properties>
 
     <dependencies>

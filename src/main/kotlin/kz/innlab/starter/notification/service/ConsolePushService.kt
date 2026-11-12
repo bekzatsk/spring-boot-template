@@ -17,6 +17,16 @@ class ConsolePushService : PushService {
         return "console-message-id"
     }
 
+    override fun sendToFid(fid: String, title: String, body: String, data: Map<String, String>): String? {
+        logger.info("[PUSH] sendToFid - fid: {}…, {} data keys (content not logged)", fid.take(6), data.size)
+        return "console-message-id"
+    }
+
+    override fun sendMulticastToTargets(targets: List<PushTarget>, title: String, body: String, data: Map<String, String>): List<String> {
+        logger.info("[PUSH] sendMulticast - targets: {}, {} data keys (content not logged)", targets.size, data.size)
+        return emptyList()
+    }
+
     override fun sendMulticast(tokens: List<String>, title: String, body: String, data: Map<String, String>): List<String> {
         logger.info("[PUSH] sendMulticast - tokens: {}, {} data keys (content not logged)", tokens.size, data.size)
         return emptyList()

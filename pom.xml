@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.1.1</version>
+		<version>4.1.2</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>kz.innlab</groupId>
@@ -38,14 +38,7 @@
 	</scm>
 	<properties>
 		<java.version>25</java.version>
-		<kotlin.version>2.3.21</kotlin.version>
-		<!-- Boot 4.1.1 manages 11.0.24, which predates September 2026 security fixes. -->
-		<tomcat.version>11.0.26</tomcat.version>
-		<!-- Boot 4.1.1 manages Jackson 3.1.5 / 2.21.5, affected by GHSA-7hhh-6rmp-j9qf,
-		     GHSA-cxp5-3px4-pw24, GHSA-gx83-3vf8-gh7j, GHSA-p6pp-m3f8-5c89, GHSA-q4xh-88c3-wmh7,
-		     GHSA-wjgm-6hv5-3cvf and GHSA-wv8q-qhhj-9h54. Drop once Boot manages these or newer. -->
-		<jackson-bom.version>3.1.7</jackson-bom.version>
-		<jackson-2-bom.version>2.21.7</jackson-2-bom.version>
+		<kotlin.version>2.4.21</kotlin.version>
 	</properties>
 
 	<dependencyManagement>
@@ -54,7 +47,7 @@
 			<dependency>
 				<groupId>com.google.cloud</groupId>
 				<artifactId>libraries-bom</artifactId>
-				<version>26.88.1</version>
+				<version>26.93.0</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -116,7 +109,7 @@
 		<dependency>
 			<groupId>org.jsoup</groupId>
 			<artifactId>jsoup</artifactId>
-			<version>1.23.2</version>
+			<version>1.24.1</version>
 		</dependency>
 
 		<dependency>
@@ -129,14 +122,14 @@
 		<dependency>
 			<groupId>com.googlecode.libphonenumber</groupId>
 			<artifactId>libphonenumber</artifactId>
-			<version>8.13.52</version>
+			<version>9.0.43</version>
 		</dependency>
 
 		<!-- Twilio SDK for WhatsApp + SMS OTP delivery (transitive: consumers don't need to declare separately) -->
 		<dependency>
 			<groupId>com.twilio.sdk</groupId>
 			<artifactId>twilio</artifactId>
-			<version>11.3.3</version>
+			<version>13.2.0</version>
 		</dependency>
 
 		<dependency>
@@ -163,14 +156,14 @@
 		<dependency>
 			<groupId>com.google.api-client</groupId>
 			<artifactId>google-api-client</artifactId>
-			<version>2.9.0</version>
+			<version>2.9.2</version>
 		</dependency>
 
 		<!-- Firebase Admin SDK for push notifications -->
 		<dependency>
 			<groupId>com.google.firebase</groupId>
 			<artifactId>firebase-admin</artifactId>
-			<version>9.4.3</version>
+			<version>9.12.0</version>
 		</dependency>
 
 		<!-- Email sending via SMTP -->
@@ -183,7 +176,7 @@
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>3.0.2</version>
+			<version>3.2.0</version>
 		</dependency>
 		<!-- Jackson 2 stop-gap: required because swagger-core still depends on Jackson 2,
 		     while Spring Boot 4 defaults to Jackson 3. Remove when springdoc upgrades swagger-core. -->
@@ -196,7 +189,7 @@
 		<dependency>
 			<groupId>com.icegreen</groupId>
 			<artifactId>greenmail-spring</artifactId>
-			<version>2.1.3</version>
+			<version>2.1.15</version>
 			<scope>test</scope>
 		</dependency>
 
@@ -238,7 +231,6 @@
 				<configuration>
 					<args>
 						<arg>-Xjsr305=strict</arg>
-						<arg>-Xannotation-default-target=param-property</arg>
 					</args>
 					<compilerPlugins>
 						<plugin>spring</plugin>
@@ -276,7 +268,7 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-source-plugin</artifactId>
-						<version>3.3.1</version>
+						<version>3.4.0</version>
 						<executions>
 							<execution>
 								<id>attach-sources</id>
@@ -291,7 +283,7 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-jar-plugin</artifactId>
-						<version>3.4.1</version>
+						<version>3.5.1</version>
 						<executions>
 							<execution>
 								<id>empty-javadoc-jar</id>
@@ -311,7 +303,7 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-gpg-plugin</artifactId>
-						<version>3.2.7</version>
+						<version>3.2.8</version>
 						<executions>
 							<execution>
 								<id>sign-artifacts</id>
@@ -336,7 +328,7 @@
 					<plugin>
 						<groupId>org.sonatype.central</groupId>
 						<artifactId>central-publishing-maven-plugin</artifactId>
-						<version>0.8.0</version>
+						<version>0.12.0</version>
 						<extensions>true</extensions>
 						<configuration>
 							<publishingServerId>central</publishingServerId>

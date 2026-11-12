@@ -16,6 +16,7 @@ import kz.innlab.starter.notification.dto.SendToTopicRequest
 import kz.innlab.starter.notification.dto.TopicSubscribeRequest
 import kz.innlab.starter.notification.model.NotificationChannel
 import kz.innlab.starter.notification.model.Platform
+import kz.innlab.starter.notification.model.PushTargetType
 import kz.innlab.starter.notification.service.DeviceTokenService
 import kz.innlab.starter.notification.service.NotificationPreferenceService
 import kz.innlab.starter.notification.service.NotificationService
@@ -53,7 +54,8 @@ class NotificationController(
     ): ResponseEntity<DeviceTokenResponse> {
         val userId = UUID.fromString(jwt.subject)
         val platform = Platform.valueOf(request.platform.uppercase())
-        val token = deviceTokenService.register(userId, platform, request.fcmToken, request.deviceId)
+        val targetType = PushTargetType.valueOf(request.tokenType.uppercase())
+        val token = deviceTokenService.register(userId, platform, request.fcmToken, request.deviceId, targetType)
         return ResponseEntity.status(201).body(DeviceTokenResponse.from(token))
     }
 
