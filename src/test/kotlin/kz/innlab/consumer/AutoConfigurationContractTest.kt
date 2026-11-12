@@ -10,6 +10,7 @@ import kz.innlab.starter.authentication.controller.LocalAuthController
 import kz.innlab.starter.authentication.controller.PhoneAuthController
 import kz.innlab.starter.authentication.controller.TelegramAuthController
 import kz.innlab.starter.authentication.controller.TelegramWebhookController
+import kz.innlab.starter.authentication.controller.TelegramGatewayCallbackController
 import kz.innlab.starter.authentication.cookie.AuthResponseCookieAdvice
 import kz.innlab.starter.authentication.exception.AuthExceptionHandler
 import kz.innlab.starter.authentication.exception.NotFoundExceptionHandler
@@ -30,6 +31,7 @@ import kz.innlab.starter.authentication.service.PhoneOtpService
 import kz.innlab.starter.authentication.service.RefreshTokenFamilyRevoker
 import kz.innlab.starter.authentication.service.RefreshTokenService
 import kz.innlab.starter.authentication.service.TelegramAuthService
+import kz.innlab.starter.authentication.service.TelegramGatewayReportService
 import kz.innlab.starter.authentication.service.TelegramGatewayService
 import kz.innlab.starter.authentication.service.TokenService
 import kz.innlab.starter.authentication.service.VerificationAttemptRecorder
@@ -199,9 +201,14 @@ class AutoConfigurationContractTest {
             "app.auth.telegram-gateway.enabled=true",
             "app.auth.telegram-gateway.token=gw-test-token"
         ).run { context ->
-            assertThat(context.getBean(conventionalName(TelegramGatewayService::class)))
-                .isInstanceOf(TelegramGatewayService::class.java)
-            assertThat(context.getBeanNamesForType(TelegramGatewayService::class.java)).hasSize(1)
+            listOf(
+                TelegramGatewayService::class,
+                TelegramGatewayReportService::class,
+                TelegramGatewayCallbackController::class
+            ).forEach { type ->
+                assertThat(context.getBean(conventionalName(type))).isInstanceOf(type.java)
+                assertThat(context.getBeanNamesForType(type.java)).hasSize(1)
+            }
         }
     }
 

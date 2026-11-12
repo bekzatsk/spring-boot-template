@@ -6,6 +6,7 @@ import kz.innlab.starter.authentication.controller.GoogleAuthController
 import kz.innlab.starter.authentication.controller.LocalAuthController
 import kz.innlab.starter.authentication.controller.PhoneAuthController
 import kz.innlab.starter.authentication.controller.TelegramAuthController
+import kz.innlab.starter.authentication.controller.TelegramGatewayCallbackController
 import kz.innlab.starter.authentication.cookie.AuthCookieWriter
 import kz.innlab.starter.authentication.service.AppleOAuth2Service
 import kz.innlab.starter.authentication.service.EmailOtpService
@@ -13,6 +14,7 @@ import kz.innlab.starter.authentication.service.GoogleOAuth2Service
 import kz.innlab.starter.authentication.service.LocalAuthService
 import kz.innlab.starter.authentication.service.PhoneOtpService
 import kz.innlab.starter.authentication.service.TelegramAuthService
+import kz.innlab.starter.authentication.service.TelegramGatewayReportService
 import kz.innlab.starter.authentication.service.TelegramGatewayService
 import kz.innlab.starter.notification.service.FirebasePushService
 import org.assertj.core.api.Assertions.assertThat
@@ -161,6 +163,43 @@ class ConditionalBeanContractTest {
 
         consumerContextRunner()
             .run { assertThat(it).doesNotHaveBean(TelegramGatewayService::class.java) }
+    }
+
+    /** Without them delivery reports get a 404 and the Gateway retries, then drops them — silently. */
+    @Test
+    fun `telegram gateway delivery-report beans follow the telegram-gateway flag`() {
+        consumerContextRunner(
+            "app.auth.telegram-gateway.enabled=true",
+            "app.auth.telegram-gateway.token=gw-test-token"
+        ).run {
+            assertThat(it).hasSingleBean(TelegramGatewayReportService::class.java)
+            assertThat(it).hasSingleBean(TelegramGatewayCallbackController::class.java)
+        }
+
+        consumerContextRunner().run {
+            assertThat(it).doesNotHaveBean(TelegramGatewayReportService::class.java)
+            assertThat(it).doesNotHaveBean(TelegramGatewayCallbackController::class.java)
+        }
+    }
+
+    @Test
+    fun `fallback on undelivered needs a ttl below the code lifetime`() {
+        // Default ttl equals the 5-minute phone code lifetime: the report would come too late.
+        consumerContextRunner(
+            "app.auth.telegram-gateway.enabled=true",
+            "app.auth.telegram-gateway.token=gw-test-token",
+            "app.auth.telegram-gateway.fallback-on-undelivered=true"
+        ).run {
+            assertThat(it).hasFailed()
+            assertThat(it.startupFailure).hasStackTraceContaining("fallback-on-undelivered")
+        }
+
+        consumerContextRunner(
+            "app.auth.telegram-gateway.enabled=true",
+            "app.auth.telegram-gateway.token=gw-test-token",
+            "app.auth.telegram-gateway.fallback-on-undelivered=true",
+            "app.auth.telegram-gateway.ttl-seconds=120"
+        ).run { assertThat(it).hasNotFailed() }
     }
 
     @Test

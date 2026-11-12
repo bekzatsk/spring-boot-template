@@ -159,15 +159,53 @@ class VerificationCodeService(
     }
 
     /**
+     * Replaces the code of a verification whose message the Telegram Gateway could not deliver
+     * (request [gatewayRequestId]) with a new one, for delivery through another channel.
+     *
+     * The record keeps its id — the client already holds it as `verificationId` — as well as its
+     * expiry and attempt count: a reissue grants neither more time nor more guesses. The old code
+     * stops working because its hash is replaced. The send counts against the per-purpose limit;
+     * not against the per-client one, since the HTTP client here is the Gateway, not the user.
+     *
+     * Returns null, changing nothing, when the verification is unknown, used, expired, out of
+     * attempts, or no longer carried by that request (already reissued). Throws
+     * RateLimitExceededException when the send limit is spent.
+     */
+    @Transactional
+    fun reissueCode(verificationId: UUID, gatewayRequestId: String): IssuedCode? {
+        val record = verificationCodeRepository.findById(verificationId).orElse(null) ?: return null
+        val now = Instant.now()
+        if (record.gatewayRequestId != gatewayRequestId || record.used ||
+            record.expiresAt <= now || record.attempts >= MAX_ATTEMPTS
+        ) {
+            return null
+        }
+        checkSendAllowed(record.purpose, client = null)
+
+        val code = OneTimeCodes.generate(devCodeFor(record.purpose), codeLengthFor(record.purpose))
+        val hash = requireNotNull(passwordEncoder.encode(code)) { "PasswordEncoder returned null hash" }
+        if (verificationCodeRepository.replaceCodeIfActive(record.id, gatewayRequestId, hash, now, MAX_ATTEMPTS) != 1) {
+            return null
+        }
+        return IssuedCode(
+            verificationId = record.id,
+            code = code,
+            resendAvailableAt = now.plusSeconds(RATE_LIMIT_SECONDS),
+            retryAfterSeconds = RATE_LIMIT_SECONDS
+        )
+    }
+
+    /**
      * Counts one outgoing code against the per-client and per-purpose send limits; throws 429 once
      * either is spent. [createCode] calls it; a flow that answers as if it sent a code without
      * sending one (to hide whether an account exists) must call it too, or the limit itself
      * would tell the two cases apart.
      */
-    fun checkSendAllowed(purpose: VerificationPurpose) {
+    fun checkSendAllowed(purpose: VerificationPurpose) = checkSendAllowed(purpose, currentClientAddress())
+
+    private fun checkSendAllowed(purpose: VerificationPurpose, client: String?) {
         if (!rateLimitProperties.enabled) return
         val perClient = rateLimitProperties.codeSendPerClient
-        val client = currentClientAddress()
         if (client != null &&
             !rateLimiter.tryAcquire("code-send:client:$client", perClient.maxAttempts, perClient.windowSeconds)
         ) {

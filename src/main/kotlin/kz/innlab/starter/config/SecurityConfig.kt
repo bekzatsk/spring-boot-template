@@ -22,6 +22,7 @@ import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository
 import org.springframework.security.web.csrf.CsrfFilter
+import kz.innlab.starter.authentication.controller.TelegramGatewayCallbackController
 import org.springframework.security.web.util.matcher.RequestMatcher
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
@@ -61,6 +62,10 @@ class SecurityConfig(
                     // default CsrfAuthenticationStrategy would clear XSRF-TOKEN in each response.
                     sessionAuthenticationStrategy = NullAuthenticatedSessionStrategy()
                     requireCsrfProtectionMatcher = RequestMatcher { request ->
+                        // Called by the Telegram Gateway, never by a browser; the report signature
+                        // authenticates it.
+                        request.requestURI.removePrefix(request.contextPath) !=
+                            TelegramGatewayCallbackController.CALLBACK_PATH &&
                         request.method !in setOf("GET", "HEAD", "OPTIONS", "TRACE") &&
                             request.cookies?.any {
                                 it.name == authCookieProperties.accessCookieName ||
@@ -102,6 +107,7 @@ class SecurityConfig(
                 }
                 authorize("/api/v1/auth/**", permitAll)
                 authorize("/telegram/webhook", permitAll)
+                authorize(TelegramGatewayCallbackController.CALLBACK_PATH, permitAll)
                 // Consumer-defined public paths
                 authSecurityProperties.publicPaths.forEach { path ->
                     authorize(path, permitAll)

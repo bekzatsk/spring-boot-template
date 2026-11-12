@@ -38,7 +38,11 @@ class ConsumerCrmController {
 
 @SpringBootTest(
     classes = [ConsumerApplication::class],
-    properties = ["app.auth.cookie.enabled=true"]
+    properties = [
+        "app.auth.cookie.enabled=true",
+        "app.auth.telegram-gateway.enabled=true",
+        "app.auth.telegram-gateway.token=gw-test-token"
+    ]
 )
 @AutoConfigureMockMvc
 class ConsumerCsrfTest {
@@ -109,5 +113,17 @@ class ConsumerCsrfTest {
         mockMvc.perform(get("/api/crm/notes")).andExpect(status().isUnauthorized)
         mockMvc.perform(get("/api/crm/notes").cookie(Cookie("access_token", token)))
             .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `the Telegram Gateway callback is exempt from CSRF and checked by its signature instead`() {
+        // Cookies on the request would otherwise make CsrfFilter answer 403 before the signature check.
+        mockMvc.perform(
+            post("/api/v1/auth/telegram-gateway/callback")
+                .cookie(Cookie("access_token", token))
+                .header("X-Request-Timestamp", (System.currentTimeMillis() / 1000).toString())
+                .header("X-Request-Signature", "00".repeat(32))
+                .content("{}")
+        ).andExpect(status().isUnauthorized)
     }
 }
